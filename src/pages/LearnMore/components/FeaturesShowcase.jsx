@@ -21,7 +21,7 @@ const features = [
 
 export default function FeaturesShowcase() {
   return (
-    <section className="bg-white py-24 px-6 md:px-10">
+    <section className="py-24 px-6 md:px-10">
       <div className="max-w-6xl mx-auto text-center">
         <h2 className="text-3xl font-bold mb-12 text-[#0f1724]">Built for Everyone in the Rental Ecosystem</h2>
         <div className="grid md:grid-cols-3 gap-10">
