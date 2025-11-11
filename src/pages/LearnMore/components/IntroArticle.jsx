@@ -3,7 +3,7 @@ import articleImg from "@/assets/images/community.jpg";
 
 export default function IntroArticle() {
   return (
-    <section className="max-w-6xl mx-auto py-20 px-6 md:px-10 grid md:grid-cols-2 gap-10 items-center">
+    <section className=" bg-[#f5f0f0] mx-auto py-20 px-6 md:px-10 grid md:grid-cols-2 gap-10 items-center">
       <motion.img
         src={articleImg}
         alt="Ghanaian community"

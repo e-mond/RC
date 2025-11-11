@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 export default function OnboardingFooter() {
   return (
     <motion.footer
-      className="mt-12 text-gray-500 text-sm text-center"
+      className="mt-12 bg-[#f8f9f9]  text-gray-500 text-sm text-center"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: 0.3 }}

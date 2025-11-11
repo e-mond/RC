@@ -20,10 +20,10 @@ const news = [
 
 export default function NewsFeed() {
   return (
-    <section className="py-20 bg-gray-50">
+    <section className="py-24 px-6 md:px-10 bg-[#f5f0f0]">
       <div className="max-w-6xl mx-auto px-6 md:px-10">
         <h2 className="text-2xl font-bold mb-10 text-center">Rental Connects Insights & Stories</h2>
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-10">
           {news.map((item, i) => (
             <motion.div
               key={i}
