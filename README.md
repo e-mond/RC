@@ -1,6 +1,6 @@
-#  Rental Connects Frontend (RCC)
+#  Rental Connects (RC)
 
-**Rental Connects (RCC)** is a modern, responsive, and dynamic web platform that bridges the gap between **tenants**, **landlords**, and **artisans** in Ghana’s rental ecosystem.  
+**Rental Connects (RC)** is a modern, responsive, and dynamic web platform that bridges the gap between **tenants**, **landlords**, and **artisans** in Ghana’s rental ecosystem.  
 This repository hosts the **frontend** built with **React + Vite**, powered by **Tailwind CSS** and **Framer Motion** for a fast, scalable, and engaging user experience.
 
 ---
@@ -307,6 +307,6 @@ Licensed under the **MIT License** — free to use, modify, and distribute with 
 
 ## Final Note
 Rental Connects isn’t just another web app — it’s a movement toward **digital trust and simplicity** in Ghana’s rental ecosystem.  
-Built for tenants, landlords, and artisans alike, RCC empowers users with transparency and ease in every interaction.
+Built for tenants, landlords, and artisans alike, RC empowers users with transparency and ease in every interaction.
 
 **Let’s build the future of renting — together. **
