@@ -6,11 +6,14 @@ import heroBg from "@/assets/images/hero2.jpg";
 export default function HeroLearn() {
   return (
     <section
-      className="relative bg-cover bg-center text-white"
+      className="relative bg-cover bg-center text-white pt-20 md:pt-24"
       style={{ backgroundImage: `url(${heroBg})` }}
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-teal-800/50"></div>
-      <div className="relative z-10 max-w-6xl mx-auto py-28 px-6 text-center">
+      {/* Dark gradient overlay */}
+      <div className="absolute inset-0 bg-linear-to-r from-black/70 to-teal-800/50" />
+
+      {/* Content */}
+      <div className="relative z-10 max-w-6xl mx-auto py-20 px-6 text-center">
         <motion.h1
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -19,6 +22,7 @@ export default function HeroLearn() {
         >
           Transforming the Way Ghana Rents, Lives, and Works
         </motion.h1>
+
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -28,10 +32,11 @@ export default function HeroLearn() {
           Learn how Rental Connects empowers tenants, landlords, and artisans with trust,
           transparency, and smarter digital tools.
         </motion.p>
+
         <PrimaryButton
           as={Link}
-          to="/signup"
-          className="bg-[#0b]6e4f text-teal-700 hover:bg-gray-100 font-semibold px-6 py-3 rounded-lg"
+          to="/role-selection"
+          className="px-6 py-3 bg-[#0b6e4f] text-white font-medium rounded-lg hover:bg-[#095c42] transition"
         >
           Get Started
         </PrimaryButton>
