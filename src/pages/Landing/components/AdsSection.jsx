@@ -1,4 +1,5 @@
 import { Sparkles, MapPin, Star } from "lucide-react";
+import promoImage from "../../../assets/images/ads-promo.jpg"; // adjust path if needed
 
 export default function AdsSection() {
   return (
@@ -44,7 +45,7 @@ export default function AdsSection() {
         {/* --- Right Image --- */}
         <div className="flex justify-center md:justify-end">
           <img
-            src="/assets/images/ads-promo.jpg" // Replace with your actual image
+            src={promoImage}
             alt="Advertisement promotion"
             className="rounded-xl w-full max-w-md object-cover shadow-md"
           />

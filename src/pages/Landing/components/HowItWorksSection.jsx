@@ -1,5 +1,9 @@
 import { FaSearch, FaComments, FaHome } from "react-icons/fa";
 import { motion as Motion } from "framer-motion";
+import img1 from "../../../assets/images/placeholder-1.jpg";
+import img2 from "../../../assets/images/placeholder-2.jpg";
+import img3 from "../../../assets/images/placeholder-3.jpg";
+
 
 // Step data for "How It Works" section
 const steps = [
@@ -8,7 +12,7 @@ const steps = [
     label: "Find",
     description:
       "Browse verified listings with detailed information and transparent pricing.",
-    image: "/assets/images/placeholder-1.jpg",
+    image: img1,
     icon: <FaSearch className="text-white text-2xl" />,
     linkText: "Explore →",
   },
@@ -17,7 +21,7 @@ const steps = [
     label: "Connect",
     description:
       "Direct messaging and secure verification ensure safe interactions between tenants and landlords.",
-    image: "/assets/images/placeholder-2.jpg",
+    image: img2,
     icon: <FaComments className="text-white text-2xl" />,
     linkText: "Connect →",
   },
@@ -26,7 +30,7 @@ const steps = [
     label: "Rent",
     description:
       "Digital payments, maintenance tracking, and comprehensive support make renting effortless.",
-    image: "/assets/images/placeholder-3.jpg",
+    image: img3,
     icon: <FaHome className="text-white text-2xl" />,
     linkText: "Rent now →",
   },

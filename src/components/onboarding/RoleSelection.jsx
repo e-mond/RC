@@ -36,7 +36,7 @@ export default function RoleSelection() {
 
   return (
     <motion.div
-      className="min-h-screen bg-white flex flex-col items-center px-6 py-10"
+      className="min-h-screen bg-white flex flex-col items-center px-4 sm:px-6 pt-10 md:pt-16"
       variants={container}
       initial="hidden"
       animate="visible"
@@ -48,14 +48,14 @@ export default function RoleSelection() {
         <h1 className="text-2xl md:text-3xl font-semibold text-[#0f1724] mb-3">
           Join Rental Connects — Choose your role to get started
         </h1>
-        <p className="text-gray-600 mb-6">
+        <p className="text-gray-600 mb-6 text-sm md:text-base">
           Pick the role that fits how you’ll use the platform. You can add more roles later in settings.
         </p>
 
         <ProgressIndicator step={1} total={3} label="Choose your role" />
 
         <motion.div
-          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mt-6"
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 md:gap-6 mt-8"
           variants={container}
         >
           <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>

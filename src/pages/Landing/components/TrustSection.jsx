@@ -1,5 +1,9 @@
 import { useState } from "react";
+import { Link } from "react-router-dom"; 
 import { ArrowRight } from "lucide-react";
+import img1 from "../../../assets/images/verifications.jpg";
+import img2 from "../../../assets/images/background-checks.jpg";
+import img3 from "../../../assets/images/fraud-prevention.jpg";
 
 const tabs = [
   {
@@ -9,7 +13,7 @@ const tabs = [
     subtitle: "Verification",
     description:
       "Every user undergoes detailed screening to ensure platform integrity.",
-    image: "/assets/images/verification.jpg",
+    image: img1,
     primaryAction: "Verify",
     secondaryAction: "Explore",
   },
@@ -20,7 +24,7 @@ const tabs = [
     subtitle: "Screening",
     description:
       "We use trusted verification partners to ensure safe and secure rentals.",
-    image: "/assets/images/background-checks.jpg",
+    image: img2,
     primaryAction: "Start check",
     secondaryAction: "Learn more",
   },
@@ -31,7 +35,7 @@ const tabs = [
     subtitle: "Security",
     description:
       "Advanced detection systems protect your identity and transactions in real-time.",
-    image: "/assets/images/fraud-prevention.jpg",
+    image: img3,
     primaryAction: "Protect now",
     secondaryAction: "Discover",
   },
@@ -47,7 +51,9 @@ export default function TrustSection() {
       <div className="max-w-6xl mx-auto px-6">
         {/* --- Header --- */}
         <div className="text-center mb-12">
-                   <h4 className="text-sm font-semibold text-[#0b6e4f] mb-2 uppercase tracking-wide">Trust</h4>
+          <h4 className="text-sm font-semibold text-[#0b6e4f] mb-2 uppercase tracking-wide">
+            Trust
+          </h4>
           <h2 className="text-4xl font-semibold text-gray-900 mb-3">
             Secure rental ecosystem
           </h2>
@@ -55,12 +61,18 @@ export default function TrustSection() {
             We protect your interests through rigorous verification and transparent processes.
           </p>
           <div className="flex justify-center gap-3">
-            <button className="px-5 py-2 text-sm border border-gray-300 rounded-full hover:bg-gray-100 transition">
+            <Link
+              to="/learn-more"
+              className="px-5 py-2 text-sm border border-gray-300 rounded-full hover:bg-gray-100 transition"
+            >
               Learn
-            </button>
-            <button className="px-5 py-2 text-sm bg-black text-white rounded-full hover:bg-gray-800 transition flex items-center gap-1">
+            </Link>
+            <Link
+              to="/role-selection"
+              className="px-5 py-2 text-sm bg-black text-white rounded-full hover:bg-gray-800 transition flex items-center gap-1"
+            >
               Explore <ArrowRight size={16} />
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -78,7 +90,7 @@ export default function TrustSection() {
             >
               {tab.label}
               {activeTab === tab.id && (
-                <span className="absolute left-0 right-0 -bottom-px mx-auto w-3/4 h-0.5 bg-black rounded-full"></span>
+                <span className="absolute left-0 right-0 -bottom-px mx-auto w-3/4 h-0.5 bg-black rounded-full" />
               )}
             </button>
           ))}
@@ -98,12 +110,18 @@ export default function TrustSection() {
               {activeContent.description}
             </p>
             <div className="flex gap-4">
-              <button className="px-5 py-2 border border-gray-300 rounded-full text-sm hover:bg-gray-100 transition">
+              <Link
+                to="/role-selection"
+                className="px-5 py-2 border border-gray-300 rounded-full text-sm hover:bg-gray-100 transition"
+              >
                 {activeContent.primaryAction}
-              </button>
-              <button className="flex items-center gap-1 text-sm font-medium text-gray-900 hover:underline">
+              </Link>
+              <Link
+                to="/learn-more"
+                className="flex items-center gap-1 text-sm font-medium text-gray-900 hover:underline"
+              >
                 {activeContent.secondaryAction} <ArrowRight size={14} />
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -113,6 +131,7 @@ export default function TrustSection() {
               src={activeContent.image}
               alt={activeContent.title}
               className="w-full h-full object-cover"
+              loading="lazy"
             />
           </div>
         </div>
