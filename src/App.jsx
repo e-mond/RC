@@ -9,8 +9,8 @@ import BlogPost from "@/pages/BlogPost";
 import RoleSelection from "@/components/onboarding/RoleSelection";
 import Signup from "./pages/Auth/Signup";
 import Login from "@/pages/Auth/Login";
-import ForgotPassword from "@/pages/auth/ForgotPassword";
-import ResetPassword from "@/pages/auth/ResetPassword";
+import ForgotPassword from "@/pages/Auth/ForgotPassword";
+import ResetPassword from "@/pages/Auth/ResetPassword";
 
 function AnimatedRoutes() {
   const location = useLocation();
