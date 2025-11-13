@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import LoginForm from "./components/LoginForm";
 import LoginIllustration from "./components/LoginIllustration";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 
 
 import { useNavigate } from "react-router-dom";
