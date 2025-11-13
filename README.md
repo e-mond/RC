@@ -29,7 +29,7 @@ This app promotes **transparency, convenience, and digital trust** in property m
 | Icons | [Lucide React](https://lucide.dev/) |
 | HTTP Client | [Axios](https://axios-http.com/) |
 | State/Context | React Context API |
-| Deployment | GitHub Pages / Vercel (optional) |
+| Deployment |  Vercel |
 
 ---
 
