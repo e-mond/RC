@@ -1,24 +1,46 @@
 "use client";
 
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Home } from "lucide-react";
+import NotificationDropdown from "@/components/Notifications/NotificationDropdown";
 
 export default function Navbar() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isLandingPage = location.pathname === "/";
   const [activeSection, setActiveSection] = useState("hero");
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const scrollToSection = (id) => {
-    const section = document.getElementById(id);
-    if (section) {
-      section.scrollIntoView({ behavior: "smooth", block: "start" });
-      setActiveSection(id);
+    if (isLandingPage) {
+      const section = document.getElementById(id);
+      if (section) {
+        section.scrollIntoView({ behavior: "smooth", block: "start" });
+        setActiveSection(id);
+        setMobileOpen(false);
+        // Update URL hash
+        window.history.pushState(null, "", `#${id}`);
+      }
+    } else {
+      // Navigate to landing page, then set hash and scroll
+      navigate("/");
+      // Use setTimeout to ensure navigation completes before scrolling
+      setTimeout(() => {
+        window.location.hash = id;
+        const section = document.getElementById(id);
+        if (section) {
+          section.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 100);
       setMobileOpen(false);
     }
   };
 
   useEffect(() => {
+    if (!isLandingPage) return;
+
     const handleScroll = () => {
       const sections = ["hero", "how-it-works", "features", "benefits", "plans", "trust", "advertise"];
       let current = activeSection;
@@ -38,7 +60,7 @@ export default function Navbar() {
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [activeSection]);
+  }, [activeSection, isLandingPage]);
 
   const navVariants = {
     hidden: { opacity: 0, y: -30 },
@@ -60,23 +82,51 @@ export default function Navbar() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 flex justify-between items-center">
           {/* Logo */}
-          <motion.div
-            className="flex items-center gap-2 cursor-pointer"
-            whileHover={{ scale: 1.05 }}
-            onClick={() => scrollToSection("hero")}
-          >
+          {isLandingPage ? (
             <motion.div
-              className="w-6 h-6 bg-[#0b6e4f] rounded-md"
-              whileHover={{ rotate: 15 }}
-              transition={{ type: "spring", stiffness: 200 }}
-            />
-            <span className="text-lg font-semibold text-[#0f1724]">
-              Rental Connects
-            </span>
-          </motion.div>
+              className="flex items-center gap-2 cursor-pointer"
+              whileHover={{ scale: 1.05 }}
+              onClick={() => scrollToSection("hero")}
+            >
+              <motion.div
+                className="w-6 h-6 bg-[#0b6e4f] rounded-md"
+                whileHover={{ rotate: 15 }}
+                transition={{ type: "spring", stiffness: 200 }}
+              />
+              <span className="text-lg font-semibold text-[#0f1724]">
+                Rental Connects
+              </span>
+            </motion.div>
+          ) : (
+            <Link to="/" className="flex items-center gap-2">
+              <motion.div
+                className="w-6 h-6 bg-[#0b6e4f] rounded-md"
+                whileHover={{ rotate: 15, scale: 1.05 }}
+                transition={{ type: "spring", stiffness: 200 }}
+              />
+              <span className="text-lg font-semibold text-[#0f1724]">
+                Rental Connects
+              </span>
+            </Link>
+          )}
 
           {/* Desktop Nav */}
           <div className="hidden lg:flex items-center gap-6 text-sm font-medium text-[#0f1724]">
+            {/* Properties Link */}
+            <motion.div whileHover={{ scale: 1.05 }}>
+              <Link
+                to="/properties"
+                className={`flex items-center gap-1.5 transition-colors ${
+                  location.pathname === "/properties"
+                    ? "text-[#0b6e4f] font-semibold"
+                    : "text-[#0f1724] hover:text-[#0b6e4f]"
+                }`}
+              >
+                <Home className="w-4 h-4" />
+                Properties
+              </Link>
+            </motion.div>
+            
             {[
               { id: "how-it-works", label: "How it works" },
               { id: "features", label: "Features" },
@@ -109,6 +159,9 @@ export default function Navbar() {
 
           {/* Desktop Buttons */}
           <div className="hidden md:flex items-center gap-3">
+            {location.pathname !== "/" && (
+              <NotificationDropdown />
+            )}
             <motion.div whileHover={{ scale: 1.05 }}>
               <Link
                 to="/login"
@@ -146,6 +199,20 @@ export default function Navbar() {
           style={{ originX: 1, originY: 0 }} // Slide from right
         >
           <div className="px-4 py-3 space-y-1">
+            {/* Properties Link */}
+            <Link
+              to="/properties"
+              onClick={() => setMobileOpen(false)}
+              className={`flex items-center justify-end gap-1.5 w-full text-right py-2.5 px-3 rounded-md text-sm font-medium transition-colors ${
+                location.pathname === "/properties"
+                  ? "bg-[#e6f4ef] text-[#0b6e4f]"
+                  : "text-[#0f1724] hover:bg-gray-50"
+              }`}
+            >
+              <Home className="w-4 h-4" />
+              Properties
+            </Link>
+            
             {[
               { id: "how-it-works", label: "How it works" },
               { id: "features", label: "Features" },

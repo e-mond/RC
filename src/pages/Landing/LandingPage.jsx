@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { motion as Motion } from "framer-motion";
 import Navbar from "../../components/layout/Navbar";
 import HeroSection from "./components/HeroSection";
@@ -23,6 +24,20 @@ const fadeIn = {
 };
 
 export default function LandingPage() {
+  // Handle hash scrolling when landing page loads
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash) {
+      const id = hash.substring(1); // Remove the #
+      setTimeout(() => {
+        const section = document.getElementById(id);
+        if (section) {
+          section.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 100);
+    }
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen font-sans bg-white text-gray-800 overflow-x-hidden">
       <Navbar />

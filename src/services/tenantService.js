@@ -6,7 +6,7 @@ import apiClient from "./apiClient";
  */
 export const registerTenant = async (formData) => {
   try {
-    const { data } = await apiClient.post("/auth/signup/tenant", formData, {
+    const { data } = await apiClient.post("/auth/signup/tenant/", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return data;

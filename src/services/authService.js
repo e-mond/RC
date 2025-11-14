@@ -5,7 +5,7 @@ import apiClient from "./apiClient";
  */
 export const loginUser = async (credentials) => {
   try {
-    const { data } = await apiClient.post("/auth/login", credentials);
+    const { data } = await apiClient.post("/auth/login/", credentials);
     return data;
   } catch (err) {
     console.error("Login API error:", err);
@@ -19,7 +19,7 @@ export const loginUser = async (credentials) => {
  */
 export const signupArtisan = async (formData) => {
   try {
-    const { data } = await apiClient.post("/auth/artisan/signup", formData, {
+    const { data } = await apiClient.post("/auth/artisan/signup/", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -36,7 +36,7 @@ export const signupArtisan = async (formData) => {
  */
 export const getUserProfile = async () => {
   try {
-    const { data } = await apiClient.get("/auth/profile");
+    const { data } = await apiClient.get("/auth/profile/");
     return data;
   } catch (err) {
     console.error("Profile fetch error:", err);
@@ -50,7 +50,7 @@ export const getUserProfile = async () => {
  */
 export const forgotPassword = async (email) => {
   try {
-    const { data } = await apiClient.post("/auth/forgot-password", { email });
+    const { data } = await apiClient.post("/auth/forgot-password/", { email });
     return data;
   } catch (err) {
     console.error("Forgot password API error:", err);
@@ -65,7 +65,7 @@ export const forgotPassword = async (email) => {
  */
 export const resetPassword = async (token, payload) => {
   try {
-    const { data } = await apiClient.post(`/auth/reset-password/${token}`, payload);
+    const { data } = await apiClient.post(`/auth/reset-password/${token}/`, payload);
     return data;
   } catch (err) {
     console.error("Reset password API error:", err);

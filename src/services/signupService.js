@@ -10,7 +10,7 @@ import apiClient from "./apiClient";
  */
 export const signupUser = async (role, formData) => {
   try {
-    const endpoint = `/auth/signup/${role}`;
+    const endpoint = `/auth/signup/${role}/`;
     const { data } = await apiClient.post(endpoint, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
