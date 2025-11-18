@@ -1,19 +1,18 @@
+// src/services/apiClient.js
 import axios from "axios";
 
-/**
- * Axios instance for making API calls.
- * Automatically includes base URL and JSON headers.
- */
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
+  baseURL: import.meta.env.DEV
+    ? "/api"  // ← Vite dev server → intercepted by mock
+    : import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
+
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true,
 });
 
-/**
- * Request interceptor — adds token dynamically if available
- */
+// Add token to every request
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -25,16 +24,14 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-/**
- * Optional: Global response interceptor for automatic logout on 401
- */
+// Auto-logout on 401 (only in production)
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !import.meta.env.DEV) {
       localStorage.removeItem("token");
       localStorage.removeItem("userRole");
-      // You can also redirect to login here if needed
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   }

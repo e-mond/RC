@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import PhoneInput from "react-phone-number-input/input";
 import ProgressIndicator from "@/components/onboarding/ProgressIndicator";
 import { signupUser } from "@/services/signupService";
+import landlord_onboarding from "@/assets/images/landlord_onboarding.jpeg";
 
 /**
  * Multi-step landlord signup form.
@@ -100,7 +101,7 @@ export default function LandlordForm() {
         className="hidden md:flex md:w-1/2 relative bg-gray-100"
       >
         <img
-          src="/images/landlord-signup.jpg"
+          src={landlord_onboarding}
           alt="Landlord onboarding"
           className="object-cover w-full h-full"
         />

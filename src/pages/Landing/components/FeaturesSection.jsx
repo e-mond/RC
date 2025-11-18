@@ -8,7 +8,14 @@ import {
 } from "react-icons/fa";
 import { motion } from "framer-motion";
 
-// Animation Variants
+/* ============================================================= */
+/* 1. IMPORT IMAGE CORRECTLY (fixed path + variable)             */
+/* ============================================================= */
+import mapPlaceholder from "@/assets/images/map-placeholder.jpg";
+
+/* ============================================================= */
+/* 2. ANIMATION VARIANTS (unchanged)                             */
+/* ============================================================= */
 const container = {
   hidden: { opacity: 0 },
   visible: {
@@ -106,8 +113,9 @@ export default function FeaturesSection() {
               Explore neighborhoods visually and discover rentals near transit,
               schools, and work.
             </p>
+            {/* FIXED: Use imported variable */}
             <img
-              src="/assets/images/map-placeholder.jpg"
+              src={mapPlaceholder}
               alt="Map preview showing rental locations"
               className="rounded-lg object-cover w-full h-48 md:h-60"
             />

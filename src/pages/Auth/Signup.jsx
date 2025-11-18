@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import SignUpForm from "./components/SignUpForm";
+import SignUpForm from "./components/SignupForm";
 import OnboardingHeader from "@/components/onboarding/OnboardingHeader";
 import OnboardingFooter from "@/components/onboarding/OnboardingFooter";
 

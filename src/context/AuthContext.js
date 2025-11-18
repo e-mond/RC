@@ -1,18 +1,8 @@
-import { createContext, useContext } from "react";
+import { createContext } from "react";
 
 /**
- * Global authentication context.
- * Holds user info, loading state, and login/logout helpers.
+ * Global Auth Context
+ * - Holds user, loading, login/logout
+ * - Used by useAuth() hook
  */
 export const AuthContext = createContext(null);
-
-/**
- * Custom hook for safely consuming AuthContext
- */
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
