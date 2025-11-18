@@ -143,7 +143,7 @@ export const getUserProfile = async () => {
 /** PASSWORD RESET */
 export const forgotPassword = async (email) => {
   try {
-    const { data } = await apiClient.post("/auth/forgot-password", { email });
+    const { data } = await apiClient.post("/auth/forgot-password/", { email });
     return data;
   } catch (err) {
     throw new Error(err.response?.data?.message || "Error sending reset link");
@@ -152,7 +152,7 @@ export const forgotPassword = async (email) => {
 
 export const resetPassword = async (token, payload) => {
   try {
-    const { data } = await apiClient.post(`/auth/reset-password/${token}`, payload);
+    const { data } = await apiClient.post(`/auth/reset-password/${token}/`, payload);
     return data;
   } catch (err) {
     throw new Error(err.response?.data?.message || "Password reset failed");

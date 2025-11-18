@@ -31,7 +31,7 @@ export default function HeroSection() {
   };
 
   return (
-    <section className="bg-[#f5f0f0] py-32 overflow-hidden">
+    <section className="bg-[#f5f0f0] py-32 overflow-hidden pt-10 md:pt-16">
       <div className="max-w-7xl mx-auto px-10 flex flex-col md:flex-row items-center justify-between gap-10">
 
         {/* LEFT SIDE: text content */}
@@ -46,7 +46,7 @@ export default function HeroSection() {
             className="inline-block px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-full"
             variants={item}
           >
-            🔒 Trust • Transparency • Efficiency
+             Trust • Transparency • Efficiency
           </motion.span>
 
           <motion.h1
@@ -65,12 +65,14 @@ export default function HeroSection() {
           </motion.p>
 
           {/* CTA Buttons */}
-          <motion.div className="flex flex-wrap gap-4 pt-2" variants={item}>
-            <PrimaryButton  className="w-1/4 bg-[#0b6e4f] hover:bg-[#095c42] text-white text-base py-2.5 rounded-lg font-medium transition-colors" as={Link} to="/role-selection">
+          <motion.div 
+          className="flex flex-wrap gap-4 pt-2 sm:flex-row sm:gap-4" variants={item}>
+            
+            <PrimaryButton  className="px-6  bg-[#0b6e4f] hover:bg-[#095c42] text-white text-base py-2.5 rounded-lg font-medium transition-colors" as={Link} to="/role-selection">
               Get Started
             </PrimaryButton>
 
-            <SecondaryButton  variant="outline" className="w-1/4 border text-base py-2.5 rounded-lg font-medium transition-colors" as={Link} to="/learn-more">
+            <SecondaryButton  variant="outline" className="px-6  border text-base py-2.5 rounded-lg font-medium transition-colors" as={Link} to="/learn-more">
               Learn More
             </SecondaryButton>
           </motion.div>

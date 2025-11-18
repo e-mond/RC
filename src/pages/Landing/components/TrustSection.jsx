@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { Link } from "react-router-dom"; 
 import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+// import { Link } from "react-router-dom";
 import verificationImg from "@/assets/images/verifications.jpg";
 import backgroundChecksImg from "@/assets/images/background-checks.jpg";
 import fraudPreventionImg from "@/assets/images/fraud-prevention.jpg";
@@ -103,6 +104,11 @@ export default function TrustSection() {
               className="px-5 py-2 text-sm border border-gray-300 rounded-full hover:bg-gray-100 transition"
             >
               Learn
+            </Link>
+            <Link
+              to="/role-selection"
+              className="px-5 py-2 text-sm bg-black text-white rounded-full hover:bg-gray-800 transition flex items-center gap-1"
+            >
             </Link>
             <Link
               to="/role-selection"
@@ -211,6 +217,7 @@ export default function TrustSection() {
               src={activeContent.image}
               alt={activeContent.title}
               className="w-full h-full object-cover"
+              loading="lazy"
             />
           </motion.div>
         </motion.div>

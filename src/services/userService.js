@@ -1,31 +1,40 @@
-import apiClient from "@/services/apiClient";
+import apiClient from "./apiClient";
 
 /**
- * Fetch all users
- * @returns {Promise<Array>} - List of all users
+ * User Service
+ * Handles all user profile-related API calls
  */
-export const getAllUsers = async () => {
-  const { data } = await apiClient.get("/users");
-  return data;
+
+/**
+ * Get current user profile
+ * @returns {Promise} User profile
+ */
+export const getProfile = async () => {
+  try {
+    const { data } = await apiClient.get("/auth/profile/");
+    return data;
+  } catch (err) {
+    console.error("Get profile error:", err);
+    throw err.response?.data || { message: "Failed to fetch profile" };
+  }
 };
 
 /**
- * Update a user's role
- * @param {string} id - User ID
- * @param {string} role - New role to assign
- * @returns {Promise<Object>} - Updated user data or status
+ * Update user profile
+ * @param {FormData|Object} profileData - Updated profile data (can include profile picture)
+ * @returns {Promise} Updated profile
  */
-export const updateUserRole = async (id, role) => {
-  const { data } = await apiClient.put(`/users/${id}/role`, { role });
-  return data;
-};
-
-/**
- * Delete a user by ID
- * @param {string} id - User ID
- * @returns {Promise<Object>} - Response from server
- */
-export const deleteUser = async (id) => {
-  const { data } = await apiClient.delete(`/users/${id}`);
-  return data;
+export const updateProfile = async (profileData) => {
+  try {
+    const isFormData = profileData instanceof FormData;
+    const config = isFormData
+      ? { headers: { "Content-Type": "multipart/form-data" } }
+      : {};
+    
+    const { data } = await apiClient.patch("/auth/profile/", profileData, config);
+    return data;
+  } catch (err) {
+    console.error("Update profile error:", err);
+    throw err.response?.data || { message: "Failed to update profile" };
+  }
 };
