@@ -4,8 +4,6 @@ import Button from "@/components/ui/Button";
 import { Download, Filter, Calendar, FileText, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
-  LineChart,
-  Line,
   BarChart,
   Bar,
   XAxis,
@@ -13,29 +11,22 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
-  Legend,
 } from "recharts";
 
-/**
- * Enhanced Reports Panel with charts and export
- */
 export default function AD_ReportsPanel() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ start: "", end: "", type: "all" });
   const [error, setError] = useState("");
 
-  const load = useCallback(async (start, end, type) => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetchReports(start || filter.start, end || filter.end);
+      const res = await fetchReports(filter.start, filter.end);
       const reportList = res.data || res || [];
       let filtered = Array.isArray(reportList) ? reportList : [];
-      
-      // Filter by type if specified
-      if (type && type !== "all") {
-        filtered = filtered.filter((r) => r.type?.toLowerCase() === type.toLowerCase());
-      } else if (filter.type && filter.type !== "all") {
+
+      if (filter.type && filter.type !== "all") {
         filtered = filtered.filter((r) => r.type?.toLowerCase() === filter.type.toLowerCase());
       }
 
@@ -46,114 +37,130 @@ export default function AD_ReportsPanel() {
     } finally {
       setLoading(false);
     }
-  }, [filter.end, filter.start, filter.type]);
+  }, [filter.start, filter.end, filter.type]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const onFilter = () => {
-    load(filter.start, filter.end, filter.type);
-  };
-
   const handleExport = () => {
     const csv = [
       ["Type", "Summary", "Created At"].join(","),
       ...reports.map((r) =>
-        [r.type || "unknown", r.summary || "", new Date(r.createdAt).toISOString()].join(",")
+        [
+          r.type || "unknown",
+          `"${(r.summary || "").replace(/"/g, '""')}"`,
+          new Date(r.createdAt).toISOString(),
+        ].join(",")
       ),
     ].join("\n");
 
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `reports-${new Date().toISOString().split("T")[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `reports-${new Date().toISOString().split("T")[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Prepare chart data
   const chartData = reports.reduce((acc, report) => {
-    const date = new Date(report.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    if (!acc[date]) {
-      acc[date] = { date, count: 0 };
-    }
-    acc[date].count += 1;
+    const date = new Date(report.createdAt).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+    acc[date] = (acc[date] || 0) + 1;
     return acc;
   }, {});
 
-  const chartDataArray = Object.values(chartData).sort((a, b) => new Date(a.date) - new Date(b.date));
+  const chartDataArray = Object.entries(chartData)
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
 
   if (loading) {
     return (
-      <div className="p-6 bg-white rounded-xl shadow-sm flex items-center justify-center min-h-[300px]">
-        <Loader2 className="w-8 h-8 animate-spin text-[#0b6e4f]" />
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-800 p-12 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-12 h-12 animate-spin text-[#0b6e4f]" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-6 bg-red-50 border border-red-200 text-red-700 rounded-xl">
-        {error}
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-2xl p-8 text-center">
+        <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
+        <p className="text-lg font-medium">{error}</p>
       </div>
     );
   }
 
   return (
-    <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <header className="flex items-center justify-between mb-6">
+    <section className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-800 p-6 lg:p-8">
+      {/* Header */}
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <FileText size={20} />
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+            <FileText className="w-8 h-8 text-[#0b6e4f]" />
             System Reports
           </h3>
-          <p className="text-sm text-gray-600 mt-1">{reports.length} report(s) found</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+            {reports.length} report{reports.length !== 1 ? "s" : ""} found
+          </p>
         </div>
-        <Button variant="outline" onClick={handleExport} className="flex items-center gap-2">
-          <Download size={16} />
+        <Button
+          onClick={handleExport}
+          className="flex items-center gap-2.5 px-5 py-3 bg-[#0b6e4f] hover:bg-[#095c42] text-white font-medium rounded-xl transition shadow-md hover:shadow-lg"
+        >
+          <Download className="w-5 h-5" />
           Export CSV
         </Button>
       </header>
 
       {/* Filters */}
-      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Calendar size={18} className="text-gray-600" />
-            <input
-              type="date"
-              value={filter.start}
-              onChange={(e) => setFilter({ ...filter, start: e.target.value })}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f]"
-            />
-            <span className="text-gray-600">to</span>
-            <input
-              type="date"
-              value={filter.end}
-              onChange={(e) => setFilter({ ...filter, end: e.target.value })}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f]"
-            />
+      <div className="mb-8 p-5 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col lg:flex-row items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
+            <div className="flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              <input
+                type="date"
+                value={filter.start}
+                onChange={(e) => setFilter({ ...filter, start: e.target.value })}
+                className="px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[#0b6e4f] focus:border-transparent transition"
+              />
+              <span className="text-gray-500 dark:text-gray-400 hidden sm:inline">—</span>
+              <input
+                type="date"
+                value={filter.end}
+                onChange={(e) => setFilter({ ...filter, end: e.target.value })}
+                className="px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[#0b6e4f] focus:border-transparent transition"
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Filter className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              <select
+                value={filter.type}
+                onChange={(e) => setFilter({ ...filter, type: e.target.value })}
+                className="px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[#0b6e4f] focus:border-transparent transition"
+              >
+                <option value="all">All Types</option>
+                <option value="user">User Reports</option>
+                <option value="property">Property Reports</option>
+                <option value="payment">Payment Reports</option>
+                <option value="maintenance">Maintenance Reports</option>
+              </select>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Filter size={18} className="text-gray-600" />
-            <select
-              value={filter.type}
-              onChange={(e) => setFilter({ ...filter, type: e.target.value })}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f]"
-            >
-              <option value="all">All Types</option>
-              <option value="user">User Reports</option>
-              <option value="property">Property Reports</option>
-              <option value="payment">Payment Reports</option>
-              <option value="maintenance">Maintenance Reports</option>
-            </select>
-          </div>
-          <Button onClick={onFilter} className="flex items-center gap-2">
-            <Filter size={16} />
+
+          <Button
+            onClick={load}
+            className="w-full sm:w-auto px-6 py-2.5 bg-[#0b6e4f] hover:bg-[#095c42] text-white font-medium rounded-xl transition shadow-md"
+          >
+            <Filter className="w-4 h-4" />
             Apply Filters
           </Button>
         </div>
@@ -161,15 +168,28 @@ export default function AD_ReportsPanel() {
 
       {/* Chart */}
       {chartDataArray.length > 0 && (
-        <div className="mb-6">
-          <h4 className="text-md font-semibold mb-4">Reports Over Time</h4>
-          <ResponsiveContainer width="100%" height={300}>
+        <div className="mb-10 p-6 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700">
+          <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Reports Activity Over Time</h4>
+          <ResponsiveContainer width="100%" height={320}>
             <BarChart data={chartDataArray}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="count" fill="#0b6e4f" />
+              <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" className="dark:stroke-gray-700" />
+              <XAxis
+                dataKey="date"
+                stroke="#6b7280"
+                className="dark:stroke-gray-400"
+                tick={{ fontSize: 14 }}
+              />
+              <YAxis stroke="#6b7280" className="dark:stroke-gray-400" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "rgba(255, 255, 255, 0.95)",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "12px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                }}
+                labelStyle={{ color: "#374151", fontWeight: "bold" }}
+              />
+              <Bar dataKey="count" fill="#0b6e4f" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -177,32 +197,38 @@ export default function AD_ReportsPanel() {
 
       {/* Reports List */}
       {reports.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <p>No reports found</p>
+        <div className="text-center py-20">
+          <FileText className="w-20 h-20 mx-auto mb-6 text-gray-300 dark:text-gray-700" />
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Reports Found</h3>
+          <p className="text-gray-600 dark:text-gray-400">Try adjusting your filters or date range.</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {reports.map((r) => (
+        <div className="grid gap-4">
+          {reports.map((r, idx) => (
             <motion.div
-              key={r.id}
-              initial={{ opacity: 0, y: 10 }}
+              key={r.id || idx}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+              transition={{ delay: idx * 0.05 }}
+              className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 hover:border-[#0b6e4f]/50 dark:hover:border-[#0b6e4f]/30 transition-all hover:shadow-md"
             >
-              <div className="flex items-start justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium uppercase">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="px-3 py-1 bg-[#0b6e4f]/10 dark:bg-[#0b6e4f]/20 text-[#0b6e4f] rounded-full text-xs font-bold uppercase tracking-wider">
                       {r.type || "unknown"}
                     </span>
-                    <span className="text-xs text-gray-500">
-                      {new Date(r.createdAt).toLocaleString()}
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {new Date(r.createdAt).toLocaleString("en-GH")}
                     </span>
                   </div>
-                  <div className="font-medium text-gray-900">{r.summary || r.title || "No summary"}</div>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {r.summary || r.title || "Untitled Report"}
+                  </h4>
                   {r.description && (
-                    <div className="text-sm text-gray-600 mt-1">{r.description}</div>
+                    <p className="mt-2 text-gray-600 dark:text-gray-400 leading-relaxed">
+                      {r.description}
+                    </p>
                   )}
                 </div>
               </div>

@@ -10,7 +10,12 @@ import SectionCard from "@/modules/dashboard/SectionCard";
 
 export default function TenantDashboard() {
   const { isPremium } = useFeatureAccess();
-  const [summary, setSummary] = useState({ upcomingDue: 0, dueCount: 0, favoritesCount: 0, maintenanceCount: 0 });
+  const [summary, setSummary] = useState({
+    upcomingDue: 0,
+    dueCount: 0,
+    favoritesCount: 0,
+    maintenanceCount: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -47,7 +52,9 @@ export default function TenantDashboard() {
     };
 
     loadSummary();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [isPremium]);
 
   const metricCards = [
@@ -102,25 +109,42 @@ export default function TenantDashboard() {
       href: "/tenant/history",
       tone: "blue",
     },
-    isPremium && {
-      title: "Maintenance",
-      description: "Track premium maintenance requests",
-      icon: Wrench,
-      href: "/tenant/maintenance",
-      tone: "amber",
-    },
-  ].filter(Boolean);
+    ...(isPremium
+      ? [
+          {
+            title: "Maintenance",
+            description: "Track premium maintenance requests",
+            icon: Wrench,
+            href: "/tenant/maintenance",
+            tone: "amber",
+          },
+        ]
+      : []),
+  ];
 
   return (
-    <div className="space-y-8">
-      <PageHeader title="Welcome back" subtitle="Here’s your rental overview as of today." badge={isPremium ? "Premium Tenant" : null} />
+    <div className="p-6 space-y-8">
+      <PageHeader
+        title="Welcome back"
+        subtitle="Here’s your rental overview as of today."
+        badge={isPremium ? "Premium Tenant" : null}
+      />
 
-      {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
+      {error && (
+        <div className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/20 p-4 text-sm text-red-700 dark:text-red-400">
+          {error}
+        </div>
+      )}
 
       <MetricGrid items={metricCards} />
+
       <ActionGrid items={actions} />
 
-      <SectionCard title="My Rentals" description="Active leases and due payments">
+      <SectionCard
+        title="My Rentals"
+        description="Active leases and upcoming payments"
+        className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm dark:shadow-none"
+      >
         <TN_MyRentals />
       </SectionCard>
     </div>

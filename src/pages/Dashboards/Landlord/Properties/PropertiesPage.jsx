@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { getAllProperties } from "@/services/propertyService";
 import { Button } from "@/components/ui/button";
@@ -19,30 +18,33 @@ export default function PropertiesPage() {
   return (
     <div className="p-6">
       <div className="flex justify-between mb-4">
-        <h1 className="text-xl font-semibold">Properties</h1>
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Properties</h1>
         <Button asChild>
           <Link to="/landlord/properties/new">Add Property</Link>
         </Button>
       </div>
 
-      <div className="bg-white shadow rounded-lg">
+      <div className="bg-white dark:bg-gray-900 shadow rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
         <table className="w-full text-left">
-          <thead>
-            <tr className="border-b">
-              <th className="p-3">Name</th>
-              <th className="p-3">Location</th>
-              <th className="p-3">Rent</th>
-              <th className="p-3">Actions</th>
+          <thead className="bg-gray-50 dark:bg-gray-800/60">
+            <tr className="border-b border-gray-200 dark:border-gray-700">
+              <th className="p-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Name</th>
+              <th className="p-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Location</th>
+              <th className="p-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Rent</th>
+              <th className="p-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
             </tr>
           </thead>
 
           <tbody>
             {properties.map((p) => (
-              <tr key={p.id} className="border-b">
-                <td className="p-3">{p.name}</td>
-                <td className="p-3">{p.location}</td>
-                <td className="p-3">${p.rent}</td>
-                <td className="p-3 flex gap-2">
+              <tr
+                key={p.id}
+                className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+              >
+                <td className="p-3 text-gray-900 dark:text-gray-100">{p.name}</td>
+                <td className="p-3 text-gray-600 dark:text-gray-400">{p.location}</td>
+                <td className="p-3 font-medium text-gray-900 dark:text-gray-100">${p.rent}</td>
+                <td className="p-3">
                   <Button variant="outline" size="sm" asChild>
                     <Link to={`/landlord/properties/${p.id}/edit`}>Edit</Link>
                   </Button>
@@ -55,4 +57,3 @@ export default function PropertiesPage() {
     </div>
   );
 }
-

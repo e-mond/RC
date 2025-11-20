@@ -251,7 +251,7 @@ export default function AD_UserApprovals() {
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => handleToggleSelect(u.id)}
-                  className="flex-shrink-0"
+                  className="shrink-0"
                 >
                   {selectedUsers.has(u.id) ? (
                     <CheckSquare size={20} className="text-[#0b6e4f]" />

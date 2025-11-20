@@ -69,10 +69,7 @@ export default function TN_MyRentals() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <header>
-        <h2 className="text-xl font-bold text-[#0f1724]">My Rentals</h2>
-        <p className="text-sm text-gray-600">Manage payments and view your rental agreements</p>
-      </header>
+      
 
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">

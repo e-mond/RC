@@ -1,6 +1,6 @@
 // src/pages/Dashboards/Admin/AdminApprovals.jsx
-import AD_UserApprovals from "./components/AD_UserApprovals";
-import AD_PropertyApprovals from "./components/AD_PropertyApprovals";
+import AD_UserApprovals from "./AD_UserApprovals";
+import AD_PropertyApprovals from "./AD_PropertyApprovals";
 import { useAuthStore } from "@/stores/authStore";
 import PageHeader from "@/modules/dashboard/PageHeader";
 import SectionCard from "@/modules/dashboard/SectionCard";

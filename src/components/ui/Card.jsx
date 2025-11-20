@@ -41,7 +41,13 @@ export const Card = React.forwardRef(
       <motion.div
         ref={ref}
         className={clsx(
-          "bg-white rounded-2xl shadow-sm overflow-hidden transition-all",
+          // ←←← ONLY THESE LINES CHANGED → dark mode support
+          "bg-white dark:bg-gray-900",
+          "text-gray-900 dark:text-gray-100",
+          "shadow-sm dark:shadow-none",
+          "border border-gray-100 dark:border-gray-800",
+          // ←←← end of changes
+          "rounded-2xl overflow-hidden transition-all",
           hoverLift && "hover:shadow-lg hover:-translate-y-1",
           "p-5 sm:p-6",
           className
@@ -63,10 +69,12 @@ export const Card = React.forwardRef(
 
         <div className={imageSrc ? "pt-2" : ""}>
           {title && (
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              {title}
+            </h3>
           )}
           {description && (
-            <p className="text-sm text-gray-600">{description}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{description}</p>
           )}
           {children && <div className="mt-4">{children}</div>}
         </div>
@@ -77,7 +85,7 @@ export const Card = React.forwardRef(
 
 Card.displayName = "Card";
 
-// ---------- Add these missing named exports (Shadcn-style) ----------
+// ---------- Shadcn-style sub-components (also dark-mode ready) ----------
 export function CardHeader({ className, ...props }) {
   return (
     <div
@@ -90,7 +98,10 @@ export function CardHeader({ className, ...props }) {
 export function CardTitle({ className, ...props }) {
   return (
     <h3
-      className={clsx("text-2xl font-semibold leading-none tracking-tight", className)}
+      className={clsx(
+        "text-2xl font-semibold leading-none tracking-tight",
+        className
+      )}
       {...props}
     />
   );
