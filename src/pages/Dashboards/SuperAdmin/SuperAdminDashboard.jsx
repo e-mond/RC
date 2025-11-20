@@ -16,13 +16,6 @@ import PageHeader from "@/modules/dashboard/PageHeader";
 import SectionCard from "@/modules/dashboard/SectionCard";
 import MockDataEditor from "./components/MockDataEditor";
 
-/**
- * SUPER ADMIN DASHBOARD
- * - Ghana Time (GMT)
- * - No AnimatePresence warnings
- * - Unique keys
- * - Real + Mock API
- */
 export default function SuperAdminDashboard() {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
@@ -67,66 +60,122 @@ export default function SuperAdminDashboard() {
   }, [loadDashboardData]);
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title="Super Admin Overview"
-        subtitle={`Monitor platform health • ${timeStr}`}
-        badge="Platform Control"
-        actions={
-          <button
-            onClick={() => setOpenCreateModal(true)}
-            className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
-          >
-            + Create User
-          </button>
-        }
-      />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 space-y-10">
+        
+        {/* Enhanced Header with Live Time Badge */}
+        <PageHeader
+          title="Super Admin Overview"
+          subtitle="Platform-wide monitoring & control"
+          badge="Platform Control"
+          align="between"
+          actions={
+            <button
+              onClick={() => setOpenCreateModal(true)}
+              className="inline-flex items-center gap-2.5 px-6 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl"
+            >
+              + Create User
+            </button>
+          }
+        />
 
-      {loading && <DashboardSkeleton />}
-
-      {error && !loading && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
-          <AlertCircle size={40} className="mx-auto mb-3 text-red-600" />
-          <p className="text-red-800">{error}</p>
-          <button
-            onClick={loadDashboardData}
-            className="mt-3 rounded-lg bg-red-600 px-5 py-2 text-white hover:bg-red-700"
-          >
-            Retry
-          </button>
+        {/* Live Ghana Time Badge */}
+        <div className="flex justify-center">
+          <div className="inline-flex items-center gap-3 px-6 py-3 bg-linear-to-r from-[#0b6e4f]/10 to-emerald-600/10 dark:from-emerald-900/30 dark:to-[#0b6e4f]/20 border border-emerald-600/30 dark:border-emerald-500/40 rounded-full backdrop-blur-sm">
+            <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="font-mono text-lg font-semibold text-emerald-700 dark:text-emerald-300">
+              {timeStr}
+            </span>
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Ghana Time (GMT)</span>
+          </div>
         </div>
-      )}
 
-      {!loading && !error && (
-        <>
-          <SectionCard title="System Statistics" description="Real-time KPIs">
-            <SA_StatsOverview stats={stats} />
-          </SectionCard>
+        {/* Loading State */}
+        {loading && <DashboardSkeleton />}
 
-          <SectionCard title="System Health" description="Latency, uptime & service map">
-            <SA_SystemHealth stats={stats?.systemHealth} />
-          </SectionCard>
+        {/* Error State */}
+        {error && !loading && (
+          <div className="rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/20 p-8 text-center">
+            <AlertCircle size={56} className="mx-auto mb-4 text-red-600 dark:text-red-400" />
+            <p className="text-lg font-medium text-red-800 dark:text-red-300">{error}</p>
+            <button
+              onClick={loadDashboardData}
+              className="mt-6 rounded-xl bg-red-600 px-8 py-3 text-white font-semibold hover:bg-red-700 transition"
+            >
+              Retry Loading
+            </button>
+          </div>
+        )}
 
-          <SectionCard title="Role Distribution" description="Active accounts by role">
-            <SA_RoleDistributionChart data={stats?.roles} />
-          </SectionCard>
+        {/* Main Content - All Sections with Dark Mode */}
+        {!loading && !error && (
+          <>
+            <SectionCard
+              title="System Statistics"
+              description="Real-time platform KPIs and growth metrics"
+              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm dark:shadow-none"
+            >
+              <SA_StatsOverview stats={stats} />
+            </SectionCard>
 
-          <SectionCard title="User Directory" description="Manage admins, tenants and landlords">
-            <SA_UserTable users={users} onCreate={() => setOpenCreateModal(true)} onDelete={setDeleteTarget} />
-          </SectionCard>
+            <SectionCard
+              title="System Health"
+              description="Uptime, latency, and service status monitoring"
+              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm dark:shadow-none"
+            >
+              <SA_SystemHealth stats={stats?.systemHealth} />
+            </SectionCard>
 
-          <SectionCard title="Recent Activity" description="Latest platform events">
-            <SA_ActivityFeed activity={activity} />
-          </SectionCard>
+            <SectionCard
+              title="Role Distribution"
+              description="Breakdown of active accounts by user role"
+              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm dark:shadow-none"
+            >
+              <SA_RoleDistributionChart data={stats?.roles} />
+            </SectionCard>
 
-          <SectionCard title="Mock Data Editor" description="Curate the demo dataset before switching to live mode">
-            <MockDataEditor />
-          </SectionCard>
-        </>
-      )}
+            <SectionCard
+              title="User Directory"
+              description="Full control over all platform users"
+              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm dark:shadow-none"
+            >
+              <SA_UserTable
+                users={users}
+                onCreate={() => setOpenCreateModal(true)}
+                onDelete={setDeleteTarget}
+              />
+            </SectionCard>
 
-      <SA_CreateUserModal open={openCreateModal} onClose={() => setOpenCreateModal(false)} onSuccess={loadDashboardData} />
-      <SA_DeleteUserModal user={deleteTarget} onClose={() => setDeleteTarget(null)} onSuccess={loadDashboardData} />
+            <SectionCard
+              title="Recent Activity"
+              description="Latest actions across the entire platform"
+              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm dark:shadow-none"
+            >
+              <SA_ActivityFeed activity={activity} />
+            </SectionCard>
+
+            <SectionCard
+              title="Mock Data Editor"
+              description="Safely curate demo data before going live"
+              className="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-2xl"
+            >
+              <MockDataEditor />
+            </SectionCard>
+          </>
+        )}
+
+        {/* Modals */}
+        <SA_CreateUserModal
+          open={openCreateModal}
+          onClose={() => setOpenCreateModal(false)}
+          onSuccess={loadDashboardData}
+        />
+        <SA_DeleteUserModal
+          user={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onSuccess={loadDashboardData}
+        />
+      </div>
     </div>
   );
 }

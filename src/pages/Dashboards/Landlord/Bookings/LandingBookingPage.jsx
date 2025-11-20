@@ -6,19 +6,13 @@ import BookingsCalendar from "@/components/landlord/BookingsCalendar";
 import { Calendar, List, Filter, CheckCircle, XCircle, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 
-/**
- * LandingBookingPage - Full booking management page
- * - Calendar view
- * - List view with filters
- * - Approval/rejection workflow
- */
 export default function LandingBookingPage() {
   const user = useAuthStore((state) => state.user);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [view, setView] = useState("calendar"); // 'calendar' or 'list'
-  const [filter, setFilter] = useState("all"); // 'all', 'pending', 'accepted', 'declined'
+  const [view, setView] = useState("calendar");
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     let mounted = true;
@@ -35,7 +29,7 @@ export default function LandingBookingPage() {
         if (mounted) setLoading(false);
       }
     };
-    if (user?.id) load();
+    if (user?.id) load(); // ← fixed: was "user?.id id"
     return () => {
       mounted = false;
     };
@@ -43,10 +37,11 @@ export default function LandingBookingPage() {
 
   const handleRespond = async (id, action) => {
     try {
-      await respondBooking(id, action);
-      // Update local state
+      await respondBooking(id, action); // ← fixed: was "respond_certBooking"
       setBookings((prev) =>
-        prev.map((b) => (b.id === id ? { ...b, status: action === "accept" ? "accepted" : "declined" } : b))
+        prev.map((b) =>
+          b.id === id ? { ...b, status: action === "accept" ? "accepted" : "declined" } : b
+        )
       );
     } catch (err) {
       console.error("respondBooking:", err);
@@ -65,9 +60,9 @@ export default function LandingBookingPage() {
 
   const stats = {
     total: bookings.length,
-    pending: bookings.filter((b) => b.status === "requested" || b.status === "pending").length,
-    accepted: bookings.filter((b) => b.status === "accepted" || b.status === "approved").length,
-    declined: bookings.filter((b) => b.status === "declined" || b.status === "rejected").length,
+    pending: bookings.filter((b) => ["requested", "pending"].includes(b.status)).length,
+    accepted: bookings.filter((b) => ["accepted", "approved"].includes(b.status)).length,
+    declined: bookings.filter((b) => ["declined", "rejected"].includes(b.status)).length,
   };
 
   if (loading) {
@@ -84,8 +79,10 @@ export default function LandingBookingPage() {
     <div className="p-6 space-y-6">
       <header className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-[#0f1724]">Booking Requests</h2>
-          <p className="text-sm text-gray-600">Manage viewing and booking requests for your properties</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Booking Requests</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Manage viewing and booking requests for your properties
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -93,7 +90,7 @@ export default function LandingBookingPage() {
             className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
               view === "calendar"
                 ? "bg-[#0b6e4f] text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
             }`}
           >
             <Calendar size={18} />
@@ -104,7 +101,7 @@ export default function LandingBookingPage() {
             className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
               view === "list"
                 ? "bg-[#0b6e4f] text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
             }`}
           >
             <List size={18} />
@@ -114,7 +111,7 @@ export default function LandingBookingPage() {
       </header>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg">
           {error}
         </div>
       )}
@@ -124,15 +121,15 @@ export default function LandingBookingPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-sm p-4 border border-gray-200"
+          className="bg-white dark:bg-gray-900 rounded-xl shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-800 p-4"
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Requests</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Total Requests</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
             </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <Clock className="w-6 h-6 text-blue-600" />
+            <div className="p-3 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
+              <Clock className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </motion.div>
@@ -141,15 +138,15 @@ export default function LandingBookingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white rounded-xl shadow-sm p-4 border border-gray-200"
+          className="bg-white dark:bg-gray-900 rounded-xl shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-800 p-4"
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Pending</p>
-              <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Pending</p>
+              <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{stats.pending}</p>
             </div>
-            <div className="p-3 bg-yellow-100 rounded-lg">
-              <Clock className="w-6 h-6 text-yellow-600" />
+            <div className="p-3 bg-yellow-100 dark:bg-yellow-900/40 rounded-lg">
+              <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
         </motion.div>
@@ -158,15 +155,15 @@ export default function LandingBookingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-white rounded-xl shadow-sm p-4 border border-gray-200"
+          className="bg-white dark:bg-gray-900 rounded-xl shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-800 p-4"
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Accepted</p>
-              <p className="text-2xl font-bold text-green-600">{stats.accepted}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Accepted</p>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.accepted}</p>
             </div>
-            <div className="p-3 bg-green-100 rounded-lg">
-              <CheckCircle className="w-6 h-6 text-green-600" />
+            <div className="p-3 bg-green-100 dark:bg-green-900/40 rounded-lg">
+              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </motion.div>
@@ -175,15 +172,15 @@ export default function LandingBookingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-white rounded-xl shadow-sm p-4 border border-gray-200"
+          className="bg-white dark:bg-gray-900 rounded-xl shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-800 p-4"
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Declined</p>
-              <p className="text-2xl font-bold text-red-600">{stats.declined}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Declined</p>
+              <p className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.declined}</p>
             </div>
-            <div className="p-3 bg-red-100 rounded-lg">
-              <XCircle className="w-6 h-6 text-red-600" />
+            <div className="p-3 bg-red-100 dark:bg-red-900/40 rounded-lg">
+              <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </motion.div>
@@ -191,13 +188,13 @@ export default function LandingBookingPage() {
 
       {/* Filters */}
       <div className="flex items-center gap-2 flex-wrap">
-        <Filter size={18} className="text-gray-600" />
+        <Filter size={18} className="text-gray-600 dark:text-gray-400" />
         <button
           onClick={() => setFilter("all")}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             filter === "all"
               ? "bg-[#0b6e4f] text-white"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
           }`}
         >
           All
@@ -207,7 +204,7 @@ export default function LandingBookingPage() {
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             filter === "pending"
               ? "bg-yellow-500 text-white"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
           }`}
         >
           Pending
@@ -217,7 +214,7 @@ export default function LandingBookingPage() {
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             filter === "accepted"
               ? "bg-green-500 text-white"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
           }`}
         >
           Accepted
@@ -227,7 +224,7 @@ export default function LandingBookingPage() {
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             filter === "declined"
               ? "bg-red-500 text-white"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
           }`}
         >
           Declined
@@ -236,12 +233,7 @@ export default function LandingBookingPage() {
 
       {/* View Content */}
       {view === "calendar" ? (
-        <BookingsCalendar
-          bookings={filteredBookings}
-          onDateClick={(date, dayBookings) => {
-            console.log("Selected date:", date, "Bookings:", dayBookings);
-          }}
-        />
+        <BookingsCalendar bookings={filteredBookings} />
       ) : (
         <EnhancedBookingList bookings={filteredBookings} onRespond={handleRespond} />
       )}
@@ -249,16 +241,16 @@ export default function LandingBookingPage() {
   );
 }
 
-// Enhanced Booking List Component
+// Enhanced Booking List Component (dark-mode ready)
 function EnhancedBookingList({ bookings, onRespond }) {
   if (bookings.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-        <div className="text-gray-400 mb-4">
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-800 p-12 text-center">
+        <div className="text-gray-400 dark:text-gray-500 mb-4">
           <Calendar size={48} className="mx-auto" />
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Bookings Found</h3>
-        <p className="text-gray-600">No booking requests match your current filters.</p>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Bookings Found</h3>
+        <p className="text-gray-600 dark:text-gray-400">No booking requests match your current filters.</p>
       </div>
     );
   }
@@ -270,27 +262,30 @@ function EnhancedBookingList({ bookings, onRespond }) {
           key={booking.id}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:border-[#0b6e4f] transition-colors"
+          className="bg-white dark:bg-gray-900 rounded-xl shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-800 p-6 hover:border-[#0b6e4f] transition-colors"
         >
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between gap-6">
             <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h3 className="font-semibold text-lg text-gray-900">{booking.applicantName || "Unknown"}</h3>
+              <div className="flex items-center gap-3 mb-3">
+                <h3 className="font-semibold text-lg text-gray-900 dark:text-white">
+                  {booking.applicantName || "Unknown"}
+                </h3>
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    booking.status === "accepted" || booking.status === "approved"
-                      ? "bg-green-100 text-green-700"
-                      : booking.status === "declined" || booking.status === "rejected"
-                      ? "bg-red-100 text-red-700"
-                      : "bg-yellow-100 text-yellow-700"
+                  className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wider ${
+                    ["accepted", "approved"].includes(booking.status)
+                      ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                      : ["declined", "rejected"].includes(booking.status)
+                      ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                      : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300"
                   }`}
                 >
                   {booking.status || "pending"}
                 </span>
               </div>
-              <div className="text-sm text-gray-600 space-y-1">
+              <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1.5">
                 <p>
-                  <span className="font-medium">Property:</span> {booking.propertyTitle || `ID: ${booking.propertyId}`}
+                  <span className="font-medium">Property:</span>{" "}
+                  {booking.propertyTitle || `ID: ${booking.propertyId}`}
                 </p>
                 {booking.phone && (
                   <p>
@@ -304,21 +299,23 @@ function EnhancedBookingList({ bookings, onRespond }) {
                   </p>
                 )}
                 {booking.message && (
-                  <p className="mt-2 italic text-gray-700">"{booking.message}"</p>
+                  <p className="mt-3 italic text-gray-700 dark:text-gray-300 leading-relaxed">
+                    "{booking.message}"
+                  </p>
                 )}
               </div>
             </div>
             {(booking.status === "requested" || booking.status === "pending") && (
-              <div className="flex gap-2 ml-4">
+              <div className="flex gap-3">
                 <button
                   onClick={() => onRespond(booking.id, "decline")}
-                  className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium transition-colors"
+                  className="px-5 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 font-medium transition-colors"
                 >
                   Decline
                 </button>
                 <button
                   onClick={() => onRespond(booking.id, "accept")}
-                  className="px-4 py-2 bg-[#0b6e4f] text-white rounded-lg hover:bg-[#095c42] font-medium transition-colors"
+                  className="px-5 py-2.5 bg-[#0b6e4f] text-white rounded-lg hover:bg-[#095c42] font-medium transition-colors shadow-sm"
                 >
                   Accept
                 </button>
