@@ -1,121 +1,91 @@
+import React, { Suspense } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
+import { Toaster } from "react-hot-toast";
 
-import LandingPage from "./pages/Landing/LandingPage";
+// Public Pages
+import LandingPage from "@/pages/Landing/LandingPage";
 import LearnMore from "@/pages/LearnMore/LearnMore";
+import RoleSelection from "@/components/onboarding/RoleSelection";
 
 import Blog from "@/pages/Blog";
 import BlogPost from "@/pages/BlogPost";
-import RoleSelection from "@/components/onboarding/RoleSelection";
-import Signup from "./pages/Auth/Signup";
+
+// Auth Pages
 import Login from "@/pages/Auth/Login";
+import Signup from "@/pages/Auth/Signup";
 import ForgotPassword from "@/pages/Auth/ForgotPassword";
 import ResetPassword from "@/pages/Auth/ResetPassword";
 
-// Dashboard imports
-import TenantDashboard from "@/pages/Dashboards/TenantDashboard";
-import LandlordDashboard from "@/pages/Dashboards/LandlordDashboard";
-import ArtisanDashboard from "@/pages/Dashboards/ArtisanDashboard";
-import AdminDashboard from "@/pages/Dashboards/AdminDashboard";
-import SuperAdminDashboard from "@/pages/Dashboards/SuperAdminDashboard";
+// Secure Routes (all protected dashboard & app pages)
+import SecureRoutes from "@/routes/secureRoutes";
 
-// Property imports
-import PropertyList from "@/pages/Properties/PropertyList";
-import PropertyDetail from "@/pages/Properties/PropertyDetail";
-import AddProperty from "@/pages/Landlord/AddProperty";
+// Layouts
+import PublicLayout from "@/components/layout/PublicLayout";
 
-// Profile imports
-import ProfileView from "@/pages/Profile/ProfileView";
-import ProfileEdit from "@/pages/Profile/ProfileEdit";
+// 404
+import NotFound from "@/pages/NotFound";
 
-// Maintenance imports
-import MaintenanceRequestList from "@/pages/Maintenance/MaintenanceRequestList";
-import MaintenanceRequestForm from "@/pages/Maintenance/MaintenanceRequestForm";
-
-// Booking imports
-import BookingList from "@/pages/Bookings/BookingList";
-import BookingForm from "@/pages/Bookings/BookingForm";
-
-// Payment imports
-import PaymentHistory from "@/pages/Payments/PaymentHistory";
-
-// Chat imports
-import ChatInterface from "@/pages/Chat/ChatInterface";
-
-// Notifications imports
-import NotificationsPage from "@/pages/Notifications/NotificationsPage";
-
-// Support imports
-import HelpCenter from "@/pages/Support/HelpCenter";
-
-// Documents imports
-import DocumentsPage from "@/pages/Documents/DocumentsPage";
+// Dev Tools (only in development)
+import DebugToggle from "@/components/DebugToggle";
+import RoleSwitcher from "@/components/RoleSwitcher";
 
 function AnimatedRoutes() {
   const location = useLocation();
 
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
-        {/* Public Routes */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/learn-more" element={<LearnMore />} />
-        <Route path="/role-selection" element={<RoleSelection />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password/:token" element={<ResetPassword />} />
-        <Route path="/blog" element={<Blog />} />
-        <Route path="/blog/:slug" element={<BlogPost />} />
-        
-        {/* Dashboard Routes */}
-        <Route path="/dashboard/tenant" element={<TenantDashboard />} />
-        <Route path="/dashboard/landlord" element={<LandlordDashboard />} />
-        <Route path="/dashboard/artisan" element={<ArtisanDashboard />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="/super-admin/overview" element={<SuperAdminDashboard />} />
-        
-        {/* Property Routes */}
-        <Route path="/properties" element={<PropertyList />} />
-        <Route path="/properties/:id" element={<PropertyDetail />} />
-        <Route path="/properties/add" element={<AddProperty />} />
-        <Route path="/properties/:id/edit" element={<AddProperty />} />
-        
-        {/* Profile Routes */}
-        <Route path="/profile" element={<ProfileView />} />
-        <Route path="/profile/edit" element={<ProfileEdit />} />
-        <Route path="/profile/:userId" element={<ProfileView />} />
-        
-        {/* Maintenance Routes */}
-        <Route path="/maintenance" element={<MaintenanceRequestList />} />
-        <Route path="/maintenance/new" element={<MaintenanceRequestForm />} />
-        <Route path="/maintenance/:id" element={<MaintenanceRequestForm />} />
-        
-        {/* Booking Routes */}
-        <Route path="/bookings" element={<BookingList />} />
-        <Route path="/bookings/new" element={<BookingForm />} />
-        
-        {/* Payment Routes */}
-        <Route path="/payments/history" element={<PaymentHistory />} />
-        
-        {/* Chat Routes */}
-        <Route path="/chat" element={<ChatInterface />} />
-        <Route path="/chat/:conversationId" element={<ChatInterface />} />
+    <>
+      <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
 
-        {/* Notifications Routes */}
-        <Route path="/notifications" element={<NotificationsPage />} />
+      {/* Only wrap page transitions with AnimatePresence */}
+      <AnimatePresence mode="wait" initial={false}>
+        <Routes location={location} key={location.pathname || location.key || "route"}>
+          {/* ====================== PUBLIC ROUTES ====================== */}
+          <Route element={<PublicLayout />}>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/learn-more" element={<LearnMore />} />
+            <Route path="/role-selection" element={<RoleSelection />} />
 
-        {/* Support Routes */}
-        <Route path="/help" element={<HelpCenter />} />
-        <Route path="/support" element={<HelpCenter />} />
+            {/* Blog - public */}
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
+          </Route>
 
-        {/* Documents Routes (Premium) */}
-        <Route path="/documents" element={<DocumentsPage />} />
-      </Routes>
-    </AnimatePresence>
+          {/* ====================== AUTH ROUTES ====================== */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
+
+          {/* ====================== PROTECTED ROUTES ====================== */}
+          <Route path="/*" element={<SecureRoutes />} />
+
+          {/* ====================== 404 ====================== */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </AnimatePresence>
+
+      {/* Dev tools only in development */}
+      {import.meta.env.DEV && (
+        <div className="fixed bottom-4 left-4 z-50 flex flex-col gap-2">
+          <DebugToggle key="debug-toggle" />
+          <RoleSwitcher key="role-switcher" />
+        </div>
+      )}
+    </>
   );
 }
 
 export default function App() {
-  return <AnimatedRoutes />;
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-gray-50">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#0b6e4f] border-t-transparent" />
+        </div>
+      }
+    >
+      <AnimatedRoutes />
+    </Suspense>
+  );
 }

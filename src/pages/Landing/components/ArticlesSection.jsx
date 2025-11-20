@@ -1,75 +1,133 @@
 import { Newspaper, Radio } from "lucide-react";
-import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import mapPlaceholder from "@/assets/images/map-placeholder.jpg";
 
 export default function ArticlesSection() {
+
+  const container = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.15,
+        delayChildren: 0.2,
+      },
+    },
+  };
+
+  const item = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5, ease: "easeOut" },
+    },
+  };
+
+  const imageVariant = {
+    hidden: { opacity: 0, x: -50 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: { duration: 0.7, ease: "easeOut" },
+    },
+  };
+
   return (
     <section className="bg-[#d6f3f0] py-20">
-      <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-3 gap-8 items-start">
+      <div className="max-w-6xl mx-auto px-6">
+        <motion.div
+          className="grid md:grid-cols-3 gap-8 items-start"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+          variants={container}
+        >
+          {/* --- Main Article Card --- */}
+          <motion.div
+            className="md:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6"
+            variants={item}
+            whileHover={{
+              y: -6,
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
+              transition: { duration: 0.3 },
+            }}
+          >
+            <motion.h3
+              className="text-lg font-semibold text-gray-900 mb-1"
+              variants={item}
+            >
+              Ghana Living, Modernized
+            </motion.h3>
+            <motion.p
+              className="text-gray-600 text-sm mb-4"
+              variants={item}
+            >
+              Built for the local rental market with trusted tools and culturally aware workflows.
+            </motion.p>
 
-        {/* ---- Main Card ---- */}
-        <div className="md:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">
-            Ghana Living, Modernized
-          </h3>
-          <p className="text-gray-600 text-sm mb-4">
-            Built for the local rental market with trusted tools and culturally aware workflows.
-          </p>
+            {/* Image – animated from left */}
+            <motion.div
+              className="rounded-lg overflow-hidden"
+              variants={imageVariant}
+            >
+              <img
+                src={mapPlaceholder}
+                alt="Modern apartment building in Ghana"
+                className="w-full h-56 object-cover transition-transform duration-500 hover:scale-105"
+              />
+            </motion.div>
+          </motion.div>
 
-          {/* Google Maps + offline thumbnail */}
-          <div className="relative rounded-lg overflow-hidden shadow-md">
-            <iframe
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3975.1824505969616!2d-1.7590208263900986!3d4.909114795066785!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xfe779f45ffa27bf%3A0x62727756ebcdfcad!2sTakoradi%20Technical%20University!5e0!3m2!1sen!2sgh!4v1762900007880!5m2!1sen!2sgh"
-              width="100%"
-              height="300"
-              style={{ border: 0 }}
-              allowFullScreen=""
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              title="Takoradi Technical University"
-              className="w-full"
-              onError={(e) => {
-                e.target.style.display = "none";
-                const img = e.target.parentElement.querySelector("img");
-                if (img) img.style.display = "block";
-              }}
-            ></iframe>
+          {/* --- Press Mentions Card --- */}
+          <motion.div
+            className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
+            variants={item}
+            whileHover={{
+              y: -6,
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
+              transition: { duration: 0.3 },
+            }}
+          >
+            <motion.h4
+              className="text-md font-semibold text-gray-900 mb-4"
+              variants={item}
+            >
+              In the Press
+            </motion.h4>
 
-            {/* Fallback thumbnail */}
-            <img
-              src="/assets/images/ttu-thumbnail.jpg"
-              alt="Takoradi Technical University – map thumbnail"
-              className="absolute inset-0 w-full h-full object-cover hidden"
-            />
-          </div>
-        </div>
-
-        {/* ---- Press Card ---- */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h4 className="text-md font-semibold text-gray-900 mb-4">
-            In the Press
-          </h4>
-          <ul className="space-y-3 text-sm text-gray-700">
-            <li className="flex items-center gap-2">
-              <Newspaper className="text-teal-600 w-5 h-5 flex-shrink-0" />
-              <Link
-                to="/blog/proptech-report-2025"
-                className="underline hover:text-teal-600 transition-colors"
-              >
-                Featured in emerging proptech reports
-              </Link>
-            </li>
-            <li className="flex items-center gap-2">
-              <Radio className="text-teal-600 w-5 h-5 flex-shrink-0" />
-              <Link
-                to="/blog/radio-interview-ghana-living"
-                className="underline hover:text-teal-600 transition-colors"
-              >
-                Discussed on local business radio
-              </Link>
-            </li>
-          </ul>
-        </div>
-
+            <motion.ul className="space-y-3 text-sm text-gray-700">
+              {[
+                {
+                  icon: Newspaper,
+                  text: "Featured in emerging proptech reports",
+                  href: "https://example.com/proptech-report",
+                },
+                {
+                  icon: Radio,
+                  text: "Discussed on local business radio",
+                  href: "https://example.com/radio-interview",
+                },
+              ].map((li, idx) => (
+                <motion.li
+                  key={idx}
+                  className="flex items-center gap-2"
+                  variants={item}
+                >
+                <li.icon className="text-teal-600 w-5 h-5 shrink-0" />
+                  <a
+                    href={li.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-teal-600 hover:underline transition"
+                  >
+                    {li.text}
+                  </a>
+                </motion.li>
+              ))}
+            </motion.ul>
+          </motion.div>
+        </motion.div>
       </div>
     </section>
   );

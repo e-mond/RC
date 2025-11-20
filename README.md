@@ -1,312 +1,188 @@
-#  Rental Connects (RC)
 
-**Rental Connects (RC)** is a modern, responsive, and dynamic web platform that bridges the gap between **tenants**, **landlords**, and **artisans** in Ghana’s rental ecosystem.  
-This repository hosts the **frontend** built with **React + Vite**, powered by **Tailwind CSS** and **Framer Motion** for a fast, scalable, and engaging user experience.
+# 🏡 Rental Connects (RC)
 
----
+**Rental Connects (RC)** is a modern, scalable, and role-driven rental ecosystem built specifically for Ghana’s housing market.  
+It connects **Tenants**, **Landlords**, **Artisans**, **Admins**, and **Super Admins** in one secure, well-structured platform — enabling seamless renting, smooth communication, and digital trust.
 
-##  Project Overview
-
-Ghana’s rental industry faces challenges with trust, communication, and efficiency.  
-**Rental Connects** addresses these by offering a unified platform where users can:
-
--  **Tenants** — Find verified listings, pay rent securely, and manage rental history.  
--  **Landlords** — List properties, manage tenants, collect rent, and monitor occupancy.  
--  **Artisans** — Offer maintenance and repair services directly to verified clients.
-
-This app promotes **transparency, convenience, and digital trust** in property management.
+Live Demo: [https://rental-connects.vercel.app](https://rental-connects.vercel.app) *(coming soon)*  
+GitHub: https://github.com/e-mond/RC
 
 ---
 
-##  Tech Stack
+## 🚀 Project Status (November 2025)
 
-| Category | Technology |
-|-----------|-------------|
-| Framework | [React 18](https://react.dev/) + [Vite](https://vitejs.dev/) |
-| Styling | [Tailwind CSS](https://tailwindcss.com/) |
-| Animation | [Framer Motion](https://www.framer.com/motion/) |
-| Routing | [React Router v6](https://reactrouter.com/) |
-| Icons | [Lucide React](https://lucide.dev/) |
-| HTTP Client | [Axios](https://axios-http.com/) |
-| State/Context | React Context API |
-| Deployment |  Vercel |
-
----
-
-##  Features
-
-###  Tenant Features
-- Browse verified property listings  
-- Pay rent securely online  
-- Manage rental agreements and payment history  
-
-###  Landlord Features
-- List and manage multiple properties  
-- Collect rent directly from tenants  
-- Access analytics dashboards  
-
-###  Artisan Features
-- Create professional service profiles  
-- Connect with nearby landlords and tenants  
-- Receive service requests and reviews  
-
-###  UI / UX Highlights
-- Modern responsive interface  
-- Smooth animations (Framer Motion)  
-- Minimal, readable typography  
-- Consistent design system built with Tailwind  
-- Modular, reusable React components  
+### Completed ✅
+- Fully implemented role system:
+  - Tenant
+  - Landlord
+  - Artisan
+  - Admin
+  - Super Admin (highest authority)
+- Role-specific dashboards
+- JWT authentication with role-based redirection
+- Robust RBAC (Role-Based Access Control)
+- Admin permission system (toggleable by Super Admin)
+- Mock + Real API toggle for development/production
+- Clean, scalable folder structure
 
 ---
 
-##  Folder Structure
+## 🧱 Tech Stack
 
-```
-RC/
-├─ .husky
-├─ public/
-│  └─ index.html
-├─ src/
-│  ├─ main.jsx
-│  ├─ App.jsx
-│  ├─ index.css
-│  ├─ routes/
-│  │  ├─ index.jsx                # All routes (React Router)
-│  │  ├─ ProtectedRoute.jsx
-│  │  ├─ PublicRoute.jsx
-│  │  └─ RoleRedirect.jsx
-│  ├─ pages/
-│  │  ├─ Landing/
-│  │  │  ├─ LandingPage.jsx
-│  │  │  ├─ components/
-│  │  │  │  ├─ HeroSection.jsx
-│  │  │  │  ├─ FeaturesSection.jsx
-│  │  │  │  ├─ AdsSection.jsx
-│  │  │  │  ├─ FreemiumSection.jsx
-│  │  │  │  ├─ UserBenefits.jsx
-│  │  │  │  ├─ Testimonials.jsx
-│  │  │  │  └─ Footer.jsx
-│  │  ├─ Auth/
-│  │  │  ├─ Login.jsx              # unified login
-│  │  │  ├─ Signup.jsx             # one signup page, renders components dynamically
-│  │  │  ├─ components/
-│  │  │  │  ├─ RoleSelector.jsx
-│  │  │  │  ├─ TenantSignupForm.jsx
-│  │  │  │  ├─ LandlordSignupForm.jsx
-│  │  │  │  ├─ ArtisanSignupForm.jsx
-│  │  │  │  └─ SignupPreview.jsx   # side image + tagline updates dynamically
-│  │  ├─ Dashboards/
-│  │  │  ├─ TenantDashboard.jsx
-│  │  │  ├─ LandlordDashboard.jsx
-│  │  │  ├─ ArtisanDashboard.jsx
+| Category         | Technology                           |
+|------------------|---------------------------------------|
+| Framework        | React 18 + Vite                       |
+| Styling          | Tailwind CSS                          |
+| Animation        | Framer Motion                         |
+| State Management | React Context + Zustand               |
+| Routing          | React Router v6                       |
+| Authentication   | JWT                                   |
+| API Client       | Axios                                 |
+| API Mode         | Real + Mock (toggleable)              |
+| Deployment       | Vercel                                |
+
+---
+
+## 📂 Folder Structure
+
+```bash
+src/
+├─ main.jsx
+├─ App.jsx
+├─ index.css
+├─ routes/
+│  ├─ index.jsx
+│  ├─ secureRoutes.jsx
+│  ├─ RoleProtectedRoute.jsx
+│  └─ PublicRoute.jsx
+├─ context/
+│  ├─ AuthProvider.jsx
+│  └─ PermissionsContext.js
+├─ stores/
+│  └─ authStore.js                 # Zustand store for role & permissions
+├─ services/
+│  ├─ apiClient.js
+│  ├─ authService.js
+│  ├─ userService.js
+│  ├─ adminService.js
+│  ├─ superAdminService.js
+│  ├─ propertyService.js
+│  └─ mock/
+│     ├─ mockAuth.js
+│     ├─ mockUsers.js
+│     ├─ mockAdmin.js
+│     └─ mockToggle.js            # DEV/PROD API switch
+├─ components/
+│  ├─ layout/
+│  │  ├─ DashboardLayout.jsx
+│  │  ├─ Sidebar.jsx
+│  │  └─ Navbar.jsx
+│  └─ ui/                          # Shared UI components
+├─ pages/
+│  ├─ Landing/
+│  ├─ Auth/
+│  ├─ Dashboards/
+│  │  ├─ Tenant/
+│  │  ├─ Landlord/
+│  │  ├─ Artisan/
+│  │  ├─ Admin/
 │  │  │  ├─ AdminDashboard.jsx
-│  │  │  └─ SuperAdminDashboard.jsx
-│  │  ├─ Ads/
-│  │  │  ├─ AdsList.jsx
-│  │  │  ├─ AdCard.jsx
-│  │  │  └─ ManageAds.jsx
-│  │  ├─ Maintenance/
-│  │  │  ├─ MaintenanceRequests.jsx
-│  │  │  └─ MaintenanceForm.jsx
-│  │  ├─ Payments/
-│  │  │  ├─ PaymentPage.jsx
-│  │  │  ├─ PaymentHistory.jsx
-│  │  │  └─ UpgradePlan.jsx
-│  │  ├─ Chat/
-│  │  │  ├─ ChatWindow.jsx
-│  │  │  ├─ ChatList.jsx
-│  │  │  └─ ChatMessage.jsx
-│  │  └─ Error/
-│  │     └─ NotFound.jsx
-│  ├─ components/
-│  │  ├─ ui/
-│  │  │  ├─ Button.jsx
-│  │  │  ├─ Input.jsx
-│  │  │  ├─ Select.jsx
-│  │  │  ├─ Modal.jsx
-│  │  │  └─ Card.jsx
-│  │  ├─ layout/
-│  │  │  ├─ Navbar.jsx
-│  │  │  ├─ Sidebar.jsx
-│  │  │  └─ Footer.jsx
-│  │  └─ shared/
-│  │     ├─ PropertyCard.jsx
-│  │     ├─ UserCard.jsx
-│  │     └─ RoleBadge.jsx
-│  ├─ context/
-│  │  ├─ AuthContext.jsx
-│  │  ├─ ThemeContext.jsx
-│  │  └─ LanguageContext.jsx
-│  ├─ services/
-│  │  ├─ apiClient.js              # axios instance
-│  │  ├─ authService.js
-│  │  ├─ userService.js
-│  │  ├─ propertyService.js
-│  │  ├─ adService.js
-│  │  ├─ paymentService.js
-│  │  ├─ chatService.js
-│  │  ├─ cloudinary.js
-│  │  └─ i18n.js
-│  ├─ hooks/
-│  │  ├─ useAuth.js
-│  │  ├─ useAds.js
-│  │  └─ useLanguage.js
-│  ├─ utils/
-│  │  ├─ validators.js
-│  │  ├─ roles.js
-│  │  ├─ constants.js
-│  │  └─ helpers.js
-│  └─ assets/
-│     ├─ images/
-│     └─ icons/
-└─ package.json
-└── vite.config.js
+│  │  │  └─ components/
+│  │  │     ├─ AD_UserApprovals.jsx
+│  │  │     ├─ AD_PropertyApprovals.jsx
+│  │  │     ├─ AD_SystemInsights.jsx
+│  │  │     ├─ AD_MaintenanceOverview.jsx
+│  │  │     └─ AD_ReportsPanel.jsx
+│  │  └─ SuperAdmin/
+│  │     ├─ SuperAdminDashboard.jsx
+│  │     ├─ users/ (SA_UsersPage, tables, modals)
+│  │     ├─ roles/ (SA_RolesPage, assign modal)
+│  │     └─ audit/ (SA_AuditPage, filters, table)
+└─ utils/
+   ├─ constants.js
+   ├─ roles.js
+   ├─ helpers.js
+   └─ devtools.js
 ```
 
 ---
 
-##  Setup Instructions
+## 🔐 Authentication & RBAC
 
-###  Prerequisites
-Ensure you have:
-- **Node.js** (v16+)
-- **npm** or **yarn**
-- **Git**
+- **AuthProvider**: Handles JWT, loads user profile, redirects by role
+- **AuthStore (Zustand)**: Caches role & permission flags
+- **RoleProtectedRoute**: Route-level access control (supports single or multiple roles)
+- **Permission-based UI**: Admin widgets appear only if Super Admin grants permission
 
-###  Clone the Repository
+### Admin Permissions (Toggleable by Super Admin)
+
+| Widget                  | Permission Flag            |
+|-------------------------|----------------------------|
+| User approvals          | `canApproveUsers`          |
+| Property approvals      | `canApproveProperties`     |
+| System insights         | `canViewInsights`          |
+| Reports dashboard       | `canViewReports`           |
+| Maintenance overview    | `canManageMaintenance`     |
+
+---
+
+## 🧪 Mock vs Real API Mode
+
+Switch between mock and real backend easily:
+
+```env
+# .env
+VITE_USE_MOCK_API=true   # Development (uses mock data)
+VITE_USE_MOCK_API=false  # Production (real backend)
+```
+
+Controlled via `services/mock/mockToggle.js`
+
+---
+
+## 🛠 Setup & Installation
+
 ```bash
 git clone https://github.com/e-mond/RC.git
 cd RC
-```
-
-###  Install Dependencies
-```bash
 npm install
-# or
-yarn
-```
-
-###  Run the Development Server
-```bash
 npm run dev
-# or
-yarn dev
 ```
 
-###  Build for Production
-```bash
-npm run build
-# or
-yarn build
+Open [http://localhost:5173](http://localhost:5173)
+
+---
+
+## 📌 Roadmap
+
+### Done ✅
+- Authentication & RBAC
+- Role-based dashboards & routing
+- Super Admin panel (Users, Roles, Audit)
+- Admin dynamic permissions
+- Mock/Real API toggle
+
+### In Progress 🔄
+- Landlord–Tenant rent payment workflow
+- Maintenance request system
+- Payment integration (Flutterwave / MTN MoMo)
+- Real-time chat & notifications
+
+### Planned
+- Mobile app (React Native / Expo)
+- Property verification with GPS & photos
+- Credit scoring for tenants
+
+---
+
+## 📞 Contact & Author
+
+**Author**: E-Mond  
+**GitHub**: [@e-mond](https://github.com/e-mond)  
+**Project**: Rental Connects (RC) – Solving Ghana’s rental chaos, one connection at a time.
+
+---
+
+⭐ **Star this repo if you find it useful!**  
+Contributions, issues, and feature requests are welcome!
 ```
-
-###  Environment Variables
-Create a `.env.local` file in the root directory:
-```
-VITE_API_BASE_URL=https://api.rentalconnects.gh
-```
-
----
-
-##  Authentication Flow
-- User logs in via `/login`
-- Token (JWT) stored securely in localStorage
-- `apiClient.js` attaches the token to every API request
-- `AuthContext` auto-loads user profile on refresh
-- Logout clears session and redirects to `/login`
-
----
-
-##  Role-Based Signup Flow
-
-| Role | Route | Form Component | Purpose |
-|------|--------|----------------|----------|
-| Tenant | `/signup?role=tenant` | `TenantForm.jsx` | Register tenants to browse & pay rent |
-| Landlord | `/signup?role=landlord` | `LandlordForm.jsx` | Manage and list properties |
-| Artisan | `/signup?role=artisan` | `ArtisanForm.jsx` | Offer maintenance services |
-
----
-
-##  Learn More Page (Editorial + Marketing)
-Blends editorial storytelling with marketing for better engagement.
-
-Sections include:
--  Hero Section — inspiring tagline, CTA to join
--  Feature Highlights — breakdown for tenants, landlords, artisans
--  News & Insights Feed — short reads, platform updates
--  Sponsored/Ads Section — placeholders for partnerships
--  Final CTA Banner — call to action leading to signup
-
----
-
-##  Component Breakdown (Key UI)
-
-| Component | Description |
-|------------|-------------|
-| `HeroSection.jsx` | Landing page hero with CTA and animation |
-| `JoinBanner.jsx` | Signup prompt for tenants, landlords, artisans |
-| `RoleSelection.jsx` | Multi-role onboarding selector |
-| `ProgressIndicator.jsx` | Shows user’s onboarding step |
-| `OnboardingHeader/Footer.jsx` | Consistent header/footer during signup |
-| `LearnMorePage.jsx` | Editorial layout with newsfeed, marketing & ads sections |
-
----
-
-##  Contributing
-
-1. Fork the repository  
-2. Create a new branch  
-   ```bash
-   git checkout -b feature/your-feature
-   ```
-3. Commit and push your changes  
-   ```bash
-   git commit -m "Add: your feature"
-   git push origin feature/your-feature
-   ```
-4. Submit a Pull Request (PR)
-
-Ensure:
-- Proper code formatting (`npm run lint` if available)
-- Components follow existing naming conventions
-- Reusable UI > repetitive code
-
----
-
-##  Roadmap
-Role-based signup flow  
-Landing + Learn More pages  
-Tenant/Landlord dashboards  
-Chat and messaging system  
-Service booking and payments integration  
-Admin control panel  
-
----
-
-##  License
-Licensed under the **MIT License** — free to use, modify, and distribute with attribution.
-
----
-
-##  Contact
-**Author:** E-Mond 
-**Project:** Rental Connects (RC)  
-**GitHub:** [https://github.com/e-mond/RC](https://github.com/e-mond/RC)
-
----
-
-##  Acknowledgements
-- Tailwind CSS  
-- Framer Motion  
-- React Router  
-- Lucide Icons  
-- Vite  
-- Open-source contributors 
-
----
-
-## Final Note
-Rental Connects isn’t just another web app — it’s a movement toward **digital trust and simplicity** in Ghana’s rental ecosystem.  
-Built for tenants, landlords, and artisans alike, RC empowers users with transparency and ease in every interaction.
-
-**Let’s build the future of renting — together. **

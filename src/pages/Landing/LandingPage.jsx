@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { motion as Motion } from "framer-motion";
-import Navbar from "../../components/layout/Navbar";
+import LandingNavbar from "./components/LandingNavbar";
 import HeroSection from "./components/HeroSection";
 import FeaturesSection from "./components/FeaturesSection";
 import Benefits from "./components/Benefits";
@@ -40,7 +40,7 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-sans bg-white text-gray-800 overflow-x-hidden">
-      <Navbar />
+      <LandingNavbar />
 
       {/* Hero Section - Immediate Fade In */}
       <Motion.div

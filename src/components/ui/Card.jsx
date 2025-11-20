@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+export const Card = ({ children, ...props }) => {
+  return <div {...props}>{children}</div>;
+};
+=======
 "use client";
 
 import * as React from "react";
@@ -87,3 +92,4 @@ export const Card = React.forwardRef(
 );
 
 Card.displayName = "Card";
+>>>>>>> 75124c513b7ca91c6a3a70f4551f537cdfac00d8

@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import ProgressIndicator from "@/components/onboarding/ProgressIndicator";
 import { registerTenant } from "@/services/tenantService";
+import tenant_onboarding from "@/assets/images/tenant_onboarding.jpg";
 
 export default function TenantSignup() {
   const [step, setStep] = useState(1);
@@ -96,7 +97,7 @@ export default function TenantSignup() {
         className="hidden md:flex md:w-1/2 relative bg-gray-100"
       >
         <img
-          src="/images/tenant-signup.jpg"
+             src={tenant_onboarding}
           alt="Tenant onboarding"
           className="object-cover w-full h-full"
         />

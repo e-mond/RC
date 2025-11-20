@@ -1,43 +1,52 @@
 import { FaSearch, FaComments, FaHome } from "react-icons/fa";
 import { motion as Motion } from "framer-motion";
-import img1 from "../../../assets/images/placeholder-1.jpg";
-import img2 from "../../../assets/images/placeholder-2.jpg";
-import img3 from "../../../assets/images/placeholder-3.jpg";
+import { Link } from "react-router-dom";
 
+/* ============================================================= */
+/* 1. IMPORT IMAGES CORRECTLY (fixed)                            */
+/* ============================================================= */
+import placeholder1 from "@/assets/images/placeholder-1.jpg";
+import placeholder2 from "@/assets/images/placeholder-2.jpg";
+import placeholder3 from "@/assets/images/placeholder-3.jpg";
 
-// Step data for "How It Works" section
+/* ============================================================= */
+/* 2. STEP DATA – uses imported image variables                  */
+/* ============================================================= */
 const steps = [
   {
     title: "Discover perfect properties",
     label: "Find",
     description:
       "Browse verified listings with detailed information and transparent pricing.",
-    image: img1,
+    image: placeholder1,
     icon: <FaSearch className="text-white text-2xl" />,
-    linkText: "Explore →",
+    linkText: "Explore",
   },
   {
     title: "Communicate with confidence",
     label: "Connect",
     description:
       "Direct messaging and secure verification ensure safe interactions between tenants and landlords.",
-    image: img2,
+    image: placeholder2,
     icon: <FaComments className="text-white text-2xl" />,
-    linkText: "Connect →",
+    linkText: "Connect",
   },
   {
     title: "Manage your rental seamlessly",
     label: "Rent",
     description:
       "Digital payments, maintenance tracking, and comprehensive support make renting effortless.",
-    image: img3,
+    image: placeholder3,
     icon: <FaHome className="text-white text-2xl" />,
-    linkText: "Rent now →",
+    linkText: "Rent now",
   },
 ];
 
+/* ============================================================= */
+/* 3. COMPONENT – AboutSection                                    */
+/* ============================================================= */
 export default function AboutSection() {
-  // Parent animation (staggered children)
+  // Parent stagger animation
   const container = {
     hidden: { opacity: 0 },
     visible: {
@@ -49,7 +58,7 @@ export default function AboutSection() {
     },
   };
 
-  // Each card animation
+  // Card entrance animation
   const cardVariant = {
     hidden: { opacity: 0, y: 40 },
     visible: {
@@ -123,7 +132,7 @@ export default function AboutSection() {
               </div>
 
               {/* Overlay Content */}
-              <div className="absolute inset-0 flex flex-col justify-end p-6 text-left text-white pointer-events-none">
+              <div className="absolute inset-0 flex flex-col justify-end p-6 text-left text-white">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 rounded-full bg-[#0b6e4f]">{step.icon}</div>
                   <span className="text-sm uppercase text-gray-200 font-medium">
@@ -134,9 +143,12 @@ export default function AboutSection() {
                 <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
                 <p className="text-gray-200 text-sm mb-2">{step.description}</p>
 
-                <span className="text-[#f1f3f5] font-medium group-hover:text-white transition">
-                  {step.linkText}
-                </span>
+                <Link
+                  to="/role-selection"
+                  className="inline-flex items-center text-[#f1f3f5] font-medium hover:text-white transition-colors pointer-events-auto"
+                >
+                  {step.linkText} <span className="ml-1">→</span>
+                </Link>
               </div>
             </Motion.div>
           ))}
