@@ -1,38 +1,58 @@
-// Lightweight mock used as fallback when API is not reachable (dev/test).
-const TOTAL = 37;
+// src/mocks/propertyMock.js
+// Simple mock data for property management (dev)
+const now = () => new Date().toISOString();
 
-// generate a simple list of mock properties
-const makeProperty = (i, status = "pending") => ({
-  id: `prop_${i}`,
-  title: `2-bedroom apartment — Block ${i}`,
-  price: 1200 + (i % 5) * 150,
-  city: ["Accra", "Kumasi", "Takoradi", "Tamale"][i % 4],
-  createdAt: new Date(Date.now() - i * 1000 * 60 * 60 * 24).toISOString(),
-  ownerName: `Owner ${i}`,
-  status, // pending | approved | rejected
-  summary: `Spacious unit ${i} with good lighting and ventilation.`,
-});
+export const mockAmenities = [
+  "Parking",
+  "Water",
+  "Electricity",
+  "Fenced Compound",
+  "Internet",
+  "Air Conditioning",
+  "Kitchen",
+  "Washing Machine",
+  "Balcony",
+];
 
-const ALL = Array.from({ length: TOTAL }).map((_, i) => makeProperty(i + 1));
+export const mockProperties = [
+  {
+    id: "p_mock_1",
+    title: "3BR Apartment — East Legon",
+    address: "East Legon, Accra",
+    price: 3200,
+    currency: "GHS",
+    status: "active",
+    bedrooms: 3,
+    bathrooms: 2,
+    area: 120,
+    amenities: ["Water", "Electricity", "Parking"],
+    images: ["https://placehold.co/600x400?text=3BR+East+Legon"],
+    ownerId: "owner_mock_1",
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: "p_mock_2",
+    title: "Studio — Osu",
+    address: "Oxford Street, Osu",
+    price: 900,
+    currency: "GHS",
+    status: "pending",
+    bedrooms: 0,
+    bathrooms: 1,
+    area: 30,
+    amenities: ["Water", "Internet"],
+    images: ["https://placehold.co/600x400?text=Studio+Osu"],
+    ownerId: "owner_mock_1",
+    createdAt: now(),
+    updatedAt: now(),
+  },
+];
 
-export const mockFetchPendingProperties = ({ page = 1, perPage = 10, search = "", statusFilter = "pending" }) => {
-  // simple filter by status and text match
-  let items = ALL.filter((p) => (statusFilter ? p.status === statusFilter : true));
-  if (search) {
-    const q = search.toLowerCase();
-    items = items.filter((p) => `${p.title} ${p.city} ${p.ownerName}`.toLowerCase().includes(q));
-  }
-  const total = items.length;
-  const start = (page - 1) * perPage;
-  const pageItems = items.slice(start, start + perPage);
-  return Promise.resolve({ items: pageItems, total });
-};
+export const withDelay = (result, ms = 600) => new Promise((res) => setTimeout(() => res(result), ms));
 
-export const mockApproveProperty = (propertyId) => {
-  // pretend approval succeeded
-  return Promise.resolve({ success: true, id: propertyId, status: "approved" });
-};
-
-export const mockRejectProperty = (propertyId, { reason }) => {
-  return Promise.resolve({ success: true, id: propertyId, status: "rejected", reason });
+export default {
+  mockProperties,
+  mockAmenities,
+  withDelay,
 };

@@ -1,8 +1,6 @@
 // src/pages/Dashboards/SuperAdmin/SuperAdminDashboard.jsx
 import { useEffect, useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import DashboardSkeleton from "./components/DashboardSkeleton";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import SA_StatsOverview from "./components/SA_StatsOverview";
 import SA_UserTable from "./components/SA_UserTable";
 import SA_RoleDistributionChart from "./components/SA_RoleDistributionChart";
@@ -13,7 +11,10 @@ import SA_DeleteUserModal from "./components/SA_DeleteUserModal";
 import { fetchAllUsers, fetchSystemStats } from "@/services/adminService";
 import { AlertCircle } from "lucide-react";
 import { format } from "date-fns";
-import { toZonedTime } from "date-fns-tz"; // ← FIXED: toZonedTime
+import { toZonedTime } from "date-fns-tz";
+import PageHeader from "@/modules/dashboard/PageHeader";
+import SectionCard from "@/modules/dashboard/SectionCard";
+import MockDataEditor from "./components/MockDataEditor";
 
 /**
  * SUPER ADMIN DASHBOARD
@@ -65,116 +66,67 @@ export default function SuperAdminDashboard() {
     };
   }, [loadDashboardData]);
 
-  const container = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { staggerChildren: 0.1 } },
-  };
-
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 },
-  };
-
   return (
-    <DashboardLayout
-      aside={
-        <div className="space-y-4">
-          <h3 className="font-semibold text-lg">Platform Controls</h3>
+    <div className="space-y-8">
+      <PageHeader
+        title="Super Admin Overview"
+        subtitle={`Monitor platform health • ${timeStr}`}
+        badge="Platform Control"
+        actions={
           <button
             onClick={() => setOpenCreateModal(true)}
-            className="w-full py-2.5 bg-[#0b6e4f] text-white rounded-lg hover:bg-[#095c42] transition"
+            className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
           >
             + Create User
           </button>
-        </div>
-      }
-    >
-      <div className="space-y-8">
-        {/* Header */}
-        <motion.header
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-1"
-        >
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
-            Super Admin Overview
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Monitor platform health • {timeStr}
-          </p>
-        </motion.header>
+        }
+      />
 
-        {/* Loading */}
-        {loading && <DashboardSkeleton />}
+      {loading && <DashboardSkeleton />}
 
-        {/* Error */}
-        {error && !loading && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center"
+      {error && !loading && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
+          <AlertCircle size={40} className="mx-auto mb-3 text-red-600" />
+          <p className="text-red-800">{error}</p>
+          <button
+            onClick={loadDashboardData}
+            className="mt-3 rounded-lg bg-red-600 px-5 py-2 text-white hover:bg-red-700"
           >
-            <AlertCircle size={40} className="mx-auto text-red-600 dark:text-red-400 mb-3" />
-            <p className="text-red-800 dark:text-red-300 font-medium">{error}</p>
-            <button
-              onClick={loadDashboardData}
-              className="mt-3 px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-            >
-              Retry
-            </button>
-          </motion.div>
-        )}
+            Retry
+          </button>
+        </div>
+      )}
 
-        {/* Main Content */}
-        <AnimatePresence>
-          {!loading && !error && (
-            <motion.div
-              key="dashboard-content"
-              variants={container}
-              initial="hidden"
-              animate="show"
-              exit="hidden"
-              className="space-y-8"
-            >
-              <motion.div variants={item}>
-                <SA_StatsOverview stats={stats} />
-              </motion.div>
+      {!loading && !error && (
+        <>
+          <SectionCard title="System Statistics" description="Real-time KPIs">
+            <SA_StatsOverview stats={stats} />
+          </SectionCard>
 
-              <motion.div variants={item}>
-                <SA_SystemHealth stats={stats?.systemHealth} />
-              </motion.div>
+          <SectionCard title="System Health" description="Latency, uptime & service map">
+            <SA_SystemHealth stats={stats?.systemHealth} />
+          </SectionCard>
 
-              <motion.div variants={item}>
-                <SA_RoleDistributionChart data={stats?.roles} />
-              </motion.div>
+          <SectionCard title="Role Distribution" description="Active accounts by role">
+            <SA_RoleDistributionChart data={stats?.roles} />
+          </SectionCard>
 
-              <motion.div variants={item}>
-                <SA_UserTable
-                  users={users}
-                  onCreate={() => setOpenCreateModal(true)}
-                  onDelete={setDeleteTarget}
-                />
-              </motion.div>
+          <SectionCard title="User Directory" description="Manage admins, tenants and landlords">
+            <SA_UserTable users={users} onCreate={() => setOpenCreateModal(true)} onDelete={setDeleteTarget} />
+          </SectionCard>
 
-              <motion.div variants={item}>
-                <SA_ActivityFeed activity={activity} />
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+          <SectionCard title="Recent Activity" description="Latest platform events">
+            <SA_ActivityFeed activity={activity} />
+          </SectionCard>
 
-      {/* Modals */}
-      <SA_CreateUserModal
-        open={openCreateModal}
-        onClose={() => setOpenCreateModal(false)}
-        onSuccess={loadDashboardData}
-      />
-      <SA_DeleteUserModal
-        user={deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        onSuccess={loadDashboardData}
-      />
-    </DashboardLayout>
+          <SectionCard title="Mock Data Editor" description="Curate the demo dataset before switching to live mode">
+            <MockDataEditor />
+          </SectionCard>
+        </>
+      )}
+
+      <SA_CreateUserModal open={openCreateModal} onClose={() => setOpenCreateModal(false)} onSuccess={loadDashboardData} />
+      <SA_DeleteUserModal user={deleteTarget} onClose={() => setDeleteTarget(null)} onSuccess={loadDashboardData} />
+    </div>
   );
 }

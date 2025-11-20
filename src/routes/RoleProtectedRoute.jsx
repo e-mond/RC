@@ -66,23 +66,45 @@
 //   return <>{children}</>;
 // }
 
+
+
 // src/routes/RoleProtectedRoute.jsx
 import React from "react";
 import { Navigate } from "react-router-dom";
-import { useAuth } from "@/context/useAuth";
+import { useAuthStore } from "@/stores/authStore"; 
 
-export default function RoleProtectedRoute({ allowedRoles, fallback = "/", children }) {
-  const { user, loading } = useAuth();
+export default function RoleProtectedRoute({ 
+  allowedRoles, 
+  fallback = "/", 
+  children 
+}) {
+  const { user, loading } = useAuthStore();   // From Zustand
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
-  if (!user) return <Navigate to="/login" replace />;
+  // Still checking session
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="w-12 h-12 border-4 border-[#0b6e4f] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
+  // Not logged in → go to login
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Normalize roles
   const userRole = String(user.role || "").toLowerCase().trim();
   const allowedList = Array.isArray(allowedRoles)
     ? allowedRoles.map(r => String(r).toLowerCase().trim())
     : [String(allowedRoles).toLowerCase().trim()];
 
-  if (!allowedList.includes(userRole)) return <Navigate to={fallback} replace />;
+  // Role not allowed → redirect
+  if (!allowedList.includes(userRole)) {
+    return <Navigate to={fallback} replace />;
+  }
 
+  // All good → render children
   return <>{children}</>;
 }
