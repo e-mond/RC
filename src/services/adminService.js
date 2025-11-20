@@ -2,253 +2,343 @@
 /**
  * Unified Admin & Super Admin API Service
  * - Single source of truth for all admin endpoints
- * - Mock/real API toggle via VITE_USE_MOCK
- * - Ghana-localized (GHS, en-GH, Africa/Accra)
- * - Error handling, delays, type-safe
+ * - Mock/real API toggle via VITE_USE_MOCK or DEV mode
  * - Used by: AdminDashboard, SuperAdminDashboard, widgets
  */
 
 import apiClient from "./apiClient";
 
-// === MOCKS ===
-import {
-  mockSystemStats,
-  mockUsers,
-  mockAuditLogs,
-  withDelay,
-} from "@/mocks/superAdminMock";
+/* =====================
+   CONFIGURATION (only once!)
+   ===================== */
+const USE_MOCK = String(import.meta.env.VITE_USE_MOCK || "").toLowerCase() === "true";
+const IS_DEV = import.meta.env.DEV === true;
 
-import {
-  fetchInsightsMock,
-  fetchPendingUsersMock,
-  approveUserMock,
-  rejectUserMock,
-  fetchPendingPropertiesMock,
-  approvePropertyMock,
-  rejectPropertyMock,
-  fetchMaintenanceMock,
-  assignMaintenanceMock,
-  fetchReportsMock,
-} from "@/mocks/axiosMock";
+let mockImports = {};
 
-// === CONFIG ===
-const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
-const IS_DEV = import.meta.env.DEV;
+/* =====================
+   LOAD MOCKS ASYNCHRONOUSLY (fire & forget)
+   Only attempt to load if we're in dev or mock mode
+   ===================== */
+if (USE_MOCK || IS_DEV) {
+  (async () => {
+    try {
+      const [superAdminMock, axiosMock] = await Promise.all([
+        import("@/mocks/superAdminMock"),
+        import("@/mocks/axiosMock"),
+      ]);
+      mockImports = {
+        ...(superAdminMock.default || superAdminMock),
+        ...(axiosMock.default || axiosMock),
+      };
+      console.log("Admin service mocks loaded successfully");
+    } catch (err) {
+      console.warn("Mock files not found → using real API", err);
+      // Silently continue — real API will be used
+    }
+  })();
+}
 
-// === UTILS ===
-// eslint-disable-next-line no-unused-vars
-const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+/* =====================
+   HELPERS
+   ===================== */
+function extractError(err, fallback = "Server error") {
+  if (!err) return new Error(fallback);
+  if (err.response?.data?.message) return new Error(err.response.data.message);
+  if (err.message) return new Error(err.message);
+  return new Error(fallback);
+}
+
+// Fallback delay if mock doesn't provide one
+const withDelay =
+  typeof mockImports.withDelay === "function"
+    ? mockImports.withDelay
+    : (result, ms = 600) =>
+        new Promise((res) => setTimeout(() => res(result), ms));
 
 /* ========================================
    ADMIN ENDPOINTS
    ======================================== */
 
-/**
- * Fetch system insights for Admin dashboard
- * @returns {Promise<Object>} Insights data
- */
 export const fetchInsights = async () => {
-  if (USE_MOCK) return withDelay(fetchInsightsMock(), 800);
-  const { data } = await apiClient.get("/admin/insights");
-  return data;
+  const useMock = USE_MOCK || IS_DEV;
+
+  if (useMock && mockImports.fetchInsightsMock) {
+    return withDelay(mockImports.fetchInsightsMock(), 800);
+  }
+
+  try {
+    const { data } = await apiClient.get("/admin/insights");
+    return data;
+  } catch (err) {
+    throw extractError(err, "Failed to fetch system insights");
+  }
 };
 
-/**
- * Fetch pending user approvals
- * @returns {Promise<Array>} List of pending users
- */
 export const fetchPendingUsers = async () => {
-  if (USE_MOCK) return withDelay(fetchPendingUsersMock(), 600);
-  const { data } = await apiClient.get("/admin/users/pending");
-  return data;
+  const useMock = USE_MOCK || IS_DEV;
+
+  if (useMock && mockImports.fetchPendingUsersMock) {
+    return withDelay(mockImports.fetchPendingUsersMock(), 600);
+  }
+
+  try {
+    const { data } = await apiClient.get("/admin/users/pending");
+    return data;
+  } catch (err) {
+    throw extractError(err, "Failed to fetch pending users");
+  }
 };
 
-/**
- * Approve a pending user
- * @param {string} id - User ID
- * @returns {Promise<Object>} Success response
- */
 export const approveUser = async (id) => {
-  if (USE_MOCK) return withDelay(approveUserMock(id), 500);
-  const { data } = await apiClient.patch(`/admin/users/${id}/approve`);
-  return data;
+  if (!id) throw new Error("approveUser: id is required");
+  const useMock = USE_MOCK || IS_DEV;
+
+  if (useMock && mockImports.approveUserMock) {
+    return withDelay(mockImports.approveUserMock(id), 500);
+  }
+
+  try {
+    const { data } = await apiClient.patch(`/admin/users/${encodeURIComponent(id)}/approve`);
+    return data;
+  } catch (err) {
+    throw extractError(err, "Failed to approve user");
+  }
 };
 
-/**
- * Reject a pending user
- * @param {string} id - User ID
- * @param {string} reason - Rejection reason
- * @returns {Promise<Object>} Success response
- */
-export const rejectUser = async (id, reason) => {
-  if (USE_MOCK) return withDelay(rejectUserMock(id, reason), 500);
-  const { data } = await apiClient.patch(`/admin/users/${id}/reject`, { reason });
-  return data;
+export const rejectUser = async (id, reason = "") => {
+  if (!id) throw new Error("rejectUser: id is required");
+  const useMock = USE_MOCK || IS_DEV;
+
+  if (useMock && mockImports.rejectUserMock) {
+    return withDelay(mockImports.rejectUserMock(id, reason), 500);
+  }
+
+  try {
+    const { data } = await apiClient.patch(`/admin/users/${encodeURIComponent(id)}/reject`, { reason });
+    return data;
+  } catch (err) {
+    throw extractError(err, "Failed to reject user");
+  }
 };
 
-/**
- * Fetch pending property approvals
- * @returns {Promise<Array>} List of pending properties
- */
 export const fetchPendingProperties = async () => {
-  if (USE_MOCK) return withDelay(fetchPendingPropertiesMock(), 700);
-  const { data } = await apiClient.get("/admin/properties/pending");
-  return data;
+  const useMock = USE_MOCK || IS_DEV;
+
+  if (useMock && mockImports.fetchPendingPropertiesMock) {
+    return withDelay(mockImports.fetchPendingPropertiesMock(), 700);
+  }
+
+  try {
+    const { data } = await apiClient.get("/admin/properties/pending");
+    return data;
+  } catch (err) {
+    throw extractError(err, "Failed to fetch pending properties");
+  }
 };
 
-/**
- * Approve a property
- * @param {string} id - Property ID
- * @returns {Promise<Object>} Success response
- */
 export const approveProperty = async (id) => {
-  if (USE_MOCK) return withDelay(approvePropertyMock(id), 500);
-  const { data } = await apiClient.patch(`/admin/properties/${id}/approve`);
-  return data;
+  if (!id) throw new Error("approveProperty: id is required");
+  const useMock = USE_MOCK || IS_DEV;
+
+  if (useMock && mockImports.approvePropertyMock) {
+    return withDelay(mockImports.approvePropertyMock(id), 500);
+  }
+
+  try {
+    const { data } = await apiClient.patch(`/admin/properties/${encodeURIComponent(id)}/approve`);
+    return data;
+  } catch (err) {
+    throw extractError(err, "Failed to approve property");
+  }
 };
 
-/**
- * Reject a property
- * @param {string} id - Property ID
- * @param {string} reason - Rejection reason
- * @returns {Promise<Object>} Success response
- */
-export const rejectProperty = async (id, reason) => {
-  if (USE_MOCK) return withDelay(rejectPropertyMock(id, reason), 500);
-  const { data } = await apiClient.patch(`/admin/properties/${id}/reject`, { reason });
-  return data;
+export const rejectProperty = async (id, reason = "") => {
+  if (!id) throw new Error("rejectProperty: id is required");
+  const useMock = USE_MOCK || IS_DEV;
+
+  if (useMock && mockImports.rejectPropertyMock) {
+    return withDelay(mockImports.rejectPropertyMock(id, reason), 500);
+  }
+
+  try {
+    const { data } = await apiClient.patch(`/admin/properties/${encodeURIComponent(id)}/reject`, { reason });
+    return data;
+  } catch (err) {
+    throw extractError(err, "Failed to reject property");
+  }
 };
 
-/**
- * Fetch pending maintenance requests
- * @returns {Promise<Array>} List of pending maintenance
- */
 export const fetchMaintenance = async () => {
-  if (USE_MOCK) return withDelay(fetchMaintenanceMock(), 900);
-  const { data } = await apiClient.get("/admin/maintenance/pending");
-  return data;
+  const useMock = USE_MOCK || IS_DEV;
+
+  if (useMock && mockImports.fetchMaintenanceMock) {
+    return withDelay(mockImports.fetchMaintenanceMock(), 900);
+  }
+
+  try {
+    const { data } = await apiClient.get("/admin/maintenance/pending");
+    return data;
+  } catch (err) {
+    throw extractError(err, "Failed to fetch maintenance requests");
+  }
 };
 
-/**
- * Assign maintenance to artisan
- * @param {string} id - Maintenance ID
- * @param {string} assignedTo - Artisan ID
- * @returns {Promise<Object>} Success response
- */
 export const assignMaintenance = async (id, assignedTo) => {
-  if (USE_MOCK) return withDelay(assignMaintenanceMock(id, assignedTo), 600);
-  const { data } = await apiClient.patch(`/admin/maintenance/${id}/assign`, { assignedTo });
-  return data;
+  if (!id || !assignedTo) throw new Error("assignMaintenance: id and assignedTo are required");
+  const useMock = USE_MOCK || IS_DEV;
+
+  if (useMock && mockImports.assignMaintenanceMock) {
+    return withDelay(mockImports.assignMaintenanceMock(id, assignedTo), 600);
+  }
+
+  try {
+    const { data } = await apiClient.patch(`/admin/maintenance/${encodeURIComponent(id)}/assign`, { assignedTo });
+    return data;
+  } catch (err) {
+    throw extractError(err, "Failed to assign maintenance");
+  }
 };
 
-/**
- * Fetch reports with date range
- * @param {string} start - ISO date
- * @param {string} end - ISO date
- * @returns {Promise<Object>} Report data
- */
-export const fetchReports = async (start, end) => {
-  if (USE_MOCK) return withDelay(fetchReportsMock(start, end), 1000);
-  const { data } = await apiClient.get(`/admin/reports?start=${start}&end=${end}`);
-  return data;
+export const fetchReports = async (start = "", end = "") => {
+  const useMock = USE_MOCK || IS_DEV;
+
+  if (useMock && mockImports.fetchReportsMock) {
+    return withDelay(mockImports.fetchReportsMock(start, end), 1000);
+  }
+
+  try {
+    const params = [];
+    if (start) params.push(`start=${encodeURIComponent(start)}`);
+    if (end) params.push(`end=${encodeURIComponent(end)}`);
+    const query = params.length ? `?${params.join("&")}` : "";
+    const { data } = await apiClient.get(`/admin/reports${query}`);
+    return data;
+  } catch (err) {
+    throw extractError(err, "Failed to fetch reports");
+  }
 };
 
 /* ========================================
    SUPER ADMIN ENDPOINTS
    ======================================== */
 
-/**
- * Fetch full system stats
- * @returns {Promise<Object>} System stats
- */
 export const fetchSystemStats = async () => {
-  if (USE_MOCK || IS_DEV) return withDelay(mockSystemStats, 1000);
+  const useMock = USE_MOCK || IS_DEV;
+
+  if (useMock && mockImports.mockSystemStats) {
+    return withDelay(mockImports.mockSystemStats, 1000);
+  }
+
   try {
     const { data } = await apiClient.get("/super-admin/system/stats");
     return data;
   } catch (err) {
-    throw new Error(err.response?.data?.message || "Failed to load system stats.");
+    throw extractError(err, "Failed to load system stats");
   }
 };
 
-/**
- * Fetch all users
- * @returns {Promise<{ users: Array }>} List of all users
- */
 export const fetchAllUsers = async () => {
-  if (USE_MOCK || IS_DEV) return withDelay({ users: mockUsers }, 800);
+  const useMock = USE_MOCK || IS_DEV;
+
+  if (useMock && mockImports.mockUsers) {
+    return withDelay({ users: mockImports.mockUsers }, 800);
+  }
+
   try {
     const { data } = await apiClient.get("/super-admin/users");
     return data;
   } catch (err) {
-    throw new Error(err.response?.data?.message || "Failed to load users.");
+    throw extractError(err, "Failed to load users");
   }
 };
 
-/**
- * Create new user
- * @param {Object} payload - User data
- * @returns {Promise<Object>} Created user
- */
 export const createUser = async (payload) => {
-  if (USE_MOCK || IS_DEV) {
+  if (!payload) throw new Error("createUser: payload is required");
+  const useMock = USE_MOCK || IS_DEV;
+
+  if (useMock) {
     return withDelay(
       {
         success: true,
-        user: { ...payload, _id: "mock_" + Date.now() },
+        user: { ...payload, id: "mock_" + Date.now() },
       },
       600
     );
   }
+
   try {
     const { data } = await apiClient.post("/super-admin/users/create", payload);
     return data;
   } catch (err) {
-    throw new Error(err.response?.data?.message || "User creation failed.");
+    throw extractError(err, "User creation failed");
   }
 };
 
-/**
- * Delete user
- * @param {string} userId - User ID
- * @returns {Promise<Object>} Success response
- */
 export const deleteUser = async (userId) => {
-  if (USE_MOCK || IS_DEV) return withDelay({ success: true }, 500);
+  if (!userId) throw new Error("deleteUser: userId is required");
+  const useMock = USE_MOCK || IS_DEV;
+
+  if (useMock) return withDelay({ success: true }, 500);
+
   try {
-    const { data } = await apiClient.delete(`/super-admin/users/${userId}`);
+    const { data } = await apiClient.delete(`/super-admin/users/${encodeURIComponent(userId)}`);
     return data;
   } catch (err) {
-    throw new Error(err.response?.data?.message || "Failed to delete user.");
+    throw extractError(err, "Failed to delete user");
   }
 };
 
-/**
- * Fetch audit logs
- * @returns {Promise<Array>} List of audit logs
- */
 export const fetchAuditLogs = async () => {
-  if (USE_MOCK || IS_DEV) return withDelay(mockAuditLogs, 900);
+  const useMock = USE_MOCK || IS_DEV;
+
+  if (useMock && mockImports.mockAuditLogs) {
+    return withDelay(mockImports.mockAuditLogs, 900);
+  }
+
   try {
     const { data } = await apiClient.get("/super-admin/audit");
     return data;
   } catch (err) {
-    throw new Error(err.response?.data?.message || "Failed to load audit logs.");
+    throw extractError(err, "Failed to load audit logs");
   }
 };
 
-/**
- * Assign role to user
- * @param {string} userId - User ID
- * @param {string} role - New role
- * @returns {Promise<Object>} Success response
- */
 export const assignRole = async (userId, role) => {
-  if (USE_MOCK || IS_DEV) return withDelay({ success: true }, 600);
+  if (!userId || !role) throw new Error("assignRole: userId and role are required");
+  const useMock = USE_MOCK || IS_DEV;
+
+  if (useMock) return withDelay({ success: true }, 600);
+
   try {
-    const { data } = await apiClient.put(`/super-admin/roles/${userId}`, { role });
+    const { data } = await apiClient.put(`/super-admin/roles/${encodeURIComponent(userId)}`, { role });
     return data;
   } catch (err) {
-    throw new Error(err.response?.data?.message || "Failed to assign role.");
+    throw extractError(err, "Failed to assign role");
   }
+};
+
+/* ========================================
+   DEFAULT EXPORT
+   ======================================== */
+export default {
+  // Admin
+  fetchInsights,
+  fetchPendingUsers,
+  approveUser,
+  rejectUser,
+  fetchPendingProperties,
+  approveProperty,
+  rejectProperty,
+  fetchMaintenance,
+  assignMaintenance,
+  fetchReports,
+
+  // Super Admin
+  fetchSystemStats,
+  fetchAllUsers,
+  createUser,
+  deleteUser,
+  fetchAuditLogs,
+  assignRole,
 };

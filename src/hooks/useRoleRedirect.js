@@ -2,11 +2,11 @@ import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 const redirectMap = {
-  tenant: "/dashboard/tenant",
-  landlord: "/dashboard/landlord",
-  artisan: "/dashboard/artisan",
-  admin: "/admin/dashboard",
-  "super-admin": "/dashboard/super-admin", 
+  tenant: "/tenant/overview",
+  landlord: "/landlord/overview",
+  artisan: "/artisan/overview",
+  admin: "/admin/overview",
+  "super-admin": "/super-admin/overview",
 };
 
 export default function useRoleRedirect() {

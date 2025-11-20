@@ -1,214 +1,197 @@
+// src/services/propertyService.js
 import apiClient from "./apiClient";
 
-/**
- * Property Service
- * Handles all property-related API calls
- */
+// Default fallback mocks (always available)
+let mockData = {
+  withData: null,
+  mockProperties: [
+    {
+      id: "mock_1",
+      title: "Beautiful Apartment in East Legon",
+      address: "East Legon, Accra",
+      priceGhs: 1500,
+      images: ["https://placehold.co/600x400?text=Mock+1"],
+    },
+  ],
+};
 
-/**
- * Get all properties with optional filters
- * @param {Object} filters - Filter options (city, region, property_type, min_price, max_price, bedrooms, status, search)
- * @returns {Promise} Property list with pagination
- */
-export const getProperties = async (filters = {}) => {
-  try {
-    const params = new URLSearchParams();
-    Object.keys(filters).forEach((key) => {
-      if (filters[key] !== null && filters[key] !== undefined && filters[key] !== "") {
-        params.append(key, filters[key]);
-      }
+// Dynamically load real mocks only when needed (Vite-friendly)
+if (import.meta.env.DEV || String(import.meta.env.VITE_USE_MOCK).toLowerCase() === "true") {
+  import("@/mocks/propertyMock")
+    .then((module) => {
+      // Merge real mocks if file exists
+      mockData = { ...mockData, ...module.default };
+    })
+    .catch(() => {
+      console.warn("propertyMock.js not found — using built-in fallback mocks");
     });
-    
-    const { data } = await apiClient.get(`/properties/?${params.toString()}`);
+}
+
+const USE_MOCK = String(import.meta.env.VITE_USE_MOCK).toLowerCase() === "true";
+
+// Helper: simulate network delay
+const withDelay = (data, ms = 400) =>
+  new Promise((resolve) => setTimeout(() => resolve(data), ms));
+
+function extractError(err, fallback = "Server error") {
+  if (!err) return new Error(fallback);
+  if (err.response?.data?.message) return new Error(err.response.data.message);
+  if (err.message) return new Error(err.message);
+  return new Error(fallback);
+}
+
+/* ========== Properties ========== */
+
+export const fetchProperties = async (opts = {}) => {
+  if (USE_MOCK) {
+    const result = { data: mockData.mockProperties || [] };
+    return withDelay(result, 450);
+  }
+
+  try {
+    const { data } = await apiClient.get("/properties", { params: opts });
     return data;
   } catch (err) {
-    console.error("Get properties error:", err);
-    throw err.response?.data || { message: "Failed to fetch properties" };
+    throw extractError(err, "Failed to fetch properties");
   }
 };
 
-/**
- * Get property by ID
- * @param {number} id - Property ID
- * @returns {Promise} Property details
- */
-export const getProperty = async (id) => {
+export const fetchProperty = async (id) => {
+  if (!id) throw new Error("fetchProperty: id required");
+
+  if (USE_MOCK) {
+    const property = mockData.mockProperties?.find((p) => p.id === id);
+    return withDelay({ data: property || null }, 300);
+  }
+
   try {
-    const { data } = await apiClient.get(`/properties/${id}/`);
+    const { data } = await apiClient.get(`/properties/${encodeURIComponent(id)}`);
     return data;
   } catch (err) {
-    console.error("Get property error:", err);
-    throw err.response?.data || { message: "Failed to fetch property" };
+    throw extractError(err, "Failed to fetch property");
   }
 };
 
-/**
- * Create a new property
- * @param {FormData} formData - Property data including images
- * @returns {Promise} Created property
- */
-export const createProperty = async (formData) => {
+export const createProperty = async (payload) => {
+  if (USE_MOCK) {
+    const newProp = {
+      ...payload,
+      id: `mock_${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    mockData.mockProperties.unshift(newProp);
+    return withDelay({ data: newProp }, 600);
+  }
+
   try {
-    const { data } = await apiClient.post("/properties/", formData, {
+    const { data } = await apiClient.post("/properties", payload);
+    return data;
+  } catch (err) {
+    throw extractError(err, "Failed to create property");
+  }
+};
+
+export const updateProperty = async (id, payload) => {
+  if (!id) throw new Error("updateProperty: id required");
+
+  if (USE_MOCK) {
+    const idx = mockData.mockProperties.findIndex((p) => p.id === id);
+    if (idx === -1) throw new Error("Mock: property not found");
+
+    mockData.mockProperties[idx] = {
+      ...mockData.mockProperties[idx],
+      ...payload,
+      updatedAt: new Date().toISOString(),
+    };
+
+    return withDelay({ data: mockData.mockProperties[idx] }, 500);
+  }
+
+  try {
+    const { data } = await apiClient.put(`/properties/${encodeURIComponent(id)}`, payload);
+    return data;
+  } catch (err) {
+    throw extractError(err, "Failed to update property");
+  }
+};
+
+export const deleteProperty = async (id) => {
+  if (!id) throw new Error("deleteProperty: id required");
+
+  if (USE_MOCK) {
+    mockData.mockProperties = mockData.mockProperties.filter((p) => p.id !== id);
+    return withDelay({ success: true }, 400);
+  }
+
+  try {
+    const { data } = await apiClient.delete(`/properties/${encodeURIComponent(id)}`);
+    return data;
+  } catch (err) {
+    throw extractError(err, "Failed to delete property");
+  }
+};
+
+export const uploadImage = async (file) => {
+  if (!file) throw new Error("uploadImage: file required");
+
+  if (USE_MOCK) {
+    const mockUrl = `https://placehold.co/800x600/orange/white?text=${encodeURIComponent(
+      file.name.split(".")[0]
+    )}`;
+    return withDelay({ url: mockUrl }, 800);
+  }
+
+  try {
+    const fd = new FormData();
+    fd.append("file", file);
+    const { data } = await apiClient.post("/uploads/images", fd, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return data;
   } catch (err) {
-    console.error("Create property error:", err);
-    throw err.response?.data || { message: "Failed to create property" };
+    throw extractError(err, "Image upload failed");
   }
 };
 
-/**
- * Update a property
- * @param {number} id - Property ID
- * @param {FormData|Object} propertyData - Updated property data
- * @returns {Promise} Updated property
- */
-export const updateProperty = async (id, propertyData) => {
-  try {
-    const isFormData = propertyData instanceof FormData;
-    const config = isFormData
-      ? { headers: { "Content-Type": "multipart/form-data" } }
-      : {};
-    
-    const { data } = await apiClient.patch(`/properties/${id}/`, propertyData, config);
-    return data;
-  } catch (err) {
-    console.error("Update property error:", err);
-    throw err.response?.data || { message: "Failed to update property" };
-  }
-};
-
-/**
- * Delete a property
- * @param {number} id - Property ID
- * @returns {Promise}
- */
-export const deleteProperty = async (id) => {
-  try {
-    await apiClient.delete(`/properties/${id}/`);
-  } catch (err) {
-    console.error("Delete property error:", err);
-    throw err.response?.data || { message: "Failed to delete property" };
-  }
-};
-
-/**
- * Get properties for a specific landlord
- * @param {number} landlordId - Landlord user ID
- * @returns {Promise} List of properties
- */
-export const getLandlordProperties = async (landlordId) => {
-  try {
-    const { data } = await apiClient.get(`/properties/landlord/${landlordId}/`);
-    return data;
-  } catch (err) {
-    console.error("Get landlord properties error:", err);
-    throw err.response?.data || { message: "Failed to fetch landlord properties" };
-  }
-};
-
-/**
- * Get current user's properties
- * @returns {Promise} List of user's properties
- */
-export const getMyProperties = async () => {
-  try {
-    const { data } = await apiClient.get("/properties/my-properties/");
-    return data;
-  } catch (err) {
-    console.error("Get my properties error:", err);
-    throw err.response?.data || { message: "Failed to fetch your properties" };
-  }
-};
-
-/**
- * Get all amenities
- * @returns {Promise} List of amenities
- */
 export const getAmenities = async () => {
+  if (USE_MOCK) {
+    // Import mock amenities
+    try {
+      const { mockAmenities } = await import("@/mocks/propertyMock");
+      return withDelay(mockAmenities.map((name, idx) => ({ id: `amenity_${idx}`, name })), 300);
+    } catch {
+      // Fallback amenities
+      const fallback = [
+        "Parking",
+        "Water",
+        "Electricity",
+        "Internet",
+        "Kitchen",
+        "Washing Machine",
+        "Balcony",
+        "Fenced Compound",
+        "Air Conditioning",
+        "Security",
+      ];
+      return withDelay(fallback.map((name, idx) => ({ id: `amenity_${idx}`, name })), 300);
+    }
+  }
+
   try {
-    const { data } = await apiClient.get("/properties/amenities/");
+    const { data } = await apiClient.get("/amenities");
     return data;
   } catch (err) {
-    console.error("Get amenities error:", err);
-    throw err.response?.data || { message: "Failed to fetch amenities" };
+    throw extractError(err, "Failed to fetch amenities");
   }
 };
+export { fetchProperties as getAllProperties }
 
-/**
- * Get viewing requests
- * @param {Object} params - Optional query parameters (status)
- * @returns {Promise} List of viewing requests
- */
-export const getViewingRequests = async (params = {}) => {
-  try {
-    const { data } = await apiClient.get("/properties/viewing-requests/", { params });
-    return data;
-  } catch (err) {
-    console.error("Get viewing requests error:", err);
-    throw err.response?.data || { message: "Failed to fetch viewing requests" };
-  }
-};
-
-/**
- * Get viewing request by ID
- * @param {number} id - Viewing request ID
- * @returns {Promise} Viewing request details
- */
-export const getViewingRequest = async (id) => {
-  try {
-    const { data } = await apiClient.get(`/properties/viewing-requests/${id}/`);
-    return data;
-  } catch (err) {
-    console.error("Get viewing request error:", err);
-    throw err.response?.data || { message: "Failed to fetch viewing request" };
-  }
-};
-
-/**
- * Create a viewing request
- * @param {Object} viewingData - Viewing request data
- * @returns {Promise} Created viewing request
- */
-export const createViewingRequest = async (viewingData) => {
-  try {
-    const { data } = await apiClient.post("/properties/viewing-requests/", viewingData);
-    return data;
-  } catch (err) {
-    console.error("Create viewing request error:", err);
-    throw err.response?.data || { message: "Failed to create viewing request" };
-  }
-};
-
-/**
- * Update a viewing request
- * @param {number} id - Viewing request ID
- * @param {Object} viewingData - Updated viewing request data
- * @returns {Promise} Updated viewing request
- */
-export const updateViewingRequest = async (id, viewingData) => {
-  try {
-    const { data } = await apiClient.patch(`/properties/viewing-requests/${id}/`, viewingData);
-    return data;
-  } catch (err) {
-    console.error("Update viewing request error:", err);
-    throw err.response?.data || { message: "Failed to update viewing request" };
-  }
-};
-
-/**
- * Delete a viewing request
- * @param {number} id - Viewing request ID
- * @returns {Promise}
- */
-export const deleteViewingRequest = async (id) => {
-  try {
-    await apiClient.delete(`/properties/viewing-requests/${id}/`);
-    return { message: "Viewing request deleted successfully" };
-  } catch (err) {
-    console.error("Delete viewing request error:", err);
-    throw err.response?.data || { message: "Failed to delete viewing request" };
-  }
+export default {
+  fetchProperty,
+  createProperty,
+  updateProperty,
+  deleteProperty,
+  uploadImage,
+  getAmenities,
+  getAllProperties: fetchProperties,
 };

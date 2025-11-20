@@ -1,157 +1,169 @@
+// src/stores/authStore.js
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { loginUser, getUserProfile } from "@/services/authService";
+import { session } from "@/utils/session";
 
-// -----------------------------------------------------------------------------
-// AUTH STORE (Zustand)
-// -----------------------------------------------------------------------------
-// Handles:
-//  - User authentication state
-//  - Persisting auth data
-//  - Role + permission checks
-//  - Auto-session restore on page refresh
-//
-// NOTE:
-//  Only the `user` object is persisted via Zustand's persist middleware.
-//  Token remains in localStorage manually.
-// -----------------------------------------------------------------------------
+/**
+ * Auth Store (Zustand + Persist)
+ * 
+ * Manages:
+ * - User authentication state
+ * - Session persistence
+ * - Role-based access helpers
+ * 
+ * Role normalization: All roles stored in lowercase (tenant, landlord, artisan, admin, super-admin)
+ */
 export const useAuthStore = create(
   persist(
     (set, get) => ({
-      // Currently authenticated user
       user: null,
+      token: null,            // JWT token stored in localStorage
+      loading: true,          // Initial hydration loading
+      authLoading: false,     // Login/signup operation loading
+      error: null,
 
-      // True while checking for existing login (refresh scenarios)
-      loading: true,
-
-      // Flag to detect if auth came from refreshing the browser
-      isFromRefresh: false,
-
-      /**
-       * Load profile on initial page load / refresh.
-       * - Checks if a token exists
-       * - Fetches user profile silently
-       * - Validates session
-       */
+      // =========================
+      // LOAD EXISTING SESSION
+      // =========================
       loadSession: async () => {
-        const token = localStorage.getItem("token");
+        const token = session.getToken();
+
         if (!token) {
-          // No token → no authenticated user
-          set({ loading: false });
+          set({ user: null, token: null, loading: false });
           return;
         }
 
         try {
-          // Try loading authenticated user's profile
           const profile = await getUserProfile();
-          set({ user: profile, loading: false, isFromRefresh: true });
+
+          // Normalize role to lowercase
+          const normalizedRole = profile.role?.toLowerCase().trim() || "tenant";
+
+          set({
+            user: {
+              ...profile,
+              role: normalizedRole,
+            },
+            token,
+            loading: false,
+            error: null,
+          });
         } catch (err) {
-          // If token is invalid / expired → clear session
-          console.warn("Invalid session:", err);
-          localStorage.removeItem("token");
-          set({ user: null, loading: false });
+          console.warn("Session invalid or expired:", err);
+          get().logout(); // Centralized cleanup
+          set({ loading: false });
         }
       },
 
-      /**
-       * Login handler
-       * - Calls API
-       * - Normalizes role to lowercase
-       * - Stores permissions (admins only)
-       * - Persists token
-       *
-       * Returns:
-       *  → the user's role so caller can redirect appropriately
-       */
+      // =========================
+      // LOGIN USER
+      // =========================
       login: async (credentials) => {
-        const data = await loginUser(credentials);
+        set({ authLoading: true, error: null });
 
-        const role = data.user.role?.toLowerCase();
-        const permissions = data.user.permissions || {}; // Only admin users receive permissions
+        try {
+          const data = await loginUser(credentials);
 
-        // Store user data in Zustand
+          const token = data.token;
+          // Normalize role to lowercase for consistency
+          const normalizedRole = data.user.role?.toLowerCase().trim() || "tenant";
+
+          session.setToken(token);
+          session.setRole(normalizedRole);
+
+          set({
+            user: { ...data.user, role: normalizedRole },
+            token,
+            authLoading: false,
+            loading: false,
+            error: null,
+          });
+
+          return { success: true, role: normalizedRole };
+        } catch (err) {
+          set({
+            authLoading: false,
+            error: err?.response?.data?.message || "Login failed",
+          });
+          return { success: false, error: get().error };
+        }
+      },
+
+      // =========================
+      // LOGOUT USER
+      // =========================
+      logout: () => {
+        session.clearAll();
+        set({
+          user: null,
+          token: null,
+          loading: false,
+          authLoading: false,
+          error: null,
+        });
+      },
+
+      // =========================
+      // UPDATE USER PROFILE
+      // =========================
+      updateUser: (updates) => {
+        const currentUser = get().user;
+        if (!currentUser) return;
+
         set({
           user: {
-            ...data.user,
-            role,
-            permissions,
+            ...currentUser,
+            ...updates,
+            // Ensure role remains normalized if updated
+            role: updates.role ? updates.role.toLowerCase().trim() : currentUser.role,
           },
         });
-
-        // Persist token manually
-        localStorage.setItem("token", data.token);
-
-        return role; // Allows redirect logic from login page
       },
 
-      /**
-       * Logout function
-       * - Clears all auth data
-       * - Removes token + user
-       */
-      logout: () => {
-        localStorage.clear();
-        set({ user: null });
-      },
-
-      /**
-       * Role-check helper
-       * Accepts:
-       *  - String → "admin"
-       *  - Array  → ["admin", "super-admin"]
-       */
+      // =========================
+      // ROLE CHECK HELPERS
+      // =========================
       hasRole: (roles) => {
         const user = get().user;
-        if (!user) return false;
+        if (!user || !user.role) return false;
 
-        if (Array.isArray(roles)) {
-          return roles.includes(user.role);
-        }
-        return user.role === roles;
+        const userRole = user.role.toLowerCase();
+        const allowed = Array.isArray(roles)
+          ? roles.map((r) => r.toLowerCase().trim())
+          : [roles.toLowerCase().trim()];
+
+        return allowed.includes(userRole);
       },
 
-      /**
-       * Permission-check helper
-       * (Only used for admin accounts)
-       *
-       * Example:
-       *  hasPermission("canSuspendUsers")
-       */
-      hasPermission: (perm) => {
+      isTenant: () => get().hasRole("tenant"),
+      isLandlord: () => get().hasRole("landlord"),
+      isArtisan: () => get().hasRole("artisan"),
+      isAdmin: () => get().hasRole(["admin", "super-admin"]),
+      isSuperAdmin: () => get().hasRole("super-admin"),
+
+      // =========================
+      // GET CURRENT ROLE
+      // =========================
+      getRole: () => {
         const user = get().user;
-        if (!user || !user.permissions) return false;
-        return user.permissions[perm] === true;
+        return user?.role?.toLowerCase() || null;
       },
 
-      /**
-       * Super Admin functionality:
-       * - Updates admin permissions (mock or real API)
-       * - Only allowed for role: "super-admin"
-       */
-      updateAdminPermissions: (adminId, newPermissions) => {
+      // =========================
+      // CHECK IF AUTHENTICATED
+      // =========================
+      isAuthenticated: () => {
         const user = get().user;
-
-        // Validate role access
-        if (user.role !== "super-admin") {
-          console.warn("Only super-admin can modify permissions");
-          return false;
-        }
-
-        // Real-world → send to server
-        console.log("Updating admin permissions:", adminId, newPermissions);
-
-        return true;
+        const token = get().token;
+        return !!(user && token);
       },
     }),
-
-    // -------------------------------------------------------------------------
-    // ZUSTAND PERSIST CONFIG
-    // -------------------------------------------------------------------------
     {
-      name: "auth-storage", // localStorage key for Zustand store
+      name: "auth-storage",
       partialize: (state) => ({
-        // Only persist the user object — prevents saving entire store
         user: state.user,
+        token: state.token,
       }),
     }
   )

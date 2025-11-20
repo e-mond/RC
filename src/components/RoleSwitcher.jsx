@@ -1,82 +1,81 @@
+// src/components/RoleSwitcher.jsx
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronUp, LogIn, Home, Building, Wrench, Shield, Crown } from "lucide-react";
-import { useAuth } from "@/context/useAuth";
+import { ChevronDown, ChevronUp, Home, Building, Wrench, Shield, Crown, LogIn } from "lucide-react";
+import { useAuthStore } from "@/stores/authStore";
 import { isMockMode } from "@/mocks/mockManager.js";
 
 export default function RoleSwitcher() {
   const navigate = useNavigate();
   const menuRef = useRef(null);
-  const { setUser } = useAuth();
+  const { login, user } = useAuthStore();
 
-  // Controls dropdown visibility
   const [isOpen, setIsOpen] = useState(false);
-
-  // Tracks keyboard-highlighted role
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  // Get currently stored role
-  const currentRole = localStorage.getItem("userRole") || "none";
+  const currentRole = user?.role || "none";
 
-  // List of available roles in mock/demo mode
   const roles = useMemo(
     () => [
-      { key: "tenant", label: "Tenant", icon: Home, path: "/dashboard/tenant" },
-      { key: "landlord", label: "Landlord", icon: Building, path: "/dashboard/landlord" },
-      { key: "artisan", label: "Artisan", icon: Wrench, path: "/dashboard/artisan" },
-      { key: "admin", label: "Admin", icon: Shield, path: "/admin/dashboard" },
-      { key: "super-admin", label: "Super Admin", icon: Crown, path: "/dashboard/super-admin" },
+      { key: "tenant", label: "Tenant", icon: Home, path: "/tenant/overview" },
+      { key: "landlord", label: "Landlord", icon: Building, path: "/landlord/overview" },
+      { key: "artisan", label: "Artisan", icon: Wrench, path: "/artisan/overview" },
+      { key: "admin", label: "Admin", icon: Shield, path: "/admin/overview" },
+      { key: "super-admin", label: "Super Admin", icon: Crown, path: "/super-admin/overview" },
     ],
     []
   );
 
-  // Predefined mock profiles (only used when mock mode is ON)
-  const fakeProfiles = {
-    tenant: { id: "u1", name: "John Tenant", email: "tenant@demo.com", role: "tenant" },
-    landlord: { id: "u2", name: "Sarah Landlord", email: "landlord@demo.com", role: "landlord" },
-    artisan: { id: "u3", name: "Mike Artisan", email: "artisan@demo.com", role: "artisan" },
-    admin: { id: "u4", name: "Alex Admin", email: "admin@demo.com", role: "admin" },
-    "super-admin": { id: "u5", name: "Super User", email: "super@demo.com", role: "super-admin" },
-  };
-
-  // Handles role switching, navigation, and updating stored data
-  const switchRole = useCallback(
-    (roleKey) => {
-      // Save selected role
-      localStorage.setItem("userRole", roleKey);
-
-      // Load mock profile into localStorage + auth context
-      const fakeUser = fakeProfiles[roleKey];
-      if (fakeUser) {
-        localStorage.setItem("user", JSON.stringify(fakeUser));
-        setUser(fakeUser);
-      }
-
-      // Navigate to the role's dashboard
-      const role = roles.find((r) => r.key === roleKey);
-      if (role) navigate(role.path, { replace: true });
-
-      setIsOpen(false); // Close dropdown
-    },
-    [roles, navigate, setUser]
+  const fakeProfiles = useMemo(
+    () => ({
+      tenant: { id: "u1", fullName: "John Tenant", email: "tenant@demo.com", role: "tenant", permissions: {} },
+      landlord: { id: "u2", fullName: "Sarah Landlord", email: "landlord@demo.com", role: "landlord", permissions: {} },
+      artisan: { id: "u3", fullName: "Mike Artisan", email: "artisan@demo.com", role: "artisan", permissions: {} },
+      admin: { id: "u4", fullName: "Alex Admin", email: "admin@demo.com", role: "admin", permissions: { canViewInsights: true, canApproveUsers: true, canApproveProperties: true, canManageMaintenance: true, canViewReports: true } },
+      "super-admin": { id: "u5", fullName: "Super User", email: "super@demo.com", role: "super-admin", permissions: { canDoEverything: true } },
+    }),
+    []
   );
 
-  // Close dropdown when clicking outside
+  // Added fakeProfiles to dependency array → fixes exhaustive-deps warning
+  const switchRole = useCallback(
+    async (roleKey) => {
+      const fakeUser = fakeProfiles[roleKey];
+      if (fakeUser) {
+        await login({ email: fakeUser.email, password: "any" });
+      }
+
+      const target = roles.find((r) => r.key === roleKey);
+      if (target) {
+        navigate(target.path, { replace: true });
+      }
+
+      setIsOpen(false);
+    },
+    [roles, navigate, login, fakeProfiles]
+  );
+
+  // Close on click outside
   useEffect(() => {
     const handleClick = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setIsOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Keyboard navigation: up/down arrows + Enter selection + Escape close
+  // Keyboard navigation
   useEffect(() => {
     const handleKey = (e) => {
       if (!isOpen) return;
 
-      if (e.key === "Escape") return setIsOpen(false);
+      if (e.key === "Escape") {
+        setIsOpen(false);
+        return;
+      }
 
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -98,42 +97,36 @@ export default function RoleSwitcher() {
     return () => document.removeEventListener("keydown", handleKey);
   }, [isOpen, selectedIndex, roles, switchRole]);
 
-  // Only show role switcher in MOCK mode
   if (!isMockMode()) return null;
 
   return (
     <div ref={menuRef} className="fixed top-32 right-4 z-50">
-      {/* Wrapper UI */}
+      {/* Fixed Tailwind warning: bg-gradient-to-br → bg-linear-to-br (or keep the correct one) */}
       <motion.div className="bg-linear-to-br from-[#079467] to-[#0b6e4f] text-white rounded-2xl shadow-2xl border border-green-600 overflow-hidden">
-        {/* Toggle button */}
+        {/* Toggle Button */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-3 px-5 py-3 hover:bg-white/10 transition-all duration-200 font-medium"
+          className="flex items-center gap-3 px-5 py-3 hover:bg-white/10 transition-all duration-200 font-medium w-full"
         >
-          {/* Current role icon */}
           <CurrentRoleIcon role={currentRole} />
-
-          {/* "Switch Role" text appears only when open */}
           <AnimatePresence>
             {isOpen && (
               <motion.span
                 initial={{ opacity: 0, width: 0 }}
                 animate={{ opacity: 1, width: "auto" }}
                 exit={{ opacity: 0, width: 0 }}
-                className="whitespace-nowrap"
+                className="whitespace-nowrap overflow-hidden"
               >
                 Switch Role
               </motion.span>
             )}
           </AnimatePresence>
-
-          {/* Chevron rotation */}
           <motion.div animate={{ rotate: isOpen ? 180 : 0 }}>
             {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
           </motion.div>
         </button>
 
-        {/* Dropdown roles list */}
+        {/* Dropdown */}
         <AnimatePresence>
           {isOpen && (
             <motion.div
@@ -151,18 +144,13 @@ export default function RoleSwitcher() {
                   <motion.button
                     key={role.key}
                     onClick={() => switchRole(role.key)}
-                    onMouseEnter={() => setSelectedIndex(index)} // Hover highlight
+                    onMouseEnter={() => setSelectedIndex(index)}
                     className={`flex items-center gap-4 w-full px-6 py-3 text-left transition-all ${
                       isSelected ? "bg-white/20" : "hover:bg-white/10"
                     } ${isCurrent ? "font-bold" : ""}`}
                   >
-                    {/* Icon */}
                     <role.icon size={18} />
-
-                    {/* Role label */}
                     <span className="capitalize">{role.label}</span>
-
-                    {/* Tag for the currently active role */}
                     {isCurrent && (
                       <span className="ml-auto bg-yellow-400 text-[#079467] text-xs px-3 py-1 rounded-full font-bold">
                         CURRENT
@@ -176,7 +164,6 @@ export default function RoleSwitcher() {
         </AnimatePresence>
       </motion.div>
 
-      {/* Small "DEV" badge */}
       <div className="absolute -top-2 -right-2 text-xs font-bold bg-black text-white px-2 py-1 rounded shadow">
         DEV
       </div>
@@ -185,7 +172,6 @@ export default function RoleSwitcher() {
 }
 
 function CurrentRoleIcon({ role }) {
-  // Maps a role to its icon component
   const map = {
     tenant: Home,
     landlord: Building,
@@ -194,8 +180,6 @@ function CurrentRoleIcon({ role }) {
     "super-admin": Crown,
   };
 
-  // Default icon if role not found
   const Icon = map[role] || LogIn;
-
   return <Icon size={20} className="text-white drop-shadow" />;
 }

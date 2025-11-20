@@ -1,6 +1,7 @@
 // src/components/layout/DashboardLayout.jsx
 import React from "react";
 import PropTypes from "prop-types";
+import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 
@@ -11,6 +12,8 @@ import Navbar from "./Navbar";
  * - Fully responsive, accessible, and dark-mode compatible
  */
 export default function DashboardLayout({ children, aside }) {
+  const content = children ?? <Outlet />;
+
   return (
     <div className="min-h-screen flex bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       {/* Sidebar - Collapsible & Mobile Drawer */}
@@ -28,7 +31,7 @@ export default function DashboardLayout({ children, aside }) {
           aria-label="Dashboard content"
         >
           <div className="max-w-7xl mx-auto w-full">
-            {children}
+            {content}
           </div>
         </main>
       </div>

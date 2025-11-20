@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
-import { fetchTenantRentals } from "@/services/tenantService";
+import { fetchTenantRentals, getFavorites, getMaintenanceRequests } from "@/services/tenantService";
 import TN_MyRentals from "./components/TN_MyRentals";
-import DashboardLayout from "@/components/layout/DashboardLayout";
+import { Heart, Wrench, History, DollarSign } from "lucide-react";
+import { useFeatureAccess } from "@/context/FeatureAccessContext";
+import PageHeader from "@/modules/dashboard/PageHeader";
+import MetricGrid from "@/modules/dashboard/MetricGrid";
+import ActionGrid from "@/modules/dashboard/ActionGrid";
+import SectionCard from "@/modules/dashboard/SectionCard";
 
 export default function TenantDashboard() {
-  const [summary, setSummary] = useState({ upcomingDue: 0, dueCount: 0 });
+  const { isPremium } = useFeatureAccess();
+  const [summary, setSummary] = useState({ upcomingDue: 0, dueCount: 0, favoritesCount: 0, maintenanceCount: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -16,14 +22,23 @@ export default function TenantDashboard() {
         setLoading(true);
         setError("");
 
-        const rentals = await fetchTenantRentals(); // Now returns [] on 404
+        const [rentals, favorites, maintenance] = await Promise.all([
+          fetchTenantRentals(),
+          getFavorites().catch(() => []),
+          isPremium ? getMaintenanceRequests().catch(() => []) : Promise.resolve([]),
+        ]);
 
         if (!isMounted) return;
 
         const upcoming = rentals.reduce((acc, r) => acc + Number(r.nextDueAmount || 0), 0);
-        const dueCount = rentals.filter(r => Number(r.nextDueAmount || 0) > 0).length;
+        const dueCount = rentals.filter((r) => Number(r.nextDueAmount || 0) > 0).length;
 
-        setSummary({ upcomingDue: upcoming, dueCount });
+        setSummary({
+          upcomingDue: upcoming,
+          dueCount,
+          favoritesCount: Array.isArray(favorites) ? favorites.length : 0,
+          maintenanceCount: Array.isArray(maintenance) ? maintenance.length : 0,
+        });
       } catch (err) {
         if (isMounted) setError(err.message || "Failed to load dashboard");
       } finally {
@@ -33,62 +48,81 @@ export default function TenantDashboard() {
 
     loadSummary();
     return () => { isMounted = false; };
-  }, []);
+  }, [isPremium]);
+
+  const metricCards = [
+    {
+      label: "Upcoming Due",
+      value: loading ? null : `₵${summary.upcomingDue.toFixed(2)}`,
+      icon: DollarSign,
+      accent: "emerald",
+      isLoading: loading,
+    },
+    {
+      label: "Payments Due",
+      value: loading ? null : summary.dueCount,
+      icon: DollarSign,
+      accent: "blue",
+      isLoading: loading,
+    },
+    {
+      label: "Favorites",
+      value: loading ? null : summary.favoritesCount,
+      icon: Heart,
+      accent: "rose",
+      href: "/tenant/wishlist",
+      isLoading: loading,
+    },
+    ...(isPremium
+      ? [
+          {
+            label: "Maintenance",
+            value: loading ? null : summary.maintenanceCount,
+            icon: Wrench,
+            accent: "amber",
+            href: "/tenant/maintenance",
+            isLoading: loading,
+          },
+        ]
+      : []),
+  ];
+
+  const actions = [
+    {
+      title: "My Wishlist",
+      description: "View your saved properties",
+      icon: Heart,
+      href: "/tenant/wishlist",
+      tone: "rose",
+    },
+    {
+      title: "Rental History",
+      description: "Generate references & view past stays",
+      icon: History,
+      href: "/tenant/history",
+      tone: "blue",
+    },
+    isPremium && {
+      title: "Maintenance",
+      description: "Track premium maintenance requests",
+      icon: Wrench,
+      href: "/tenant/maintenance",
+      tone: "amber",
+    },
+  ].filter(Boolean);
 
   return (
-    <DashboardLayout>
-    <div className="p-6 max-w-7xl mx-auto space-y-8">
-      {/* Header */}
-      <header>
-        <h1 className="text-2xl font-bold text-[#0f1724]">Welcome Back!</h1>
-        <p className="text-gray-600 mt-1">Here’s your rental overview as of today.</p>
-      </header>
+    <div className="space-y-8">
+      <PageHeader title="Welcome back" subtitle="Here’s your rental overview as of today." badge={isPremium ? "Premium Tenant" : null} />
 
-      {/* Error Alert */}
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-          {error}
-        </div>
-      )}
+      {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        <SummaryCard title="Upcoming Due" value={loading ? null : `₵${summary.upcomingDue.toFixed(2)}`} loading={loading} />
-        <SummaryCard title="Payments Due" value={loading ? null : summary.dueCount} loading={loading} />
-        <SupportCard />
-      </div>
+      <MetricGrid items={metricCards} />
+      <ActionGrid items={actions} />
 
-      {/* My Rentals */}
-      <section>
+      <SectionCard title="My Rentals" description="Active leases and due payments">
         <TN_MyRentals />
-      </section>
-    </div>
-    </DashboardLayout>
-  );
-}
-
-// Reusable Card Components
-function SummaryCard({ title, value, loading }) {
-  return (
-    <div className="bg-white border rounded-lg p-5 shadow-sm">
-      <p className="text-sm text-gray-500">{title}</p>
-      {loading ? (
-        <div className="mt-2 h-8 w-28 bg-gray-200 rounded animate-pulse" />
-      ) : (
-        <p className="text-2xl font-bold text-[#0f1724]">{value}</p>
-      )}
-    </div>
-  );
-}
-
-function SupportCard() {
-  return (
-    <div className="bg-linear-to-r from-[#0b6e4f] to-[#095c42] text-white rounded-lg p-5 shadow-sm flex items-center justify-between">
-      <div>
-        <p className="text-sm opacity-90">Need Help?</p>
-        <p className="text-lg font-medium">Contact Support</p>
-      </div>
-      <span className="text-3xl">Help</span>
+      </SectionCard>
     </div>
   );
 }

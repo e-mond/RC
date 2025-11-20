@@ -1,160 +1,116 @@
-// import apiClient from "./apiClient";
-
-// /** LOGIN */
-// export const loginUser = async (credentials) => {
-//   try {
-//     const { data } = await apiClient.post("/auth/login", credentials);
-//     return data;
-//   } catch (err) {
-//     console.error("Login API error:", err);
-//     throw new Error(err.response?.data?.message || "Login failed");
-//   }
-// };
-
-// /** SIGNUP */
-// export const signupTenant = async (formData) => {
-//   try {
-//     const { data } = await apiClient.post("/auth/signup/tenant", formData, {
-//       headers: { "Content-Type": "multipart/form-data" },
-//     });
-//     return data;
-//   } catch (err) {
-//     console.error("Tenant signup error:", err);
-//     throw new Error(err.response?.data?.message || "Signup failed");
-//   }
-// };
-
-// export const signupLandlord = async (formData) => {
-//   try {
-//     const { data } = await apiClient.post("/auth/signup/landlord", formData, {
-//       headers: { "Content-Type": "multipart/form-data" },
-//     });
-//     return data;
-//   } catch (err) {
-//     console.error("Landlord signup error:", err);
-//     throw new Error(err.response?.data?.message || "Signup failed");
-//   }
-// };
-
-// export const signupArtisan = async (formData) => {
-//   try {
-//     const { data } = await apiClient.post("/auth/signup/artisan", formData, {
-//       headers: { "Content-Type": "multipart/form-data" },
-//     });
-//     return data;
-//   } catch (err) {
-//     console.error("Artisan signup error:", err);
-//     throw new Error(err.response?.data?.message || "Signup failed");
-//   }
-// };
-
-// /** PROFILE */
-// export const getUserProfile = async () => {
-//   try {
-//     const { data } = await apiClient.get("/auth/profile");
-//     return data.user;
-//   } catch (err) {
-//     console.error("Profile fetch error:", err);
-//     throw new Error(err.response?.data?.message || "Unable to load profile");
-//   }
-// };
-
-// /** PASSWORD RESET */
-// export const forgotPassword = async (email) => {
-//   try {
-//     const { data } = await apiClient.post("/auth/forgot-password", { email });
-//     return data;
-//   } catch (err) {
-//     console.error("Forgot password error:", err);
-//     throw new Error(err.response?.data?.message || "Error sending reset link");
-//   }
-// };
-
-// export const resetPassword = async (token, payload) => {
-//   try {
-//     const { data } = await apiClient.post(`/auth/reset-password/${token}`, payload);
-//     return data;
-//   } catch (err) {
-//     console.error("Reset password error:", err);
-//     throw new Error(err.response?.data?.message || "Password reset failed");
-//   }
-// };
-
-
-
 // src/services/authService.js
-import apiClient from "./apiClient.js";
+import apiClient from "./apiClient";
+import { isMockMode } from "@/mocks/mockManager";
+import { session } from "@/utils/session";
 
-/** LOGIN */
+
+/* ------------------------------------------------------------
+   Utility: Extracts error messages consistently
+------------------------------------------------------------ */
+const extractError = (err, fallback = "Request failed") =>
+  err?.response?.data?.message || err?.response?.data?.error || err?.message || fallback;
+
+/* ------------------------------------------------------------
+   LOGIN
+   Works with real backend and mock mode
+------------------------------------------------------------ */
 export const loginUser = async (credentials) => {
+  // ----- MOCK MODE -----
+  if (import.meta.env.DEV && isMockMode()) {
+    const roleMap = {
+      "tenant@demo.com": "tenant",
+      "landlord@demo.com": "landlord",
+      "artisan@demo.com": "artisan",
+      "admin@demo.com": "admin",
+      "super@demo.com": "super-admin",
+    };
+
+    const role = roleMap[credentials.email] || "tenant";
+    const user = {
+      id: `u${Date.now()}`,
+      name: credentials.email.split("@")[0],
+      email: credentials.email,
+      role,
+    };
+
+    session.setToken("dev-jwt-demo");
+    session.setRole(role);
+
+    return { token: "dev-jwt-demo", user };
+  }
+
+  // ----- REAL API -----
   try {
     const { data } = await apiClient.post("/auth/login", credentials);
-    return data; // contains { token, user }
+    return {
+      token: data.token || data.access_token,
+      user: data.user || data,
+    };
   } catch (err) {
-    console.error("Login API error:", err);
-    throw new Error(err.response?.data?.message || "Login failed");
+    throw new Error(extractError(err, "Login failed"));
   }
 };
 
-/** SIGNUP */
-export const signupTenant = async (formData) => {
+/* ------------------------------------------------------------
+   SIGNUP (Tenant / Landlord / Artisan)
+------------------------------------------------------------ */
+const signup = async (endpoint, formData) => {
   try {
-    const { data } = await apiClient.post("/auth/signup/tenant", formData, {
+    const { data } = await apiClient.post(endpoint, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return data;
   } catch (err) {
-    throw new Error(err.response?.data?.message || "Signup failed");
+    throw new Error(extractError(err, "Signup failed"));
   }
 };
 
-export const signupLandlord = async (formData) => {
-  try {
-    const { data } = await apiClient.post("/auth/signup/landlord", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    return data;
-  } catch (err) {
-    throw new Error(err.response?.data?.message || "Signup failed");
-  }
-};
+export const signupTenant = (formData) => signup("/auth/signup/tenant", formData);
+export const signupLandlord = (formData) => signup("/auth/signup/landlord", formData);
+export const signupArtisan = (formData) => signup("/auth/signup/artisan", formData);
 
-export const signupArtisan = async (formData) => {
-  try {
-    const { data } = await apiClient.post("/auth/signup/artisan", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    return data;
-  } catch (err) {
-    throw new Error(err.response?.data?.message || "Signup failed");
-  }
-};
-
-/** PROFILE */
+/* ------------------------------------------------------------
+   PROFILE
+   Returns ONLY the user object
+------------------------------------------------------------ */
 export const getUserProfile = async () => {
+  if (import.meta.env.DEV && isMockMode()) {
+    const role = session.getRole() || "tenant";
+    const profiles = {
+      tenant: { id: "u1", name: "Kofi Mensah", email: "tenant@demo.com", role: "tenant" },
+      landlord: { id: "u2", name: "Ama Owusu", email: "landlord@demo.com", role: "landlord" },
+      artisan: { id: "u3", name: "Kwame Electrician", email: "artisan@demo.com", role: "artisan" },
+      admin: { id: "u4", name: "Efua Admin", email: "admin@demo.com", role: "admin" },
+      "super-admin": { id: "u5", name: "Nana Super", email: "super@demo.com", role: "super-admin" },
+    };
+    return profiles[role];
+  }
+
   try {
     const { data } = await apiClient.get("/auth/profile");
-    return data.user; // consistent: always return user only
+    return data.user || data.profile || data;
   } catch (err) {
-    throw new Error(err.response?.data?.message || "Unable to load profile");
+    throw new Error(extractError(err, "Unable to load profile"));
   }
 };
 
-/** PASSWORD RESET */
+/* ------------------------------------------------------------
+   PASSWORD RESET
+------------------------------------------------------------ */
 export const forgotPassword = async (email) => {
   try {
-    const { data } = await apiClient.post("/auth/forgot-password/", { email });
+    const { data } = await apiClient.post("/auth/forgot-password", { email });
     return data;
   } catch (err) {
-    throw new Error(err.response?.data?.message || "Error sending reset link");
+    throw new Error(extractError(err, "Unable to send reset email"));
   }
 };
 
 export const resetPassword = async (token, payload) => {
   try {
-    const { data } = await apiClient.post(`/auth/reset-password/${token}/`, payload);
+    const { data } = await apiClient.post(`/auth/reset-password/${token}`, payload);
     return data;
   } catch (err) {
-    throw new Error(err.response?.data?.message || "Password reset failed");
+    throw new Error(extractError(err, "Password reset failed"));
   }
 };

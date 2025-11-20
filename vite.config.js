@@ -12,4 +12,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'), 
     },
   },
+  test: {
+    globals: true,           // ← This removes need for importing describe/test/expect
+    environment: "jsdom",
+    setupFiles: "./src/test-setup.js", // optional: for custom setup
+  },
 })

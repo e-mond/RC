@@ -1,208 +1,305 @@
-
+// src/mocks/superAdminMock.js
 /**
- * MOCK DATA FOR SUPER ADMIN DASHBOARD
- * - Used in development when API is not available
- * - Simulates real backend responses
- * - Consistent schema across all components
- * - Realistic values for demo/testing
+ * Core mock data for Super Admin & Admin features.
+ * - In-memory data store for development when backend is unavailable
+ * - Realistic Ghanaian names, locations, and values
+ * - Designed to persist during Vite dev server session
  */
 
-/**
- * SYSTEM-WIDE STATISTICS
- * Used by: SA_StatsOverview, SA_SystemHealth, SA_RoleDistributionChart
- */
+import { genId, nowISO } from "./_utils";
+
+const now = () => nowISO();
+
+// ===================================================================
+// SYSTEM-WIDE STATISTICS (Dashboard Overview)
+// ===================================================================
 export const mockSystemStats = {
-  // User counts
-  totalUsers: 1247,
-  activeTenants: 842,
-  activeLandlords: 312,
-  artisans: 78,
-  admins: 12,
-  superAdmins: 3,
+  totalUsers: 1289,
+  activeTenants: 878,
+  activeLandlords: 336,
+  artisans: 72,
+  admins: 3,
+  superAdmins: 2,
 
-  // Property & request stats
-  activeProperties: 892,
-  pendingRequests: 34,
+  activeProperties: 912,
+  pendingProperties: 4,
+  pendingUsers: 3,
 
-  // Financial
-  revenueThisMonth: 125000, // GHS
+  pendingMaintenanceRequests: 9,
+  revenueThisMonth: 178900, // GHS
+  revenueLast30Days: 178900,
 
-  // System health metrics
   systemHealth: {
-    cpu: 68, // %
-    memory: 74, // %
-    apiLatency: 89, // ms
-    uptime: "99.98%", // string
+    cpu: 62, // %
+    memory: 71, // %
+    apiLatency: 92, // ms
+    uptime: "99.97%",
   },
 
-  // Role distribution for chart
-  roles: {
-    tenant: 842,
-    landlord: 312,
-    artisan: 78,
-    admin: 12,
-    "super-admin": 3,
+  // For role distribution pie/donut chart
+  roleDistribution: {
+    tenant: 878,
+    landlord: 336,
+    artisan: 72,
+    admin: 3,
+    "super-admin": 2,
   },
 
-
-
-  // Recent activity feed
-  recentActivity: [
-    {
-      id: "act1",
-      user: "john@landlord.com",
-      userName: "John Landlord",
-      action: "Created property",
-      target: "Sunny Hills Apartment",
-      time: "2 min ago",
-      timestamp: Date.now() - 2 * 60 * 1000,
-    },
-    {
-      id: "act2",
-      user: "mike@artisan.com",
-      userName: "Mike Artisan",
-      action: "Completed task",
-      target: "Plumbing Repair #124",
-      time: "5 min ago",
-      timestamp: Date.now() - 5 * 60 * 1000,
-    },
-    {
-      id: "act3",
-      user: "admin@system.com",
-      userName: "Alex Admin",
-      action: "Approved user",
-      target: "Sarah Tenant",
-      time: "12 min ago",
-      timestamp: Date.now() - 12 * 60 * 1000,
-    },
-    {
-      id: "act4",
-      user: "sarah@tenant.com",
-      userName: "Sarah Tenant",
-      action: "Submitted payment",
-      target: "GHS 850 rent",
-      time: "18 min ago",
-      timestamp: Date.now() - 18 * 60 * 1000,
-    },
-  ],
+  lastUpdated: now(),
 };
 
-
-export const mockAuditLogs = [
-  {
-    id: "log1",
-    user: "john@landlord.com",
-    action: "Created property",
-    target: "Apartment #12",
-    timestamp: Date.now() - 2 * 60 * 1000,
-    level: "info",
-  },
-  {
-    id: "log2",
-    user: "admin@system.com",
-    action: "Deleted user",
-    target: "user123",
-    timestamp: Date.now() - 10 * 60 * 1000,
-    level: "warn",
-  },
-  {
-    id: "log3",
-    user: "mike@artisan.com",
-    action: "Failed login",
-    target: "3 attempts",
-    timestamp: Date.now() - 30 * 60 * 1000,
-    level: "error",
-  },
-];
-/**
- * FULL USER LIST
- * Used by: SA_UserTable
- * Schema: _id, fullName, email, role, status, joined
- */
+// ===================================================================
+// FULL USER LIST (SA_UserTable / All Users endpoint)
+// ===================================================================
 export const mockUsers = [
   {
-    _id: "u1",
-    fullName: "John Landlord",
-    email: "john@landlord.com",
+    id: genId("u"),
+    fullName: "Kwame Asare",
+    email: "kwame.asare@example.gh",
     role: "landlord",
     status: "active",
-    joined: "2024-01-15",
-    avatar: null,
+    phone: "+233 24 123 4567",
+    createdAt: "2024-02-10T08:30:00Z",
+    lastLogin: now(),
   },
   {
-    _id: "u2",
-    fullName: "Sarah Tenant",
-    email: "sarah@tenant.com",
+    id: genId("u"),
+    fullName: "Adwoa Mensah",
+    email: "adwoa.mensah@example.gh",
     role: "tenant",
     status: "active",
-    joined: "2024-03-22",
-    avatar: null,
+    phone: "+233 55 987 6543",
+    createdAt: "2024-06-22T14:20:00Z",
+    lastLogin: now(),
   },
   {
-    _id: "u3",
-    fullName: "Mike Artisan",
-    email: "mike@artisan.com",
+    id: genId("u"),
+    fullName: "Ebo Plumbing",
+    email: "ebo.plumb@example.gh",
     role: "artisan",
     status: "pending",
-    joined: "2025-11-01",
-    avatar: null,
+    phone: "+233 20 555 1122",
+    createdAt: "2025-11-18T10:15:00Z",
   },
   {
-    _id: "u4",
-    fullName: "Alex Admin",
-    email: "alex@admin.com",
+    id: genId("u"),
+    fullName: "Nana Yaa Admin",
+    email: "nana.admin@system.com",
     role: "admin",
     status: "active",
-    joined: "2023-06-10",
-    avatar: null,
+    phone: "+233 50 000 9999",
+    createdAt: "2023-08-01T09:00:00Z",
   },
   {
-    _id: "u5",
-    fullName: "Emma Super",
-    email: "emma@super.com",
+    id: genId("u"),
+    fullName: "Super Emma Osei",
+    email: "emma.super@system.com",
     role: "super-admin",
     status: "active",
-    joined: "2023-01-01",
-    avatar: null,
+    phone: "+233 54 111 2233",
+    createdAt: "2023-01-01T00:00:00Z",
   },
   {
-    _id: "u6",
-    fullName: "David Brown",
-    email: "david@landlord.com",
+    id: genId("u"),
+    fullName: "Yaw Boateng",
+    email: "yaw.boateng@example.gh",
     role: "landlord",
     status: "inactive",
-    joined: "2024-07-19",
-    avatar: null,
-  },
-  {
-    _id: "u7",
-    fullName: "Lisa Green",
-    email: "lisa@tenant.com",
-    role: "tenant",
-    status: "active",
-    joined: "2025-02-28",
-    avatar: null,
-  },
-  {
-    _id: "u8",
-    fullName: "Paul Fixer",
-    email: "paul@artisan.com",
-    role: "artisan",
-    status: "active",
-    joined: "2024-09-05",
-    avatar: null,
+    phone: "+233 26 444 5566",
+    createdAt: "2024-09-05T12:00:00Z",
   },
 ];
 
-export const withDelay = (data, time = 500) =>
-  new Promise((resolve) => setTimeout(() => resolve(data), time));
+// ===================================================================
+// PENDING USER APPROVALS
+// ===================================================================
+export const pendingUsers = [
+  {
+    id: genId("pu"),
+    fullName: "Akosua Frimpong",
+    email: "akosua.f@example.gh",
+    role: "artisan",
+    phone: "+233 27 888 7766",
+    submittedAt: "2025-11-19T09:45:00Z",
+    note: "Submitted National ID and trade certificate",
+    documents: ["id_front.jpg", "certificate.pdf"],
+  },
+  {
+    id: genId("pu"),
+    fullName: "Kofi Owusu",
+    email: "kofi.owusu@example.gh",
+    role: "landlord",
+    phone: "+233 54 222 3344",
+    submittedAt: "2025-11-18T16:20:00Z",
+    note: "Awaiting verification of property ownership documents",
+    documents: ["deed.pdf", "utility_bill.jpg"],
+  },
+];
 
-/**
- * EXPORT FOR EASY MOCK SWITCHING
- */
+// ===================================================================
+// PENDING PROPERTY APPROVALS
+// ===================================================================
+export const pendingProperties = [
+  {
+    id: genId("pp"),
+    title: "3-Bedroom Executive House - East Legon",
+    ownerName: "Kwame Asare",
+    ownerId: mockUsers[0].id,
+    address: "Trassaco Valley, East Legon, Accra",
+    price: 4500, // GHS per month
+    images: [], // would be URLs in real app
+    submittedAt: "2025-11-19T11:30:00Z",
+    status: "pending",
+  },
+  {
+    id: genId("pp"),
+    title: "Modern Studio Apartment - Osu",
+    ownerName: "Abena Serwaa",
+    ownerId: genId("u"),
+    address: "Oxford Street, Osu, Accra",
+    price: 1800,
+    images: [],
+    submittedAt: "2025-11-18T19:10:00Z",
+    status: "pending",
+  },
+];
+
+// ===================================================================
+// PENDING MAINTENANCE / REPAIR REQUESTS
+// ===================================================================
+export const pendingMaintenance = [
+  {
+    id: genId("m"),
+    propertyId: pendingProperties[0].id,
+    propertyTitle: pendingProperties[0].title,
+    tenantName: "Adwoa Mensah",
+    tenantId: mockUsers[1].id,
+    summary: "Air conditioner not cooling",
+    details: "AC in master bedroom blows air but not cold. Started 2 days ago.",
+    priority: "high",
+    createdAt: "2025-11-19T08:15:00Z",
+    status: "pending",
+  },
+  {
+    id: genId("m"),
+    propertyId: genId("prop"),
+    propertyTitle: "2BR Apartment - Airport Residential",
+    tenantName: "Efua Sackey",
+    tenantId: genId("u"),
+    summary: "Leaking pipe under kitchen sink",
+    details: "Small leak has become worse after last night.",
+    priority: "urgent",
+    createdAt: "2025-11-19T06:40:00Z",
+    status: "pending",
+  },
+];
+
+// ===================================================================
+// AUDIT LOGS
+// ===================================================================
+export const mockAuditLogs = [
+  {
+    id: genId("a"),
+    actor: "emma.super@system.com",
+    actorName: "Super Emma Osei",
+    action: "approved_user",
+    target: "akosua.f@example.gh",
+    detail: "Approved artisan registration",
+    level: "info",
+    createdAt: "2025-11-19T10:05:00Z",
+  },
+  {
+    id: genId("a"),
+    actor: "system",
+    action: "auto_reject_property",
+    target: "Duplicate listing - Labone",
+    detail: "Property already exists in system",
+    level: "warn",
+    createdAt: "2025-11-19T03:22:00Z",
+  },
+  {
+    id: genId("a"),
+    actor: "nana.admin@system.com",
+    action: "banned_user",
+    target: "spamuser123@example.com",
+    detail: "Repeated fraudulent listings",
+    level: "error",
+    createdAt: "2025-11-18T14:50:00Z",
+  },
+];
+
+// ===================================================================
+// RECENT ACTIVITY FEED
+// ===================================================================
+export const recentActivity = [
+  {
+    id: genId("act"),
+    user: "adwoa.mensah@example.gh",
+    userName: "Adwoa Mensah",
+    action: "Submitted maintenance request",
+    target: "AC not cooling",
+    time: "2 min ago",
+    timestamp: Date.now() - 2 * 60 * 1000,
+  },
+  {
+    id: genId("act"),
+    user: "kwame.asare@example.gh",
+    userName: "Kwame Asare",
+    action: "Listed new property",
+    target: "3-Bedroom House - East Legon",
+    time: "8 min ago",
+    timestamp: Date.now() - 8 * 60 * 1000,
+  },
+  {
+    id: genId("act"),
+    user: "emma.super@system.com",
+    userName: "Super Emma Osei",
+    action: "Approved artisan",
+    target: "Akosua Frimpong",
+    time: "15 min ago",
+    timestamp: Date.now() - 15 * 60 * 1000,
+  },
+];
+
+// ===================================================================
+// REPORTS / FLAGS
+// ===================================================================
+export const mockReports = [
+  {
+    id: genId("r"),
+    type: "fraud",
+    reporter: "tenant123",
+    summary: "Landlord asking for payment outside platform",
+    status: "open",
+    createdAt: "2025-11-19T07:30:00Z",
+  },
+  {
+    id: genId("r"),
+    type: "dispute",
+    reporter: "landlord456",
+    summary: "Tenant refusing to vacate after notice",
+    status: "under_review",
+    createdAt: "2025-11-18T22:10:00Z",
+  },
+];
+
+// ===================================================================
+// UTILITY: Simulated API delay
+// ===================================================================
+export const withDelay = (data, delay = 600) =>
+  new Promise((resolve) => setTimeout(() => resolve({ data }), delay));
+
+// ===================================================================
+// DEFAULT EXPORT
+// ===================================================================
 export default {
   mockSystemStats,
   mockUsers,
+  pendingUsers,
+  pendingProperties,
+  pendingMaintenance,
   mockAuditLogs,
+  recentActivity,
+  mockReports,
   withDelay,
 };

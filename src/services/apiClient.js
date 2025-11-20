@@ -1,5 +1,6 @@
 // src/services/apiClient.js
 import axios from "axios";
+import { session } from "@/utils/session";
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api",
@@ -12,7 +13,7 @@ const apiClient = axios.create({
 // Add token to every request
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    const token = session.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -26,8 +27,7 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 && !import.meta.env.DEV) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("userRole");
+      session.clearAll();
       window.location.href = "/login";
     }
     return Promise.reject(error);
