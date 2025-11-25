@@ -10,10 +10,11 @@ export default function PropertiesPage() {
     load();
   }, []);
 
-  const load = async () => {
-    const res = await getAllProperties();
-    setProperties(res);
-  };
+const load = async () => {
+  const res = await getAllProperties();
+  setProperties(res?.data || res || []);
+};
+
 
   return (
     <div className="p-6">

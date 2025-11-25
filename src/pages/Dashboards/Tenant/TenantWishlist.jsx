@@ -7,11 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useFeatureStore } from "@/stores/featureStore";
 
 /**
- * TenantWishlist - Saved favorite properties
- * - View all favorited properties
- * - Remove from favorites
- * - Navigate to property details
- * - Price change notifications (if implemented)
+ * TenantWishlist - Fully Dark Mode Compatible
  */
 export default function TenantWishlist() {
   const [favorites, setFavorites] = useState([]);
@@ -55,7 +51,7 @@ export default function TenantWishlist() {
 
   if (loading) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-[400px]">
+      <div className="p-6 flex items-center justify-center min-h-[400px] bg-gray-50 dark:bg-gray-900">
         <Loader2 className="w-8 h-8 animate-spin text-[#0b6e4f]" />
       </div>
     );
@@ -65,18 +61,18 @@ export default function TenantWishlist() {
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <header className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-[#0f1724]">My Wishlist</h2>
-          <p className="text-sm text-gray-600">Your saved favorite properties</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">My Wishlist</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Your saved favorite properties</p>
         </div>
         {favorites.length > 0 && (
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
             {favorites.length} {favorites.length === 1 ? "property" : "properties"} saved
           </div>
         )}
       </header>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg">
           {error}
         </div>
       )}
@@ -102,7 +98,7 @@ export default function TenantWishlist() {
   );
 }
 
-// Property Card Component
+// Property Card - Dark Mode Ready
 function PropertyCard({ property, onRemove, removing, isPremium }) {
   const propertyId = property.id || property.propertyId;
   const imageUrl = property.images?.[0] || property.image || "https://placehold.co/400x300?text=Property";
@@ -114,10 +110,10 @@ function PropertyCard({ property, onRemove, removing, isPremium }) {
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
-      className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
+      className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300"
     >
       {/* Image */}
-      <div className="relative h-48 bg-gray-200">
+      <div className="relative h-48 bg-gray-200 dark:bg-gray-700">
         <img
           src={imageUrl}
           alt={property.title || "Property"}
@@ -126,7 +122,7 @@ function PropertyCard({ property, onRemove, removing, isPremium }) {
         <button
           onClick={() => onRemove(propertyId)}
           disabled={removing}
-          className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:bg-red-50 transition-colors disabled:opacity-50"
+          className="absolute top-3 right-3 p-2 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-full shadow-md hover:bg-red-50 dark:hover:bg-red-900/50 transition-all disabled:opacity-50"
           aria-label="Remove from favorites"
         >
           {removing ? (
@@ -136,7 +132,7 @@ function PropertyCard({ property, onRemove, removing, isPremium }) {
           )}
         </button>
         {isPremium && property.priceChanged && (
-          <div className="absolute top-3 left-3 px-3 py-1 bg-yellow-500 text-white text-xs font-medium rounded-full">
+          <div className="absolute top-3 left-3 px-3 py-1 bg-yellow-500 text-white text-xs font-medium rounded-full shadow-lg">
             Price Changed
           </div>
         )}
@@ -145,16 +141,16 @@ function PropertyCard({ property, onRemove, removing, isPremium }) {
       {/* Content */}
       <div className="p-4 space-y-3">
         <div>
-          <h3 className="font-semibold text-lg text-gray-900 line-clamp-1">
+          <h3 className="font-semibold text-lg text-gray-900 dark:text-white line-clamp-1">
             {property.title || "Untitled Property"}
           </h3>
-          <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
+          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-1">
             <MapPin size={14} />
             {property.address || property.location || "Location not specified"}
           </p>
         </div>
 
-        <div className="flex items-center gap-4 text-sm text-gray-600">
+        <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
           {property.bedrooms !== undefined && (
             <span className="flex items-center gap-1">
               <Bed size={16} />
@@ -169,13 +165,15 @@ function PropertyCard({ property, onRemove, removing, isPremium }) {
           )}
         </div>
 
-        <div className="flex items-center justify-between pt-2 border-t">
+        <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
           <div>
             <span className="text-2xl font-bold text-[#0b6e4f]">
               {currency === "GHS" ? "₵" : "$"}
               {price.toLocaleString()}
             </span>
-            <span className="text-sm text-gray-500 ml-1">/{property.period || "month"}</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">
+              /{property.period || "month"}
+            </span>
           </div>
           <Link
             to={`/properties/${propertyId}`}
@@ -190,15 +188,15 @@ function PropertyCard({ property, onRemove, removing, isPremium }) {
   );
 }
 
-// Empty State
+// Empty State - Dark Mode Enhanced
 function EmptyWishlistState() {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-12 text-center border border-gray-200">
-      <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-        <Heart className="w-12 h-12 text-gray-400" />
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-12 text-center border border-gray-200 dark:border-gray-700">
+      <div className="mx-auto w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-6">
+        <Heart className="w-12 h-12 text-gray-400 dark:text-gray-500" />
       </div>
-      <h3 className="text-xl font-semibold text-gray-900 mb-2">No Favorites Yet</h3>
-      <p className="text-gray-600 mb-6 max-w-md mx-auto">
+      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Favorites Yet</h3>
+      <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
         Start exploring properties and save your favorites to view them here later.
       </p>
       <Link
@@ -211,4 +209,3 @@ function EmptyWishlistState() {
     </div>
   );
 }
-

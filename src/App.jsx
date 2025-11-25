@@ -2,7 +2,7 @@ import React, { Suspense } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { Toaster } from "react-hot-toast";
-import DemoModeBanner from "@/components/common/DemoModeBanner";
+// import DemoModeBanner from "@/components/common/DemoModeBanner";
 
 // Public Pages
 import LandingPage from "@/pages/Landing/LandingPage";
@@ -37,7 +37,7 @@ function AnimatedRoutes() {
   return (
     <>
       <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
-      <DemoModeBanner />
+      {/* <DemoModeBanner /> */}
 
       {/* Only wrap page transitions with AnimatePresence */}
       <AnimatePresence mode="wait" initial={false}>
