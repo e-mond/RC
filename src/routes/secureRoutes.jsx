@@ -18,6 +18,8 @@ const TenantPayments = lazy(() => import("@/pages/Dashboards/Tenant/TenantPaymen
 const TenantMaintenance = lazy(() => import("@/pages/Dashboards/Tenant/TenantMaintenance"));
 const TenantWishlist = lazy(() => import("@/pages/Dashboards/Tenant/TenantWishlist"));
 const TenantRentalHistory = lazy(() => import("@/pages/Dashboards/Tenant/TenantRentalHistory"));
+const TenantProperties = lazy(() => import("@/pages/Dashboards/Tenant/TenantProperties"));
+const PropertyDetail = lazy(() => import("@/pages/PropertyDetail"));
 
 // Landlord
 const LandlordDashboard = lazy(() => import("@/pages/Dashboards/Landlord/LandlordDashboard"));
@@ -70,6 +72,8 @@ const dashboardRoutes = [
     children: [
       { index: true, element: <TenantDashboard /> },
       { path: "overview", element: <TenantDashboard /> },
+      { path: "properties", element: <TenantProperties /> },
+      { path: "properties/:id", element: <PropertyDetail /> },
       { path: "rentals", element: <TenantRentals /> },
       { path: "payments", element: <TenantPayments /> },
       { path: "maintenance", element: <TenantMaintenance /> },
@@ -131,19 +135,19 @@ const dashboardRoutes = [
     ],
   },
 
-      // ---------------- Admin ----------------
-      {
-        path: "admin",
-        role: ["admin", "super-admin"],
-        layout: DashboardLayout,
-        children: [
-          { index: true, element: <Navigate to="overview" replace /> },
-          { path: "overview", element: <AdminDashboard /> },
-          { path: "dashboard", element: <Navigate to="overview" replace /> }, // Redirect for backward compatibility
-          { path: "approvals", element: <AdminApprovals /> },
-          { path: "reports", element: <AdminReports /> },
-        ],
-      },
+  // ---------------- Admin ----------------
+  {
+    path: "admin",
+    role: ["admin", "super-admin"],
+    layout: DashboardLayout,
+    children: [
+      { index: true, element: <Navigate to="overview" replace /> },
+      { path: "overview", element: <AdminDashboard /> },
+      { path: "dashboard", element: <Navigate to="overview" replace /> }, // Redirect for backward compatibility
+      { path: "approvals", element: <AdminApprovals /> },
+      { path: "reports", element: <AdminReports /> },
+    ],
+  },
 ];
 
 // ---------------------------

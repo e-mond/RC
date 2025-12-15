@@ -82,22 +82,15 @@ export default function ArtisanTasks() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Header */}
-      <header className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 dark:text-white">My Tasks</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-          Manage and track all your assigned maintenance jobs
-        </p>
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <header>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">My Tasks</h2>
+        <p className="text-sm text-gray-600 dark:text-gray-400">Manage your assigned maintenance tasks</p>
       </header>
 
       {/* Error Alert */}
       {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-4 mb-6 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 rounded-xl backdrop-blur-sm"
-        >
+        <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg">
           {error}
         </motion.div>
       )}
@@ -110,22 +103,17 @@ export default function ArtisanTasks() {
         <StatsCard title="Completed" value={stats.completed} icon={CheckCircle} gradient="from-emerald-500 to-emerald-600" />
       </div>
 
-      {/* Filters - Glassmorphism */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 mb-8"
-      >
-        <div className="flex flex-col lg:flex-row gap-5">
-          {/* Search */}
+      {/* Filters */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by title, address, or description..."
-              className="w-full pl-12 pr-6 py-3.5 bg-gray-100 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 dark:text-white placeholder-gray-500"
+              placeholder="Search tasks..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             />
           </div>
 
@@ -139,7 +127,7 @@ export default function ArtisanTasks() {
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="px-5 py-3 bg-gray-100 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 dark:text-white"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
@@ -189,16 +177,10 @@ function StatsCard({ title, value, icon: Icon, gradient }) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale:  1.03 }}
-      className={`bg-linear-to-br ${gradient} p-6 rounded-2xl shadow-lg text-white`}
+      className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border border-gray-200 dark:border-gray-700"
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-white/80 text-sm mb-1">{title}</p>
-          <p className="text-3xl font-bold">{value}</p>
-        </div>
-        {Icon && <Icon size={32} className="opacity-80" />}
-      </div>
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{title}</p>
+      <p className={`text-2xl font-bold ${color.replace("bg-", "text-")}`}>{value}</p>
     </motion.div>
   );
 }
@@ -231,16 +213,14 @@ function TaskCard({ task, index, onClick }) {
       transition={{ delay: index * 0.05 }}
       whileHover={{ scale: 1.02, x: 10 }}
       onClick={onClick}
-      className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 cursor-pointer hover:shadow-2xl hover:border-[#0b6e4f] transition-all duration-300"
+      className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-all cursor-pointer"
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
-          <div className="flex flex-wrap items-center gap-3 mb-3">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-              {task.title || "Untitled Task"}
-            </h3>
-            <span className={`px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-1.5 ${config.color}`}>
-              <StatusIcon size={16} />
+          <div className="flex items-center gap-3 mb-2">
+            <h3 className="font-semibold text-lg text-gray-900 dark:text-white">{task.title}</h3>
+            <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${config.color}`}>
+              <StatusIcon size={14} />
               {config.label}
             </span>
             <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${priorityConfig[task.priority || "medium"]}`}>
@@ -261,8 +241,8 @@ function TaskCard({ task, index, onClick }) {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex flex-wrap gap-6 text-sm">
+      <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
           {task.propertyTitle && (
             <span className="text-gray-600 dark:text-gray-400">
               Property: <span className="font-medium text-gray-900 dark:text-white">{task.propertyTitle}</span>
@@ -299,21 +279,13 @@ function EmptyTasksState({ searchQuery, filter, priorityFilter }) {
   const hasActiveFilter = searchQuery || filter !== "all" || priorityFilter !== "all";
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="text-center py-20"
-    >
-      <div className="w-32 h-32 mx-auto mb-8 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
-        <AlertOctagon size={64} className="text-gray-400 dark:text-gray-600" />
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-12 text-center border border-gray-200 dark:border-gray-700">
+      <div className="mx-auto w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-6">
+        <AlertCircle className="w-12 h-12 text-gray-400" />
       </div>
-      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-        {hasActiveFilter ? "No Tasks Match Your Filters" : "No Tasks Assigned Yet"}
-      </h3>
+      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Tasks Found</h3>
       <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
-        {hasActiveFilter
-          ? "Try adjusting your search or filters to see more tasks."
-          : "You currently have no assigned tasks. New jobs will appear here when assigned!"}
+        You don't have any tasks matching your current filters. Check back later for new assignments.
       </p>
     </motion.div>
   );

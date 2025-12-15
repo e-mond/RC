@@ -8,6 +8,8 @@ import { Toaster } from "react-hot-toast";
 import LandingPage from "@/pages/Landing/LandingPage";
 import LearnMore from "@/pages/LearnMore/LearnMore";
 import RoleSelection from "@/components/onboarding/RoleSelection";
+import PublicProperties from "@/pages/Landing/PublicProperties";
+import PropertyDetail from "@/pages/PropertyDetail";
 
 import Blog from "@/pages/Blog";
 import BlogPost from "@/pages/BlogPost";
@@ -45,6 +47,8 @@ function AnimatedRoutes() {
           {/* ====================== PUBLIC ROUTES ====================== */}
           <Route element={<PublicLayout />}>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/properties" element={<PublicProperties />} />
+            <Route path="/properties/:id" element={<PropertyDetail />} />
             <Route path="/learn-more" element={<LearnMore />} />
             <Route path="/role-selection" element={<RoleSelection />} />
 

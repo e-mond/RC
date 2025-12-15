@@ -3,7 +3,7 @@ import { enableMock, disableMock, isMockEnabled as isAdapterActive } from "@/moc
 
 const KEY = "demoMockEnabled";
 const FORCE_ENV = String(import.meta.env.VITE_FORCE_MOCK || "").toLowerCase() === "true";
-let enabled = FORCE_ENV ? true : localStorage.getItem(KEY) !== "false"; // default = true
+let enabled = FORCE_ENV ? true : localStorage.getItem(KEY) === "true"; // default = false
 const listeners = new Set();
 
 const notify = () => {

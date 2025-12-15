@@ -86,15 +86,19 @@ export default function ArtisanForm() {
       formData.append("email", form.email);
       formData.append("phone", form.phone);
       formData.append("password", form.password);
+      formData.append("confirmPassword", form.confirmPassword);
       formData.append("profession", finalProfession);
       formData.append("experience", form.experience);
       formData.append("region", form.region);
-      formData.append("idUpload", form.idUpload);
-      formData.append("agree", form.agree);
+      if (form.idUpload) {
+        formData.append("idUpload", form.idUpload);
+      }
+      formData.append("agree", String(form.agree));
 
       await signupArtisan(formData);
 
-      navigate("/dashboard/artisan");
+      // After successful signup, send artisan to login so they authenticate
+      navigate("/login");
     } catch (err) {
       setError(
         err.response?.data?.message || "Signup failed. Please try again."

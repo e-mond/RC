@@ -5,18 +5,12 @@ import { BrowserRouter as Router } from "react-router-dom";
 import App from "./App";
 import "./index.css";
 
-import { enableAllMocks, isMockMode } from "@/mocks/mockManager";
+
 import { useAuthStore } from "@/stores/authStore";
 import { FeatureAccessProvider } from "@/context/FeatureAccessContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 
-// ========= ENABLE MOCK MODE WHEN ACTIVE =========
-if (isMockMode()) {
-  enableAllMocks();
-  if (import.meta.env.DEV) {
-    console.log("%cMock Mode ENABLED", "color: lime; font-size: 16px; font-weight: bold");
-  }
-}
+
 
 // ========= ENSURE ROOT EXISTS =========
 const container = document.getElementById("root");

@@ -66,6 +66,8 @@ export default function TenantSignup() {
 
       const formData = new FormData();
       Object.entries(form).forEach(([key, value]) => {
+        // Backend serializer does not expect "agree" for tenants; avoid sending it
+        if (key === "agree") return;
         if (value !== null) formData.append(key, value);
       });
 

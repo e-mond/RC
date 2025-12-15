@@ -119,14 +119,13 @@ export default function ArtisanSchedule() {
         {dayTasks.slice(0, 4).map((task, idx) => (
           <div
             key={idx}
-            className={`h-1.5 w-full rounded-full ${
-              task.status === "completed"
-                ? "bg-green-500"
-                : task.status === "in_progress"
+            className={`h-1 w-full rounded ${task.status === "completed"
+              ? "bg-green-500"
+              : task.status === "in_progress"
                 ? "bg-blue-500"
-                : "bg-amber-500"
-            }`}
-            title={task.title || "Task"}
+                : "bg-yellow-500"
+              }`}
+            title={task.title}
           />
         ))}
         {/* Show "+X" if more than 4 tasks */}
@@ -157,116 +156,119 @@ export default function ArtisanSchedule() {
      Main Render
      ======================================== */
   return (
-    <div className="p-6 max-w-7xl mx-auto min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Header */}
-      <header className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Job Schedule
-        </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-          View and manage your upcoming tasks and availability
-        </p>
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <header>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Job Schedule</h2>
+        <p className="text-sm text-gray-600 dark:text-gray-400">Manage your task schedule and availability</p>
       </header>
 
       {/* Error Alert */}
       {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-4 mb-6 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 rounded-xl backdrop-blur-sm"
-        >
+        <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg">
           {error}
         </motion.div>
       )}
 
       {/* Main Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* ==================== Calendar Panel ==================== */}
-        <motion.div
-          initial={{ opacity: 0, x: -30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="lg:col-span-2 bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
-        >
-          {/* Calendar Header */}
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/60">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                <CalendarIcon size={24} className="text-[#0b6e4f]" />
-                Schedule Calendar
-              </h3>
-
-              {/* Legend */}
-              <div className="flex items-center gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-amber-500 rounded-full" />
-                  <span className="text-gray-600 dark:text-gray-400">Pending</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full" />
-                  <span className="text-gray-600 dark:text-gray-400">In Progress</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full" />
-                  <span className="text-gray-600 dark:text-gray-400">Completed</span>
-                </div>
+        {/* Calendar */}
+        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2 text-gray-900 dark:text-white">
+              <CalendarIcon size={20} />
+              Schedule Calendar
+            </h3>
+            <div className="flex items-center gap-3 text-xs text-gray-600">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-yellow-500 rounded" />
+                <span>Pending</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-blue-500 rounded" />
+                <span>In Progress</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-green-500 rounded" />
+                <span>Completed</span>
               </div>
             </div>
           </div>
 
-          {/* Calendar */}
-          <div className="p-6">
-            <Calendar
-              onChange={setSelectedDate}
-              value={selectedDate}
-              tileContent={tileContent}
-              className="custom-calendar w-full"
-              locale="en-US"
-            />
-          </div>
-        </motion.div>
+          <Calendar
+            onChange={setSelectedDate}
+            value={selectedDate}
+            tileContent={tileContent}
+            className="w-full border-0"
+          />
 
-        {/* ==================== Selected Date Tasks Panel ==================== */}
-        <motion.div
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col"
-        >
-          {/* Date Header */}
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/60">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-              {format(selectedDate, "EEEE, MMMM d, yyyy")}
-            </h3>
-          </div>
+          <style>{`
+            .react-calendar {
+              border: none;
+              font-family: inherit;
+              background: transparent;
+              width: 100%;
+            }
+            .react-calendar__tile {
+              padding: 0.5rem;
+              position: relative;
+              color: inherit;
+            }
+            .react-calendar__tile--active {
+              background: #0b6e4f !important;
+              color: white;
+            }
+            .react-calendar__tile:hover {
+              background-color: #e0f2e9;
+            }
+            .react-calendar__navigation button {
+              color: #0b6e4f;
+              font-weight: 600;
+            }
+            .react-calendar__navigation button:hover {
+              background-color: #e0f2e9;
+            }
+            .react-calendar__month-view__weekdays {
+              color: inherit;
+            }
+            .react-calendar__month-view__days__day {
+              color: inherit;
+            }
+            .react-calendar__month-view__days__day--neighboringMonth {
+              color: #9ca3af;
+            }
+            /* Dark mode styles */
+            .dark .react-calendar {
+              color: white;
+            }
+            .dark .react-calendar__tile:hover {
+              background-color: #374151;
+            }
+            .dark .react-calendar__navigation button:hover {
+              background-color: #374151;
+            }
+            .dark .react-calendar__month-view__days__day--neighboringMonth {
+              color: #6b7280;
+            }
+          `}</style>
+        </div>
 
-          {/* Tasks List */}
-          <div className="flex-1 overflow-y-auto p-6">
-            {selectedDateTasks.length === 0 ? (
-              /* Empty State */
-              <div className="text-center py-12">
-                <div className="w-20 h-20 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
-                  <CalendarIcon size={40} className="text-gray-400" />
-                </div>
-                <p className="text-gray-500 dark:text-gray-400 font-medium">
-                  No tasks scheduled
-                </p>
-                <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-                  Enjoy your day off!
-                </p>
-              </div>
-            ) : (
-              /* Tasks with smooth enter/exit animations */
-              <div className="space-y-4">
-                <AnimatePresence mode="wait">
-                  {selectedDateTasks.map((task) => (
-                    <TaskScheduleItem key={task.id} task={task} />
-                  ))}
-                </AnimatePresence>
-              </div>
-            )}
-          </div>
-        </motion.div>
+        {/* Selected Date Tasks */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+          <h3 className="text-md font-semibold mb-4 text-gray-900 dark:text-white">
+            Tasks on {format(selectedDate, "MMMM d, yyyy")}
+          </h3>
+          {selectedDateTasks.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 text-sm">
+              <p>No tasks scheduled for this date</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {selectedDateTasks.map((task) => (
+                <TaskScheduleItem key={task.id} task={task} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ==================== Custom Calendar Styling ==================== */}
@@ -361,24 +363,14 @@ function TaskScheduleItem({ task }) {
 
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -10, scale: 0.95 }}
-      whileHover={{ scale: 1.02 }}
-      transition={{ duration: 0.3 }}
-      className="p-5 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-2xl shadow-md hover:shadow-xl hover:border-[#0b6e4f] transition-all duration-300"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-[#0b6e4f] transition-colors"
     >
-      {/* Title + Status Badge */}
-      <div className="flex items-start justify-between mb-3">
-        <h4 className="font-semibold text-gray-900 dark:text-white text-base">
-          {task.title || "Untitled Task"}
-        </h4>
-        <span
-          className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 ${config.color}`}
-        >
-          <StatusIcon size={14} />
-          {config.label}
+      <div className="flex items-start justify-between mb-2">
+        <h4 className="font-medium text-sm text-gray-900 dark:text-white">{task.title}</h4>
+        <span className={`px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1 ${config.color}`}>
+          <StatusIcon size={12} />
         </span>
       </div>
 

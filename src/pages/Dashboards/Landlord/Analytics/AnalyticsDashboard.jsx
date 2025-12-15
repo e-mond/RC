@@ -1,6 +1,7 @@
 // src/pages/Dashboards/Landlord/Analytics/AnalyticsDashboard.jsx
 import React, { useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/authStore";
+import { getLandlordAnalyticsDashboard } from "@/services/analyticsService";
 import {
   LineChart,
   Line,
@@ -32,61 +33,51 @@ export default function AnalyticsDashboard() {
     const load = async () => {
       try {
         setLoading(true);
-        await new Promise((r) => setTimeout(r, 500));
+        setError("");
 
+        const { stats, revenue } = await getLandlordAnalyticsDashboard();
         if (!mounted) return;
 
-        const mockData = {
-          revenue: [
-            { month: "Jan", revenue: 3200, expenses: 800, net: 2400 },
-            { month: "Feb", revenue: 3500, expenses: 850, net: 2650 },
-            { month: "Mar", revenue: 4200, expenses: 900, net: 3300 },
-            { month: "Apr", revenue: 3800, expenses: 820, net: 2980 },
-            { month: "May", revenue: 4500, expenses: 950, net: 3550 },
-            { month: "Jun", revenue: 4800, expenses: 1000, net: 3800 },
-          ],
-          occupancy: [
-            { month: "Jan", occupied: 8, vacant: 2, total: 10 },
-            { month: "Feb", occupied: 9, vacant: 1, total: 10 },
-            { month: "Mar", occupied: 9, vacant: 1, total: 10 },
-            { month: "Apr", occupied: 8, vacant: 2, total: 10 },
-            { month: "May", occupied: 10, vacant: 0, total: 10 },
-            { month: "Jun", occupied: 10, vacant: 0, total: 10 },
-          ],
-          inquiries: [
-            { day: "Mon", inquiries: 12, views: 180 },
-            { day: "Tue", inquiries: 15, views: 220 },
-            { day: "Wed", inquiries: 18, views: 250 },
-            { day: "Thu", inquiries: 14, views: 200 },
-            { day: "Fri", inquiries: 20, views: 280 },
-            { day: "Sat", inquiries: 22, views: 300 },
-            { day: "Sun", inquiries: 16, views: 240 },
-          ],
-          propertyPerformance: [
-            { name: "Property A", views: 1200, inquiries: 45, bookings: 8 },
-            { name: "Property B", views: 980, inquiries: 32, bookings: 6 },
-            { name: "Property C", views: 750, inquiries: 28, bookings: 5 },
-            { name: "Property D", views: 650, inquiries: 20, bookings: 3 },
-          ],
-          trustScore: 87,
-          trustHistory: [
-            { month: "Jan", score: 82 },
-            { month: "Feb", score: 84 },
-            { month: "Mar", score: 85 },
-            { month: "Apr", score: 86 },
-            { month: "May", score: 87 },
-            { month: "Jun", score: 87 },
-          ],
-          summary: {
-            totalRevenue: 24000,
-            totalProperties: 10,
-            occupancyRate: 100,
-            totalInquiries: 117,
-            avgResponseTime: "2.5 hours",
+        const totalRevenue = Number(revenue?.total_revenue || 0);
+        const totalProperties = Number(stats?.total_properties || 0);
+        const rentedProperties = Number(stats?.rented_properties || 0);
+        const occupancyRate =
+          totalProperties > 0 ? Math.round((rentedProperties / totalProperties) * 100) : 0;
+
+        const monthlyRevenue = revenue?.monthly_revenue || {};
+        const revenueChart = Object.entries(monthlyRevenue).map(([month, amount]) => ({
+          month,
+          revenue: Number(amount || 0),
+          expenses: 0,
+          net: Number(amount || 0),
+        }));
+
+        const occupancy = [
+          {
+            month: "Current",
+            occupied: rentedProperties,
+            vacant: Math.max(totalProperties - rentedProperties, 0),
+            total: totalProperties,
           },
+        ];
+
+        const summary = {
+          totalRevenue,
+          totalProperties,
+          occupancyRate,
+          totalInquiries: 0,
+          avgResponseTime: "N/A",
         };
 
-        setAnalytics(mockData);
+        setAnalytics({
+          revenue: revenueChart,
+          occupancy,
+          inquiries: [],
+          propertyPerformance: [],
+          trustScore: 0,
+          trustHistory: [],
+          summary,
+        });
       } catch (err) {
         console.error("loadAnalytics:", err);
         if (mounted) setError(err.message || "Failed to load analytics");

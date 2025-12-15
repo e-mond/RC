@@ -72,8 +72,10 @@ export default function AR_EarningsPanel() {
 
   if (error) {
     return (
-      <div className="p-12 bg-linear-to-br from-red-50 to-pink-50 dark:from-red-900/30 dark:to-pink-900/20 border border-red-200 dark:border-red-800 rounded-3xl text-center">
-        <p className="text-xl font-semibold text-red-700 dark:text-red-300">{error}</p>
+      <div className="p-6">
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 p-4 rounded-lg">
+          {error}
+        </div>
       </div>
     );
   }
@@ -103,53 +105,32 @@ export default function AR_EarningsPanel() {
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-2xl rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 p-8"
+          className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700"
         >
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">Monthly Earnings</h3>
-          <ResponsiveContainer width="100%" height={360}>
-            <BarChart data={chartData} barSize={40}>
-              <CartesianGrid strokeDasharray="4 8" stroke="#e0e0e0" opacity={0.3} />
-              <XAxis dataKey="month" stroke="#666" fontSize={14} />
-              <YAxis stroke="#666" fontSize={14} tickFormatter={(v) => `₵${(v / 1000).toFixed(0)}k`} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "rgba(15, 23, 36, 0.95)",
-                  border: "1px solid #0b6e4f",
-                  borderRadius: "16px",
-                  backdropFilter: "blur(12px)",
-                }}
-                labelStyle={{ color: "#fff", fontWeight: "bold" }}
-                formatter={(v) => `₵${Number(v).toLocaleString()}`}
-              />
-              <Bar dataKey="amount" radius={[12, 12, 0, 0]}>
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Earnings Over Time</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis dataKey="month" stroke="#9CA3AF" />
+              <YAxis stroke="#9CA3AF" />
+              <Tooltip formatter={(value) => `₵${value.toLocaleString()}`} contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px', color: '#fff' }} />
+              <Line type="monotone" dataKey="amount" stroke="#0b6e4f" strokeWidth={2} dot={{ r: 4 }} />
+            </LineChart>
           </ResponsiveContainer>
         </motion.div>
       )}
 
       {/* Payment History */}
-      <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-2xl rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="p-8 border-b border-gray-200 dark:border-gray-700 bg-linear-to-r from-[#0b6e4f]/5 to-transparent">
-          <h3 className="text-2xl font-extrabold text-gray-900 dark:text-white">Payment History</h3>
-        </div>
-        <div className="divide-y divide-gray-200 dark:divide-gray-700">
-          {history.length === 0 ? (
-            <div className="p-20 text-center">
-              <div className="mx-auto w-32 h-32 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6">
-                <DollarSign className="w-16 h-16 text-gray-400 dark:text-gray-600" />
-              </div>
-              <p className="text-xl font-medium text-gray-700 dark:text-gray-300">No payments yet</p>
-              <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-                Complete jobs to see your earnings flow in
-              </p>
-            </div>
-          ) : (
-            history.map((earning, idx) => (
-              <motion.div
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Payment History</h3>
+        {history.length === 0 ? (
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+            <p>No payment history yet</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {history.map((earning) => (
+              <PaymentHistoryItem
                 key={earning.id}
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -163,5 +144,58 @@ export default function AR_EarningsPanel() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Summary Card
+function SummaryCard({ title, value, icon, color }) {
+  const textColor = color.replace("bg-", "text-");
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border border-gray-200 dark:border-gray-700"
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{title}</p>
+          <p className={`text-2xl font-bold ${textColor}`}>{value}</p>
+        </div>
+        <div className={`p-3 ${color} rounded-lg bg-opacity-10`}>
+          {icon}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// Payment History Item
+function PaymentHistoryItem({ earning, onGenerateInvoice }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-md transition-shadow bg-white dark:bg-gray-800"
+    >
+      <div className="flex-1">
+        <h4 className="font-semibold text-gray-900 dark:text-white">{earning.taskTitle || "Task Payment"}</h4>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          {earning.date ? new Date(earning.date).toLocaleDateString() : "Date not available"}
+        </p>
+      </div>
+      <div className="flex items-center gap-4">
+        <div className="text-right">
+          <p className="text-lg font-bold text-[#0b6e4f]">₵{earning.amount?.toLocaleString() || "0"}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{earning.status || "paid"}</p>
+        </div>
+        <button
+          onClick={() => onGenerateInvoice(earning.taskId || earning.id)}
+          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+        >
+          <Download size={16} />
+          Invoice
+        </button>
+      </div>
+    </motion.div>
   );
 }

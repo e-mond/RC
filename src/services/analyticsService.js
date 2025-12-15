@@ -62,3 +62,13 @@ export const getAdminAnalytics = async () => {
   }
 };
 
+/**
+ * Convenience helper: get landlord-focused analytics data
+ * by combining role-aware dashboard stats and revenue analytics.
+ */
+export const getLandlordAnalyticsDashboard = async () => {
+  const [stats, revenue] = await Promise.all([getDashboardStats(), getRevenueAnalytics()]);
+  return { stats, revenue };
+};
+
+

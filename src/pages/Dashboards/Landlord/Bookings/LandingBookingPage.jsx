@@ -7,7 +7,6 @@ import { Calendar, List, Filter, CheckCircle, XCircle, Clock } from "lucide-reac
 import { motion } from "framer-motion";
 
 export default function LandingBookingPage() {
-  const user = useAuthStore((state) => state.user);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -19,9 +18,9 @@ export default function LandingBookingPage() {
     const load = async () => {
       try {
         setLoading(true);
-        const res = await fetchBookings(user?.id);
+        const list = await fetchBookings();
         if (!mounted) return;
-        setBookings(Array.isArray(res.data) ? res.data : Array.isArray(res) ? res : []);
+        setBookings(Array.isArray(list) ? list : []);
       } catch (err) {
         console.error("fetchBookings:", err);
         if (mounted) setError(err.message || "Unable to load bookings");
@@ -29,11 +28,11 @@ export default function LandingBookingPage() {
         if (mounted) setLoading(false);
       }
     };
-    if (user?.id) load(); // ← fixed: was "user?.id id"
+    load();
     return () => {
       mounted = false;
     };
-  }, [user?.id]);
+  }, []);
 
   const handleRespond = async (id, action) => {
     try {
