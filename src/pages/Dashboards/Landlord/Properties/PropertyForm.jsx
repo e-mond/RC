@@ -135,11 +135,8 @@ export default function PropertyForm() {
         country: data.country || "Ghana",
         price: Number(data.price),
         currency: data.currency,
-        deposit: data.deposit ? Number(data.deposit) : undefined,
         bedrooms: Number(data.bedrooms),
         bathrooms: Number(data.bathrooms),
-        area: data.area ? Number(data.area) : data.area_sqm ? Number(data.area_sqm) : undefined,
-        area_sqm: data.area_sqm ? Number(data.area_sqm) : data.area ? Number(data.area) : undefined,
         property_type: data.property_type,
         status: data.status,
         amenities: data.amenities.map((a) => (typeof a === "string" ? a : a.name)),
@@ -147,6 +144,25 @@ export default function PropertyForm() {
         lat: data.lat ? String(data.lat) : "",
         lng: data.lng ? String(data.lng) : "",
       };
+
+      // Optional fields - only include if provided
+      if (data.deposit) payload.deposit = Number(data.deposit);
+      if (data.area || data.area_sqm) payload.area_sqm = Number(data.area || data.area_sqm);
+      if (data.lat) payload.latitude = String(data.lat);
+      if (data.lng) payload.longitude = String(data.lng);
+
+      // Convert amenity names to IDs
+      if (data.amenities && data.amenities.length > 0) {
+        const amenityIds = data.amenities
+          .map((amenityName) => {
+            const found = amenitiesList.find(
+              (a) => a.name === amenityName || a.id === amenityName
+            );
+            return found?.id;
+          })
+          .filter((id) => id !== undefined);
+        if (amenityIds.length > 0) payload.amenity_ids = amenityIds;
+      }
 
       if (id) {
         await updateProperty(id, payload);

@@ -47,6 +47,7 @@ export default function LandlordDashboard() {
   const [stats, setStats] = useState(null);
   const [activity, setActivity] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const { theme } = useTheme();
   useEffect(() => {
@@ -73,10 +74,20 @@ export default function LandlordDashboard() {
     loadDashboard();
   }, []);
 
-  if (loading || !stats) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
         <div className="w-16 h-16 border-4 border-[#0b6e4f] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (error || !stats) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 p-4 rounded-lg">
+          {error || "Failed to load landlord dashboard"}
+        </div>
       </div>
     );
   }

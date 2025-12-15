@@ -65,6 +65,7 @@ const roleMenus = {
   ],
   tenant: [
     { to: "/tenant/overview", label: "Overview", icon: <Home size={18} /> },
+    { to: "/tenant/properties", label: "Browse Properties", icon: <Building2 size={18} /> },
     { to: "/tenant/rentals", label: "My Rentals", icon: <FileText size={18} /> },
     { to: "/tenant/payments", label: "Payments", icon: <Receipt size={18} /> },
     { to: "/tenant/maintenance", label: "Maintenance", icon: <Wrench size={18} /> },

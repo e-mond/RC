@@ -33,14 +33,25 @@ function extractError(err, fallback = "Server error") {
   return new Error(fallback);
 }
 
-/* ---------- Properties ---------- */
+/* ---------- Properties (landlord-scoped helpers) ---------- */
 
+/**
+ * Fetch properties for a specific landlord.
+ * NOTE: Backend exposes this under `/api/properties/landlord/<id>/`.
+ */
 export const fetchProperties = async (ownerId) => {
+  if (!ownerId) {
+    throw new Error("fetchProperties: ownerId is required");
+  }
+
   if (isMockEnvEnabled()) {
     return mocks.withDelay(mocks.fetchPropertiesMock?.() || { data: [] }, 400);
   }
+
   try {
-    const { data } = await apiClient.get(`/landlord/${encodeURIComponent(ownerId)}/properties`);
+    const { data } = await apiClient.get(
+      `/properties/landlord/${encodeURIComponent(ownerId)}/`
+    );
     return data;
   } catch (err) {
     throw extractError(err, "Failed to fetch properties");
@@ -48,9 +59,7 @@ export const fetchProperties = async (ownerId) => {
 };
 
 export const fetchPropertyById = async (id) => {
-  if (isMockEnvEnabled()) {
-    return mocks.withDelay(mocks.fetchPropertyByIdMock?.(id) || { data: {} }, 300);
-  }
+  // Always use real API for property details to keep landlord views accurate.
   try {
     const { data } = await apiClient.get(`/properties/${encodeURIComponent(id)}`);
     return data;
@@ -60,19 +69,32 @@ export const fetchPropertyById = async (id) => {
 };
 
 export const createProperty = async (payload) => {
-  if (isMockEnvEnabled()) {
-    return mocks.withDelay(mocks.createPropertyMock?.(payload) || { property: { id: "new_mock" } }, 400);
-  }
+  // Always create real properties against the backend (no mocks).
   try {
+    // Backend PropertyCreateSerializer expects:
+    // - multipart/form-data with `images` as files
+    // - amenity_ids[] for amenities
     const fd = new FormData();
-    Object.entries(payload).forEach(([k, v]) => {
+    Object.entries(payload || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null) return;
+
       if (k === "images" && v && v.length) {
         Array.from(v).forEach((file) => fd.append("images", file));
-      } else if (v !== undefined && v !== null) {
+      } else if (k === "amenity_ids" && Array.isArray(v)) {
+        v.forEach((id) => fd.append("amenity_ids", id));
+      } else if (k === "lat") {
+        fd.append("latitude", v);
+      } else if (k === "lng") {
+        fd.append("longitude", v);
+      } else if (k === "area" || k === "area_sqm") {
+        // Normalise to area_sqm which backend expects
+        fd.append("area_sqm", v);
+      } else {
         fd.append(k, v);
       }
     });
-    const { data } = await apiClient.post("/landlord/properties", fd, {
+
+    const { data } = await apiClient.post("/properties/", fd, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return data;
@@ -82,19 +104,28 @@ export const createProperty = async (payload) => {
 };
 
 export const updateProperty = async (id, payload) => {
-  if (isMockEnvEnabled()) {
-    return mocks.withDelay(mocks.updatePropertyMock?.(id, payload) || { property: { id } }, 400);
-  }
+  // Always update real properties against the backend (no mocks).
   try {
     const fd = new FormData();
-    Object.entries(payload).forEach(([k, v]) => {
+    Object.entries(payload || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null) return;
+
       if (k === "images" && v && v.length) {
         Array.from(v).forEach((file) => fd.append("images", file));
-      } else if (v !== undefined && v !== null) {
+      } else if (k === "amenity_ids" && Array.isArray(v)) {
+        v.forEach((aid) => fd.append("amenity_ids", aid));
+      } else if (k === "lat") {
+        fd.append("latitude", v);
+      } else if (k === "lng") {
+        fd.append("longitude", v);
+      } else if (k === "area" || k === "area_sqm") {
+        fd.append("area_sqm", v);
+      } else {
         fd.append(k, v);
       }
     });
-    const { data } = await apiClient.put(`/landlord/properties/${encodeURIComponent(id)}`, fd, {
+
+    const { data } = await apiClient.put(`/properties/${encodeURIComponent(id)}/`, fd, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return data;
@@ -104,51 +135,101 @@ export const updateProperty = async (id, payload) => {
 };
 
 export const deleteProperty = async (id) => {
-  if (isMockEnvEnabled()) {
-    return mocks.withDelay(mocks.deletePropertyMock?.(id) || { success: true }, 300);
-  }
+  // Always delete real properties against the backend (no mocks).
   try {
-    const { data } = await apiClient.delete(`/landlord/properties/${encodeURIComponent(id)}`);
+    const { data } = await apiClient.delete(`/properties/${encodeURIComponent(id)}/`);
     return data;
   } catch (err) {
     throw extractError(err, "Failed to delete property");
   }
 };
 
-/* ---------- Bookings ---------- */
+/* ---------- Bookings (landlord-scoped via auth) ---------- */
 
-export const fetchBookings = async (ownerId) => {
-  if (isMockEnvEnabled()) {
-    return mocks.withDelay(mocks.fetchBookingsMock?.() || { data: [] }, 350);
-  }
+export const fetchBookings = async () => {
   try {
-    const { data } = await apiClient.get(`/landlord/${encodeURIComponent(ownerId)}/bookings`);
-    return data;
+    // Backend filters by role: landlords automatically see their own bookings
+    const { data } = await apiClient.get("/bookings/");
+    const list = data?.results ?? data ?? [];
+    return Array.isArray(list) ? list : [];
   } catch (err) {
     throw extractError(err, "Failed to fetch bookings");
   }
 };
 
 export const respondBooking = async (id, action) => {
-  if (isMockEnvEnabled()) {
-    return mocks.withDelay(mocks.respondBookingMock?.(id, action) || { success: true }, 300);
-  }
   try {
-    const { data } = await apiClient.patch(`/landlord/bookings/${encodeURIComponent(id)}`, { action });
+    // Map UI actions to backend booking statuses
+    let status;
+    if (action === "accept") status = "approved";
+    else if (action === "decline") status = "rejected";
+    else status = action;
+
+    const { data } = await apiClient.patch(`/bookings/${encodeURIComponent(id)}/`, { status });
     return data;
   } catch (err) {
     throw extractError(err, "Failed to respond to booking");
   }
 };
 
+/* ---------- Dashboard helpers ---------- */
+
 export async function getLandlordDashboardStats() {
-  const { data } = await apiClient.get("/landlord/dashboard/stats");
-  return data;
+  try {
+    // Use generic analytics dashboard + viewing requests to build landlord dashboard view
+    const [analyticsRes, viewingRes] = await Promise.all([
+      apiClient.get("/analytics/dashboard/"),
+      apiClient.get("/properties/viewing-requests/", { params: { status: "pending" } }),
+    ]);
+
+    const analytics = analyticsRes.data || analyticsRes || {};
+    const viewingRequests = viewingRes.data ?? viewingRes ?? [];
+
+    const totalProperties = analytics.total_properties ?? 0;
+    const rentedProperties = analytics.rented_properties ?? 0;
+    const totalRevenue = analytics.total_revenue ?? 0;
+
+    const occupancyRate =
+      totalProperties > 0 ? Math.round((rentedProperties / totalProperties) * 100) : 0;
+
+    const pendingViewRequests = Array.isArray(viewingRequests)
+      ? viewingRequests.length
+      : viewingRequests.count ?? 0;
+
+    // Simple derived charts to keep UI happy (can be refined later)
+    const revenueChart = [
+      { month: "This Month", revenue: totalRevenue },
+    ];
+    const occupancyTrend = [
+      { month: "Now", rate: occupancyRate },
+    ];
+
+    return {
+      totalProperties,
+      monthlyRevenue: totalRevenue,
+      occupancyRate,
+      pendingViewRequests,
+      revenueChart,
+      occupancyTrend,
+    };
+  } catch (err) {
+    throw extractError(err, "Failed to load landlord dashboard stats");
+  }
 }
 
 export async function getLandlordRecentActivity() {
-  const { data } = await apiClient.get("/landlord/dashboard/activity");
-  return data;
+  try {
+    // Very lightweight activity feed from recent bookings
+    const { data } = await apiClient.get("/bookings/", { params: { page_size: 5 } });
+    const results = data?.results ?? data ?? [];
+
+    return (Array.isArray(results) ? results : []).map((b) => ({
+      message: `Booking ${b.status || "update"} for property ${b.property?.title || `#${b.property_id || b.id}`}`,
+      time: b.created_at || b.updated_at || "",
+    }));
+  } catch (err) {
+    throw extractError(err, "Failed to load landlord activity");
+  }
 }
 
 export default {
