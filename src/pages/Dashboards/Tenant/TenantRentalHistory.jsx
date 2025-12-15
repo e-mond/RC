@@ -83,10 +83,16 @@ export default function TenantRentalHistory() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
-      <header>
-        <h2 className="text-2xl font-bold text-[#0f1724]">Rental History</h2>
-        <p className="text-sm text-gray-600">Complete timeline of your rental agreements</p>
-      </header>
+     <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div>
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+      Rental History
+    </h2>
+    <p className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400">
+      Complete timeline of your rental agreements and past tenancies
+    </p>
+  </div>
+</header>
 
       {history.length === 0 ? (
         <EmptyHistoryState />
@@ -126,7 +132,7 @@ function RentalHistoryItem({ rental, index, onGenerateReference, generatingRef }
       className="relative flex gap-6"
     >
       {/* Timeline Dot */}
-      <div className="relative z-10 flex-shrink-0">
+      <div className="relative z-10 shrink-0">
         <div
           className={`w-16 h-16 rounded-full flex items-center justify-center border-4 border-white shadow-md ${
             status === "active"

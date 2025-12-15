@@ -12,7 +12,7 @@ import { AlertCircle, Loader2 } from "lucide-react";
 
 /**
  * PropertyForm - Enhanced with react-hook-form + zod validation
- * Supports Create and Edit modes
+ * Supports Create and Edit modes + Full Dark Mode Support
  */
 export default function PropertyForm() {
   const { id } = useParams();
@@ -68,7 +68,6 @@ export default function PropertyForm() {
         const prop = res?.data ?? res;
         if (!mounted) return;
 
-        // Map API response to form data
         reset({
           title: prop.title || "",
           description: prop.description || "",
@@ -92,7 +91,6 @@ export default function PropertyForm() {
         });
       } catch (err) {
         console.error("fetchProperty:", err);
-        // Error handled by form
       } finally {
         if (mounted) setLoading(false);
       }
@@ -128,7 +126,6 @@ export default function PropertyForm() {
   const onSubmit = async (data) => {
     setSubmitting(true);
     try {
-      // Prepare payload - match backend PropertyCreateSerializer fields
       const payload = {
         title: data.title,
         description: data.description || "",
@@ -141,7 +138,11 @@ export default function PropertyForm() {
         bedrooms: Number(data.bedrooms),
         bathrooms: Number(data.bathrooms),
         property_type: data.property_type,
-        status: data.status === "active" ? "available" : data.status,
+        status: data.status,
+        amenities: data.amenities.map((a) => (typeof a === "string" ? a : a.name)),
+        images: data.images.filter((img) => typeof img === "string"),
+        lat: data.lat ? String(data.lat) : "",
+        lng: data.lng ? String(data.lng) : "",
       };
 
       // Optional fields - only include if provided
@@ -172,7 +173,6 @@ export default function PropertyForm() {
       navigate("/landlord/properties", { replace: true });
     } catch (err) {
       console.error("submitProperty:", err);
-      // Error will be shown via form state
     } finally {
       setSubmitting(false);
     }
@@ -191,7 +191,6 @@ export default function PropertyForm() {
         { shouldDirty: true }
       );
     } else {
-      // Find amenity name from list
       const amenity = amenitiesList.find((a) => a.id === amenityIdOrName || a.name === amenityIdOrName);
       setValue("amenities", [...current, amenity?.name || amenityIdOrName], { shouldDirty: true });
     }
@@ -205,7 +204,7 @@ export default function PropertyForm() {
 
   if (loading) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-[400px]">
+      <div className="p-6 flex items-center justify-center min-h-[400px] bg-gray-50 dark:bg-gray-900">
         <Loader2 className="w-8 h-8 animate-spin text-[#0b6e4f]" />
       </div>
     );
@@ -213,22 +212,24 @@ export default function PropertyForm() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-6 rounded-2xl shadow-sm">
-        <header className="flex items-center justify-between border-b pb-4">
-          <h3 className="text-2xl font-bold text-[#0f1724]">{isEdit ? "Edit Property" : "Create Property"}</h3>
-          <div className="text-sm text-gray-500">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
+        <header className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-4">
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {isEdit ? "Edit Property" : "Create Property"}
+          </h3>
+          <div className="text-sm text-gray-500 dark:text-gray-400">
             {isEdit ? `ID: ${id}` : "Draft mode until published"}
           </div>
         </header>
 
         {/* Form Errors Summary */}
         {Object.keys(errors).length > 0 && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center gap-2 text-red-700 font-medium mb-2">
+          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div className="flex items-center gap-2 text-red-700 dark:text-red-400 font-medium mb-2">
               <AlertCircle size={18} />
               <span>Please fix the following errors:</span>
             </div>
-            <ul className="list-disc list-inside text-sm text-red-600 space-y-1">
+            <ul className="list-disc list-inside text-sm text-red-600 dark:text-red-300 space-y-1">
               {Object.entries(errors).map(([key, fieldError]) => (
                 <li key={key}>
                   {key}: {fieldError?.message || ""}
@@ -240,40 +241,43 @@ export default function PropertyForm() {
 
         {/* Basic Information */}
         <section className="space-y-4">
-          <h4 className="text-lg font-semibold text-gray-900">Basic Information</h4>
+          <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Basic Information</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Title <span className="text-red-500">*</span>
               </label>
               <input
                 {...register("title")}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white ${errors.title ? "border-red-500" : "border-gray-300"
-                  }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] focus:border-[#0b6e4f] transition-colors
+                  ${errors.title 
+                    ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10" 
+                    : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+                  } text-gray-900 dark:text-white`}
                 placeholder="e.g., 3BR Apartment in East Legon"
               />
               {errors.title && (
-                <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.title.message}</p>
               )}
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
               <textarea
                 {...register("description")}
                 rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 placeholder="Describe your property..."
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Property Type <span className="text-red-500">*</span>
               </label>
               <select
                 {...register("property_type")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="apartment">Apartment</option>
                 <option value="house">House</option>
@@ -285,10 +289,10 @@ export default function PropertyForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
               <select
                 {...register("status")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="draft">Draft</option>
                 <option value="pending">Pending Approval</option>
@@ -301,36 +305,39 @@ export default function PropertyForm() {
 
         {/* Location */}
         <section className="space-y-4">
-          <h4 className="text-lg font-semibold text-gray-900">Location</h4>
+          <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Location</h4>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Address <span className="text-red-500">*</span>
             </label>
             <input
               {...register("address")}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white ${errors.address ? "border-red-500" : "border-gray-300"
-                }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] focus:border-[#0b6e4f] transition-colors
+                ${errors.address 
+                  ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10" 
+                  : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+                } text-gray-900 dark:text-white`}
               placeholder="Full address"
             />
             {errors.address && (
-              <p className="mt-1 text-sm text-red-600">{errors.address.message}</p>
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.address.message}</p>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City</label>
               <input
                 {...register("city")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 placeholder="e.g., Accra"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Region</label>
               <input
                 {...register("region")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 placeholder="e.g., Greater Accra"
               />
             </div>
@@ -348,41 +355,44 @@ export default function PropertyForm() {
 
         {/* Pricing */}
         <section className="space-y-4">
-          <h4 className="text-lg font-semibold text-gray-900">Pricing</h4>
+          <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Pricing</h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Price <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
                 step="0.01"
                 {...register("price")}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white ${errors.price ? "border-red-500" : "border-gray-300"
-                  }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] transition-colors
+                  ${errors.price 
+                    ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10" 
+                    : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+                  } text-gray-900 dark:text-white`}
                 placeholder="0.00"
               />
               {errors.price && (
-                <p className="mt-1 text-sm text-red-600">{errors.price.message}</p>
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.price.message}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Currency</label>
               <select
                 {...register("currency")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="GHS">GHS (₵)</option>
                 <option value="USD">USD ($)</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Deposit</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Deposit</label>
               <input
                 type="number"
                 step="0.01"
                 {...register("deposit")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 placeholder="Optional"
               />
             </div>
@@ -391,47 +401,53 @@ export default function PropertyForm() {
 
         {/* Property Details */}
         <section className="space-y-4">
-          <h4 className="text-lg font-semibold text-gray-900">Property Details</h4>
+          <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Property Details</h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Bedrooms <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
                 {...register("bedrooms")}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white ${errors.bedrooms ? "border-red-500" : "border-gray-300"
-                  }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] transition-colors
+                  ${errors.bedrooms 
+                    ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10" 
+                    : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+                  } text-gray-900 dark:text-white`}
                 min="0"
                 max="20"
               />
               {errors.bedrooms && (
-                <p className="mt-1 text-sm text-red-600">{errors.bedrooms.message}</p>
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.bedrooms.message}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Bathrooms <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
                 {...register("bathrooms")}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white ${errors.bathrooms ? "border-red-500" : "border-gray-300"
-                  }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] transition-colors
+                  ${errors.bathrooms 
+                    ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/10" 
+                    : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+                  } text-gray-900 dark:text-white`}
                 min="0"
                 max="20"
               />
               {errors.bathrooms && (
-                <p className="mt-1 text-sm text-red-600">{errors.bathrooms.message}</p>
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.bathrooms.message}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Area (sqm)</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Area (sqm)</label>
               <input
                 type="number"
                 step="0.01"
                 {...register("area")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 placeholder="Optional"
               />
             </div>
@@ -440,7 +456,7 @@ export default function PropertyForm() {
 
         {/* Images */}
         <section className="space-y-4">
-          <h4 className="text-lg font-semibold text-gray-900">
+          <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
             Images <span className="text-red-500">*</span>
           </h4>
           <ImageUploader
@@ -449,15 +465,15 @@ export default function PropertyForm() {
             multiple
           />
           {errors.images && (
-            <p className="text-sm text-red-600">{errors.images.message}</p>
+            <p className="text-sm text-red-600 dark:text-red-400">{errors.images.message}</p>
           )}
         </section>
 
         {/* Amenities */}
         <section className="space-y-4">
-          <h4 className="text-lg font-semibold text-gray-900">Amenities</h4>
+          <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Amenities</h4>
           {amenitiesLoading ? (
-            <div className="flex items-center gap-2 text-gray-500">
+            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
               <Loader2 className="w-4 h-4 animate-spin" />
               <span className="text-sm">Loading amenities...</span>
             </div>
@@ -472,9 +488,10 @@ export default function PropertyForm() {
                     type="button"
                     key={amenity.id}
                     onClick={() => toggleAmenity(amenity.id)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isSelected
-                      ? "bg-[#0b6e4f] text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
+                      ${isSelected
+                        ? "bg-[#0b6e4f] text-white ring-2 ring-[#0b6e4f]/50"
+                        : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
                       }`}
                   >
                     {amenity.name}
@@ -486,7 +503,7 @@ export default function PropertyForm() {
         </section>
 
         {/* Actions */}
-        <div className="flex items-center gap-3 justify-end pt-4 border-t">
+        <div className="flex items-center gap-3 justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
           <Button
             type="button"
             variant="outline"

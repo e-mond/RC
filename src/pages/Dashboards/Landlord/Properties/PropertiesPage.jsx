@@ -10,22 +10,11 @@ export default function PropertiesPage() {
     load();
   }, []);
 
-  const load = async () => {
-    try {
-      const res = await getAllProperties();
-      // Ensure we always store an array to avoid runtime errors
-      if (Array.isArray(res)) {
-        setProperties(res);
-      } else if (Array.isArray(res?.data)) {
-        setProperties(res.data);
-      } else {
-        setProperties([]);
-      }
-    } catch (err) {
-      console.error("Failed to load properties:", err);
-      setProperties([]);
-    }
-  };
+const load = async () => {
+  const res = await getAllProperties();
+  setProperties(res?.data || res || []);
+};
+
 
   return (
     <div className="p-6">

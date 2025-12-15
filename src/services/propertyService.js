@@ -1,7 +1,11 @@
 // src/services/propertyService.js
 import apiClient from "./apiClient";
+const FORCE_MOCK = true;
 
-// Default fallback mocks (always available)
+/* ============================================================
+   DYNAMIC MOCK LOADING (Vite Friendly)
+   ============================================================ */
+
 let mockData = {
   withData: null,
   mockProperties: [
@@ -15,24 +19,34 @@ let mockData = {
   ],
 };
 
-// Dynamically load real mocks only when needed (Vite-friendly)
+// Load real mocks ONLY when VITE_USE_MOCK = true or in dev mode
 if (import.meta.env.DEV || String(import.meta.env.VITE_USE_MOCK).toLowerCase() === "true") {
   import("@/mocks/propertyMock")
     .then((module) => {
-      // Merge real mocks if file exists
-      mockData = { ...mockData, ...module.default };
+      if (module?.default) {
+        mockData = { ...mockData, ...module.default };
+      }
     })
     .catch(() => {
       console.warn("propertyMock.js not found — using built-in fallback mocks");
     });
 }
 
-const USE_MOCK = String(import.meta.env.VITE_USE_MOCK).toLowerCase() === "true";
+const USE_MOCK =
+  import.meta.env.DEV ||
+  import.meta.env.VITE_USE_MOCK === "true" ||
+  import.meta.env.VITE_USE_MOCK === true;
 
-// Helper: simulate network delay
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+
+// Simulates a network delay
 const withDelay = (data, ms = 400) =>
   new Promise((resolve) => setTimeout(() => resolve(data), ms));
 
+// Normalized error extractor
 function extractError(err, fallback = "Server error") {
   if (!err) return new Error(fallback);
   if (err.response?.data?.message) return new Error(err.response.data.message);
@@ -40,8 +54,14 @@ function extractError(err, fallback = "Server error") {
   return new Error(fallback);
 }
 
-/* ========== Properties ========== */
+/* ============================================================
+   PROPERTY SERVICES
+   ============================================================ */
 
+/**
+ * Fetch all properties
+ * @param {object} opts - query params
+ */
 export const fetchProperties = async (opts = {}) => {
   if (USE_MOCK) {
     // Always return a plain array in mock mode
@@ -64,6 +84,9 @@ export const fetchProperties = async (opts = {}) => {
   }
 };
 
+/**
+ * Fetch single property by ID
+ */
 export const fetchProperty = async (id) => {
   if (!id) throw new Error("fetchProperty: id required");
 
@@ -80,6 +103,9 @@ export const fetchProperty = async (id) => {
   }
 };
 
+/**
+ * Create a new property
+ */
 export const createProperty = async (payload) => {
   if (USE_MOCK) {
     const newProp = {
@@ -99,6 +125,9 @@ export const createProperty = async (payload) => {
   }
 };
 
+/**
+ * Update a property
+ */
 export const updateProperty = async (id, payload) => {
   if (!id) throw new Error("updateProperty: id required");
 
@@ -123,6 +152,9 @@ export const updateProperty = async (id, payload) => {
   }
 };
 
+/**
+ * Delete property
+ */
 export const deleteProperty = async (id) => {
   if (!id) throw new Error("deleteProperty: id required");
 
@@ -139,6 +171,9 @@ export const deleteProperty = async (id) => {
   }
 };
 
+/**
+ * Upload image
+ */
 export const uploadImage = async (file) => {
   if (!file) throw new Error("uploadImage: file required");
 
@@ -152,24 +187,29 @@ export const uploadImage = async (file) => {
   try {
     const fd = new FormData();
     fd.append("file", file);
-    // Backend: POST /api/properties/uploads/images/
-    const { data } = await apiClient.post("/properties/uploads/images/", fd, {
+
+    const { data } = await apiClient.post("/uploads/images", fd, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+
     return data;
   } catch (err) {
     throw extractError(err, "Image upload failed");
   }
 };
 
+/**
+ * Get amenities
+ */
 export const getAmenities = async () => {
   if (USE_MOCK) {
-    // Import mock amenities
     try {
       const { mockAmenities } = await import("@/mocks/propertyMock");
-      return withDelay(mockAmenities.map((name, idx) => ({ id: `amenity_${idx}`, name })), 300);
+      return withDelay(
+        mockAmenities.map((name, idx) => ({ id: `amenity_${idx}`, name })),
+        300
+      );
     } catch {
-      // Fallback amenities
       const fallback = [
         "Parking",
         "Water",
@@ -212,7 +252,12 @@ export const getAmenities = async () => {
     throw extractError(err, "Failed to fetch amenities");
   }
 };
-export { fetchProperties as getAllProperties }
+
+/* ============================================================
+   EXPORT ALIASES
+   ============================================================ */
+
+export { fetchProperties as getAllProperties };
 
 export default {
   fetchProperty,

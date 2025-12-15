@@ -234,7 +234,7 @@ export default function LandlordForm() {
                   <Button onClick={handlePrev} type="button" variant="outline" className="w-1/2 border text-base py-2.5 rounded-lg font-medium transition-colors">
                     Back
                   </Button>
-                  <Button type="submit" className="w-1/2 bg-[#0b6e4f] hover:bg-[#095c42] text-white text-base py-2.5 rounded-lg font-medium transition-colors" disabled={isSubmitting || !form.agree}>
+                  <Button type="submit" className="w-1/2 px-4 py-2.5 bg-[#0b6e4f] text-white text-nowrap font-medium rounded-lg hover:bg-[#095c42] transition" disabled={isSubmitting || !form.agree}>
                     {isSubmitting ? "Creating..." : "Create Account"}
                   </Button>
                 </div>

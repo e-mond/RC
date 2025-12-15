@@ -217,7 +217,7 @@ export default function TenantSignup() {
                   <PrimaryButton onClick={handlePrev} type="button"  variant="outline" className="w-1/2 border text-base py-2.5 rounded-lg font-medium transition-colors">
                     Back
                   </PrimaryButton>
-                  <PrimaryButton type="submit" className="w-1/2 bg-[#0b6e4f] hover:bg-[#095c42] text-white text-base py-2.5 rounded-lg font-medium transition-colors" disabled={isSubmitting || !form.agree}>
+                  <PrimaryButton type="submit" className="w-1/2 bg-[#0b6e4f] hover:bg-[#095c42] text-white text-nowrap text-base py-2.5 rounded-lg font-medium transition-colors" disabled={isSubmitting || !form.agree}>
                     {isSubmitting ? "Creating..." : "Create Account"}
                   </PrimaryButton>
                 </div>

@@ -276,7 +276,7 @@ export default function ArtisanForm() {
                   <PrimaryButton
                     type="submit"
                     disabled={loading}
-                    className="w-1/2 bg-[#0b6e4f] hover:bg-[#095c42] text-white text-base py-2.5 rounded-lg font-medium transition-colors"
+                    className="w-1/2 bg-[#0b6e4f] hover:bg-[#095c42] text-white text-base py-2.5 text-nowrap rounded-lg font-medium transition-colors"
                   >
                     {loading ? "Creating..." : "Create Account"}
                   </PrimaryButton>
