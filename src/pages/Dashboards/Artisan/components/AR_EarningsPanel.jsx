@@ -82,7 +82,7 @@ export default function AR_EarningsPanel() {
   if (error) {
     return (
       <div className="p-6">
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 p-4 rounded-lg">
           {error}
         </div>
       </div>
@@ -139,15 +139,15 @@ export default function AR_EarningsPanel() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-sm p-6 border border-gray-200"
+          className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700"
         >
-          <h3 className="text-lg font-semibold mb-4">Earnings Over Time</h3>
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Earnings Over Time</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip formatter={(value) => `₵${value.toLocaleString()}`} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis dataKey="month" stroke="#9CA3AF" />
+              <YAxis stroke="#9CA3AF" />
+              <Tooltip formatter={(value) => `₵${value.toLocaleString()}`} contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px', color: '#fff' }} />
               <Line type="monotone" dataKey="amount" stroke="#0b6e4f" strokeWidth={2} dot={{ r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
@@ -155,10 +155,10 @@ export default function AR_EarningsPanel() {
       )}
 
       {/* Payment History */}
-      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-        <h3 className="text-lg font-semibold mb-4">Payment History</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Payment History</h3>
         {history.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
             <p>No payment history yet</p>
           </div>
         ) : (
@@ -184,11 +184,11 @@ function SummaryCard({ title, value, icon, color }) {
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="bg-white rounded-xl shadow-sm p-4 border border-gray-200"
+      className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border border-gray-200 dark:border-gray-700"
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-600 mb-1">{title}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{title}</p>
           <p className={`text-2xl font-bold ${textColor}`}>{value}</p>
         </div>
         <div className={`p-3 ${color} rounded-lg bg-opacity-10`}>
@@ -205,22 +205,22 @@ function PaymentHistoryItem({ earning, onGenerateInvoice }) {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+      className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:shadow-md transition-shadow bg-white dark:bg-gray-800"
     >
       <div className="flex-1">
-        <h4 className="font-semibold text-gray-900">{earning.taskTitle || "Task Payment"}</h4>
-        <p className="text-sm text-gray-600 mt-1">
+        <h4 className="font-semibold text-gray-900 dark:text-white">{earning.taskTitle || "Task Payment"}</h4>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
           {earning.date ? new Date(earning.date).toLocaleDateString() : "Date not available"}
         </p>
       </div>
       <div className="flex items-center gap-4">
         <div className="text-right">
           <p className="text-lg font-bold text-[#0b6e4f]">₵{earning.amount?.toLocaleString() || "0"}</p>
-          <p className="text-xs text-gray-500 capitalize">{earning.status || "paid"}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{earning.status || "paid"}</p>
         </div>
         <button
           onClick={() => onGenerateInvoice(earning.taskId || earning.id)}
-          className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm"
+          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
         >
           <Download size={16} />
           Invoice

@@ -11,8 +11,20 @@ export default function PropertiesPage() {
   }, []);
 
   const load = async () => {
-    const res = await getAllProperties();
-    setProperties(res);
+    try {
+      const res = await getAllProperties();
+      // Ensure we always store an array to avoid runtime errors
+      if (Array.isArray(res)) {
+        setProperties(res);
+      } else if (Array.isArray(res?.data)) {
+        setProperties(res.data);
+      } else {
+        setProperties([]);
+      }
+    } catch (err) {
+      console.error("Failed to load properties:", err);
+      setProperties([]);
+    }
   };
 
   return (
@@ -36,14 +48,14 @@ export default function PropertiesPage() {
           </thead>
 
           <tbody>
-            {properties.map((p) => (
+            {Array.isArray(properties) && properties.map((p) => (
               <tr
                 key={p.id}
                 className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
               >
-                <td className="p-3 text-gray-900 dark:text-gray-100">{p.name}</td>
-                <td className="p-3 text-gray-600 dark:text-gray-400">{p.location}</td>
-                <td className="p-3 font-medium text-gray-900 dark:text-gray-100">${p.rent}</td>
+                <td className="p-3 text-gray-900 dark:text-gray-100">{p.title}</td>
+                <td className="p-3 text-gray-600 dark:text-gray-400">{p.address}{p.city ? `, ${p.city}` : ''}</td>
+                <td className="p-3 font-medium text-gray-900 dark:text-gray-100">₵{p.price}</td>
                 <td className="p-3">
                   <Button variant="outline" size="sm" asChild>
                     <Link to={`/landlord/properties/${p.id}/edit`}>Edit</Link>

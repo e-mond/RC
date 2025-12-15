@@ -73,12 +73,12 @@ export default function ArtisanTasks() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <header>
-        <h2 className="text-2xl font-bold text-[#0f1724]">My Tasks</h2>
-        <p className="text-sm text-gray-600">Manage your assigned maintenance tasks</p>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">My Tasks</h2>
+        <p className="text-sm text-gray-600 dark:text-gray-400">Manage your assigned maintenance tasks</p>
       </header>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+        <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg">
           {error}
         </div>
       )}
@@ -92,7 +92,7 @@ export default function ArtisanTasks() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border border-gray-200 dark:border-gray-700">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
@@ -101,7 +101,7 @@ export default function ArtisanTasks() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search tasks..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f]"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -109,7 +109,7 @@ export default function ArtisanTasks() {
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f]"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
@@ -157,9 +157,9 @@ function StatsCard({ title, value, color }) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl shadow-sm p-4 border border-gray-200"
+      className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border border-gray-200 dark:border-gray-700"
     >
-      <p className="text-sm text-gray-600 mb-1">{title}</p>
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{title}</p>
       <p className={`text-2xl font-bold ${color.replace("bg-", "text-")}`}>{value}</p>
     </motion.div>
   );
@@ -189,12 +189,12 @@ function TaskCard({ task, onClick }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       onClick={onClick}
-      className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all cursor-pointer"
+      className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-all cursor-pointer"
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <h3 className="font-semibold text-lg text-gray-900">{task.title}</h3>
+            <h3 className="font-semibold text-lg text-gray-900 dark:text-white">{task.title}</h3>
             <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${config.color}`}>
               <StatusIcon size={14} />
               {config.label}
@@ -213,8 +213,8 @@ function TaskCard({ task, onClick }) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between pt-4 border-t">
-        <div className="flex items-center gap-4 text-sm text-gray-600">
+      <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
           {task.propertyTitle && (
             <span>
               <span className="font-medium">Property:</span> {task.propertyTitle}
@@ -245,12 +245,12 @@ function TaskCard({ task, onClick }) {
 // Empty State
 function EmptyTasksState() {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-12 text-center border border-gray-200">
-      <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-12 text-center border border-gray-200 dark:border-gray-700">
+      <div className="mx-auto w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-6">
         <AlertCircle className="w-12 h-12 text-gray-400" />
       </div>
-      <h3 className="text-xl font-semibold text-gray-900 mb-2">No Tasks Found</h3>
-      <p className="text-gray-600 max-w-md mx-auto">
+      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Tasks Found</h3>
+      <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
         You don't have any tasks matching your current filters. Check back later for new assignments.
       </p>
     </div>

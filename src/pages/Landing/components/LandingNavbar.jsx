@@ -74,32 +74,43 @@ export default function Navbar() {
         {/* === NAV LINKS === */}
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-[#0f1724]">
           {[
+            { id: "properties", label: "Properties", isRoute: true },
             { id: "how-it-works", label: "How it works" },
             { id: "features", label: "Features" },
-             { id: "benefits", label: "Benefits" },
+            { id: "benefits", label: "Benefits" },
             { id: "plans", label: "Pricing" },
             { id: "trust", label: "Trust" },
             { id: "advertise", label: "Advertise" },
           ].map((item) => (
-            <motion.button
-              key={item.id}
-              onClick={() => scrollToSection(item.id)}
-              className={`relative pb-1 transition-colors ${
-                activeSection === item.id
-                  ? "text-[#0b6e4f] font-semibold"
-                  : "hover:text-[#0b6e4f]"
-              }`}
-              whileHover={{ scale: 1.05 }}
-            >
-              {item.label}
-              {activeSection === item.id && (
-                <motion.div
-                  layoutId="nav-underline"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0b6e4f] rounded-full"
-                  transition={{ type: "spring", stiffness: 250, damping: 20 }}
-                />
-              )}
-            </motion.button>
+            item.isRoute ? (
+              <motion.div key={item.id} whileHover={{ scale: 1.05 }}>
+                <Link
+                  to="/properties"
+                  className="relative pb-1 transition-colors hover:text-[#0b6e4f]"
+                >
+                  {item.label}
+                </Link>
+              </motion.div>
+            ) : (
+              <motion.button
+                key={item.id}
+                onClick={() => scrollToSection(item.id)}
+                className={`relative pb-1 transition-colors ${activeSection === item.id
+                    ? "text-[#0b6e4f] font-semibold"
+                    : "hover:text-[#0b6e4f]"
+                  }`}
+                whileHover={{ scale: 1.05 }}
+              >
+                {item.label}
+                {activeSection === item.id && (
+                  <motion.div
+                    layoutId="nav-underline"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0b6e4f] rounded-full"
+                    transition={{ type: "spring", stiffness: 250, damping: 20 }}
+                  />
+                )}
+              </motion.button>
+            )
           ))}
         </div>
 

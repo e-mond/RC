@@ -128,7 +128,7 @@ export default function PropertyForm() {
   const onSubmit = async (data) => {
     setSubmitting(true);
     try {
-      // Prepare payload
+      // Prepare payload - match backend PropertyCreateSerializer fields
       const payload = {
         title: data.title,
         description: data.description || "",
@@ -138,18 +138,30 @@ export default function PropertyForm() {
         country: data.country || "Ghana",
         price: Number(data.price),
         currency: data.currency,
-        deposit: data.deposit ? Number(data.deposit) : undefined,
         bedrooms: Number(data.bedrooms),
         bathrooms: Number(data.bathrooms),
-        area: data.area ? Number(data.area) : data.area_sqm ? Number(data.area_sqm) : undefined,
-        area_sqm: data.area_sqm ? Number(data.area_sqm) : data.area ? Number(data.area) : undefined,
         property_type: data.property_type,
-        status: data.status,
-        amenities: data.amenities.map((a) => (typeof a === "string" ? a : a.name)),
-        images: data.images.filter((img) => typeof img === "string"), // Only URLs, files handled by ImageUploader
-        lat: data.lat ? String(data.lat) : "",
-        lng: data.lng ? String(data.lng) : "",
+        status: data.status === "active" ? "available" : data.status,
       };
+
+      // Optional fields - only include if provided
+      if (data.deposit) payload.deposit = Number(data.deposit);
+      if (data.area || data.area_sqm) payload.area_sqm = Number(data.area || data.area_sqm);
+      if (data.lat) payload.latitude = String(data.lat);
+      if (data.lng) payload.longitude = String(data.lng);
+
+      // Convert amenity names to IDs
+      if (data.amenities && data.amenities.length > 0) {
+        const amenityIds = data.amenities
+          .map((amenityName) => {
+            const found = amenitiesList.find(
+              (a) => a.name === amenityName || a.id === amenityName
+            );
+            return found?.id;
+          })
+          .filter((id) => id !== undefined);
+        if (amenityIds.length > 0) payload.amenity_ids = amenityIds;
+      }
 
       if (id) {
         await updateProperty(id, payload);
@@ -201,307 +213,301 @@ export default function PropertyForm() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-6 rounded-2xl shadow-sm">
-          <header className="flex items-center justify-between border-b pb-4">
-            <h3 className="text-2xl font-bold text-[#0f1724]">{isEdit ? "Edit Property" : "Create Property"}</h3>
-            <div className="text-sm text-gray-500">
-              {isEdit ? `ID: ${id}` : "Draft mode until published"}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-6 rounded-2xl shadow-sm">
+        <header className="flex items-center justify-between border-b pb-4">
+          <h3 className="text-2xl font-bold text-[#0f1724]">{isEdit ? "Edit Property" : "Create Property"}</h3>
+          <div className="text-sm text-gray-500">
+            {isEdit ? `ID: ${id}` : "Draft mode until published"}
+          </div>
+        </header>
+
+        {/* Form Errors Summary */}
+        {Object.keys(errors).length > 0 && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center gap-2 text-red-700 font-medium mb-2">
+              <AlertCircle size={18} />
+              <span>Please fix the following errors:</span>
             </div>
-          </header>
+            <ul className="list-disc list-inside text-sm text-red-600 space-y-1">
+              {Object.entries(errors).map(([key, fieldError]) => (
+                <li key={key}>
+                  {key}: {fieldError?.message || ""}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-          {/* Form Errors Summary */}
-          {Object.keys(errors).length > 0 && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-center gap-2 text-red-700 font-medium mb-2">
-                <AlertCircle size={18} />
-                <span>Please fix the following errors:</span>
-              </div>
-              <ul className="list-disc list-inside text-sm text-red-600 space-y-1">
-                {Object.entries(errors).map(([key, fieldError]) => (
-                  <li key={key}>
-                    {key}: {fieldError?.message || ""}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Basic Information */}
-          <section className="space-y-4">
-            <h4 className="text-lg font-semibold text-gray-900">Basic Information</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Title <span className="text-red-500">*</span>
-                </label>
-                <input
-                  {...register("title")}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] ${
-                    errors.title ? "border-red-500" : "border-gray-300"
-                  }`}
-                  placeholder="e.g., 3BR Apartment in East Legon"
-                />
-                {errors.title && (
-                  <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
-                )}
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  {...register("description")}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f]"
-                  placeholder="Describe your property..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Property Type <span className="text-red-500">*</span>
-                </label>
-                <select
-                  {...register("property_type")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f]"
-                >
-                  <option value="apartment">Apartment</option>
-                  <option value="house">House</option>
-                  <option value="studio">Studio</option>
-                  <option value="room">Room</option>
-                  <option value="commercial">Commercial</option>
-                  <option value="land">Land</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  {...register("status")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f]"
-                >
-                  <option value="draft">Draft</option>
-                  <option value="pending">Pending Approval</option>
-                  <option value="active">Active</option>
-                  <option value="suspended">Suspended</option>
-                </select>
-              </div>
-            </div>
-          </section>
-
-          {/* Location */}
-          <section className="space-y-4">
-            <h4 className="text-lg font-semibold text-gray-900">Location</h4>
+        {/* Basic Information */}
+        <section className="space-y-4">
+          <h4 className="text-lg font-semibold text-gray-900">Basic Information</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Address <span className="text-red-500">*</span>
+                Title <span className="text-red-500">*</span>
               </label>
               <input
-                {...register("address")}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] ${
-                  errors.address ? "border-red-500" : "border-gray-300"
-                }`}
-                placeholder="Full address"
+                {...register("title")}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white ${errors.title ? "border-red-500" : "border-gray-300"
+                  }`}
+                placeholder="e.g., 3BR Apartment in East Legon"
               />
-              {errors.address && (
-                <p className="mt-1 text-sm text-red-600">{errors.address.message}</p>
+              {errors.title && (
+                <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                <input
-                  {...register("city")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f]"
-                  placeholder="e.g., Accra"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
-                <input
-                  {...register("region")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f]"
-                  placeholder="e.g., Greater Accra"
-                />
-              </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <textarea
+                {...register("description")}
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white"
+                placeholder="Describe your property..."
+              />
             </div>
 
-            <MapPicker
-              value={{
-                address: watchedLocation[2] || "",
-                lat: watchedLocation[0] || "",
-                lng: watchedLocation[1] || "",
-              }}
-              onChange={handleLocationChange}
-            />
-          </section>
-
-          {/* Pricing */}
-          <section className="space-y-4">
-            <h4 className="text-lg font-semibold text-gray-900">Pricing</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Price <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register("price")}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] ${
-                    errors.price ? "border-red-500" : "border-gray-300"
-                  }`}
-                  placeholder="0.00"
-                />
-                {errors.price && (
-                  <p className="mt-1 text-sm text-red-600">{errors.price.message}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
-                <select
-                  {...register("currency")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f]"
-                >
-                  <option value="GHS">GHS (₵)</option>
-                  <option value="USD">USD ($)</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Deposit</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register("deposit")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f]"
-                  placeholder="Optional"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Property Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                {...register("property_type")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white"
+              >
+                <option value="apartment">Apartment</option>
+                <option value="house">House</option>
+                <option value="studio">Studio</option>
+                <option value="room">Room</option>
+                <option value="commercial">Commercial</option>
+                <option value="land">Land</option>
+              </select>
             </div>
-          </section>
 
-          {/* Property Details */}
-          <section className="space-y-4">
-            <h4 className="text-lg font-semibold text-gray-900">Property Details</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bedrooms <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  {...register("bedrooms")}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] ${
-                    errors.bedrooms ? "border-red-500" : "border-gray-300"
-                  }`}
-                  min="0"
-                  max="20"
-                />
-                {errors.bedrooms && (
-                  <p className="mt-1 text-sm text-red-600">{errors.bedrooms.message}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bathrooms <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  {...register("bathrooms")}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] ${
-                    errors.bathrooms ? "border-red-500" : "border-gray-300"
-                  }`}
-                  min="0"
-                  max="20"
-                />
-                {errors.bathrooms && (
-                  <p className="mt-1 text-sm text-red-600">{errors.bathrooms.message}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Area (sqm)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register("area")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f]"
-                  placeholder="Optional"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select
+                {...register("status")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white"
+              >
+                <option value="draft">Draft</option>
+                <option value="pending">Pending Approval</option>
+                <option value="active">Active</option>
+                <option value="suspended">Suspended</option>
+              </select>
             </div>
-          </section>
-
-          {/* Images */}
-          <section className="space-y-4">
-            <h4 className="text-lg font-semibold text-gray-900">
-              Images <span className="text-red-500">*</span>
-            </h4>
-            <ImageUploader
-              value={watchedImages || []}
-              onChange={(images) => setValue("images", images, { shouldDirty: true })}
-              multiple
-            />
-            {errors.images && (
-            <p className="text-sm text-red-600">{errors.images.message}</p>
-            )}
-          </section>
-
-          {/* Amenities */}
-          <section className="space-y-4">
-            <h4 className="text-lg font-semibold text-gray-900">Amenities</h4>
-            {amenitiesLoading ? (
-              <div className="flex items-center gap-2 text-gray-500">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm">Loading amenities...</span>
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {amenitiesList.map((amenity) => {
-                  const isSelected = watchedAmenities?.some(
-                    (a) => (typeof a === "string" ? a : a.name) === amenity.name
-                  );
-                  return (
-                    <button
-                      type="button"
-                      key={amenity.id}
-                      onClick={() => toggleAmenity(amenity.id)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        isSelected
-                          ? "bg-[#0b6e4f] text-white"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
-                    >
-                      {amenity.name}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-
-          {/* Actions */}
-          <div className="flex items-center gap-3 justify-end pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate("/landlord/properties")}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" disabled={submitting || !isDirty}>
-              {submitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  {isEdit ? "Saving…" : "Creating…"}
-                </>
-              ) : isEdit ? (
-                "Save Changes"
-              ) : (
-                "Create Property"
-              )}
-            </Button>
           </div>
-        </form>
-      </div>
+        </section>
+
+        {/* Location */}
+        <section className="space-y-4">
+          <h4 className="text-lg font-semibold text-gray-900">Location</h4>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Address <span className="text-red-500">*</span>
+            </label>
+            <input
+              {...register("address")}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white ${errors.address ? "border-red-500" : "border-gray-300"
+                }`}
+              placeholder="Full address"
+            />
+            {errors.address && (
+              <p className="mt-1 text-sm text-red-600">{errors.address.message}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+              <input
+                {...register("city")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white"
+                placeholder="e.g., Accra"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
+              <input
+                {...register("region")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white"
+                placeholder="e.g., Greater Accra"
+              />
+            </div>
+          </div>
+
+          <MapPicker
+            value={{
+              address: watchedLocation[2] || "",
+              lat: watchedLocation[0] || "",
+              lng: watchedLocation[1] || "",
+            }}
+            onChange={handleLocationChange}
+          />
+        </section>
+
+        {/* Pricing */}
+        <section className="space-y-4">
+          <h4 className="text-lg font-semibold text-gray-900">Pricing</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Price <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                {...register("price")}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white ${errors.price ? "border-red-500" : "border-gray-300"
+                  }`}
+                placeholder="0.00"
+              />
+              {errors.price && (
+                <p className="mt-1 text-sm text-red-600">{errors.price.message}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+              <select
+                {...register("currency")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white"
+              >
+                <option value="GHS">GHS (₵)</option>
+                <option value="USD">USD ($)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Deposit</label>
+              <input
+                type="number"
+                step="0.01"
+                {...register("deposit")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white"
+                placeholder="Optional"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Property Details */}
+        <section className="space-y-4">
+          <h4 className="text-lg font-semibold text-gray-900">Property Details</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Bedrooms <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                {...register("bedrooms")}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white ${errors.bedrooms ? "border-red-500" : "border-gray-300"
+                  }`}
+                min="0"
+                max="20"
+              />
+              {errors.bedrooms && (
+                <p className="mt-1 text-sm text-red-600">{errors.bedrooms.message}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Bathrooms <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                {...register("bathrooms")}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white ${errors.bathrooms ? "border-red-500" : "border-gray-300"
+                  }`}
+                min="0"
+                max="20"
+              />
+              {errors.bathrooms && (
+                <p className="mt-1 text-sm text-red-600">{errors.bathrooms.message}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Area (sqm)</label>
+              <input
+                type="number"
+                step="0.01"
+                {...register("area")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 bg-white"
+                placeholder="Optional"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Images */}
+        <section className="space-y-4">
+          <h4 className="text-lg font-semibold text-gray-900">
+            Images <span className="text-red-500">*</span>
+          </h4>
+          <ImageUploader
+            value={watchedImages || []}
+            onChange={(images) => setValue("images", images, { shouldDirty: true })}
+            multiple
+          />
+          {errors.images && (
+            <p className="text-sm text-red-600">{errors.images.message}</p>
+          )}
+        </section>
+
+        {/* Amenities */}
+        <section className="space-y-4">
+          <h4 className="text-lg font-semibold text-gray-900">Amenities</h4>
+          {amenitiesLoading ? (
+            <div className="flex items-center gap-2 text-gray-500">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm">Loading amenities...</span>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {amenitiesList.map((amenity) => {
+                const isSelected = watchedAmenities?.some(
+                  (a) => (typeof a === "string" ? a : a.name) === amenity.name
+                );
+                return (
+                  <button
+                    type="button"
+                    key={amenity.id}
+                    onClick={() => toggleAmenity(amenity.id)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isSelected
+                      ? "bg-[#0b6e4f] text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
+                  >
+                    {amenity.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* Actions */}
+        <div className="flex items-center gap-3 justify-end pt-4 border-t">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate("/landlord/properties")}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" disabled={submitting || !isDirty}>
+            {submitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                {isEdit ? "Saving…" : "Creating…"}
+              </>
+            ) : isEdit ? (
+              "Save Changes"
+            ) : (
+              "Create Property"
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 }

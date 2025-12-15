@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getLandlordDashboardStats,getLandlordRecentActivity,} from "@/services/landlordService";
+import { getLandlordDashboardStats, getLandlordRecentActivity } from "@/services/landlordService";
 import { BarChart,Bar,XAxis,YAxis,Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, } from "recharts";
 
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
@@ -7,16 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useTheme } from "@/context/ThemeContext";
 
-
-// --------------------
-// MOCK FALLBACK IMPORTS
-// --------------------
-import { mockLandlordDashboardStats, mockLandlordActivity } from "@/mocks/dashboardMock";
-
 export default function LandlordDashboard() {
   const [stats, setStats] = useState(null);
   const [activity, setActivity] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const { theme } = useTheme();
   useEffect(() => {
@@ -25,37 +20,40 @@ export default function LandlordDashboard() {
 
   const loadDashboard = async () => {
     setLoading(true);
+    setError("");
 
     try {
-      // -----------------------------
-      // TRY REAL API FIRST
-      // -----------------------------
       const realStats = await getLandlordDashboardStats();
       const realActivity = await getLandlordRecentActivity();
 
       setStats(realStats);
       setActivity(realActivity);
     } catch (err) {
-      console.warn("Dashboard API failed → switching to mock mode", err);
-
-      // -----------------------------
-      // MOCK FALLBACK
-      // -----------------------------
-      setStats(mockLandlordDashboardStats);
-      setActivity(mockLandlordActivity);
+      console.error("Landlord dashboard failed:", err);
+      setError(err.message || "Failed to load landlord dashboard");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   useEffect(() => {
     loadDashboard();
   }, []);
 
-  if (loading || !stats) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin w-10 h-10 border-4 border-[#0b6e4f] border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  if (error || !stats) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 p-4 rounded-lg">
+          {error || "Failed to load landlord dashboard"}
+        </div>
       </div>
     );
   }

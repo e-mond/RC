@@ -44,13 +44,21 @@ function extractError(err, fallback = "Server error") {
 
 export const fetchProperties = async (opts = {}) => {
   if (USE_MOCK) {
-    const result = { data: mockData.mockProperties || [] };
-    return withDelay(result, 450);
+    // Always return a plain array in mock mode
+    const list = mockData.mockProperties || [];
+    return withDelay(list, 450);
   }
 
   try {
     const { data } = await apiClient.get("/properties", { params: opts });
-    return data;
+    // Normalize various possible backend shapes into a flat array
+    return (
+      data?.properties ||
+      data?.results ||
+      data?.data ||
+      data ||
+      []
+    );
   } catch (err) {
     throw extractError(err, "Failed to fetch properties");
   }
@@ -84,7 +92,7 @@ export const createProperty = async (payload) => {
   }
 
   try {
-    const { data } = await apiClient.post("/properties", payload);
+    const { data } = await apiClient.post("/properties/", payload);
     return data;
   } catch (err) {
     throw extractError(err, "Failed to create property");
@@ -144,7 +152,8 @@ export const uploadImage = async (file) => {
   try {
     const fd = new FormData();
     fd.append("file", file);
-    const { data } = await apiClient.post("/uploads/images", fd, {
+    // Backend: POST /api/properties/uploads/images/
+    const { data } = await apiClient.post("/properties/uploads/images/", fd, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return data;
@@ -178,8 +187,27 @@ export const getAmenities = async () => {
   }
 
   try {
-    const { data } = await apiClient.get("/amenities");
-    return data;
+    // Backend exposes amenities under /api/properties/amenities/
+    const { data } = await apiClient.get("/properties/amenities/");
+
+    // Normalize into array of { id, name }
+    const list = Array.isArray(data?.amenities)
+      ? data.amenities
+      : Array.isArray(data?.results)
+        ? data.results
+        : Array.isArray(data)
+          ? data
+          : [];
+
+    return list.map((item, idx) => {
+      if (typeof item === "string") {
+        return { id: `amenity_${idx}`, name: item };
+      }
+      return {
+        id: item.id ?? `amenity_${idx}`,
+        name: item.name ?? String(item),
+      };
+    });
   } catch (err) {
     throw extractError(err, "Failed to fetch amenities");
   }

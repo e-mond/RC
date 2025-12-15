@@ -41,7 +41,8 @@ export const loginUser = async (credentials) => {
 
   // ----- REAL API -----
   try {
-    const { data } = await apiClient.post("/auth/login", credentials);
+    // Backend expects trailing slash: /api/auth/login/
+    const { data } = await apiClient.post("/auth/login/", credentials);
     return {
       token: data.token || data.access_token,
       user: data.user || data,
@@ -65,9 +66,10 @@ const signup = async (endpoint, formData) => {
   }
 };
 
-export const signupTenant = (formData) => signup("/auth/signup/tenant", formData);
-export const signupLandlord = (formData) => signup("/auth/signup/landlord", formData);
-export const signupArtisan = (formData) => signup("/auth/signup/artisan", formData);
+// Use trailing slashes to match Django routes exactly
+export const signupTenant = (formData) => signup("/auth/signup/tenant/", formData);
+export const signupLandlord = (formData) => signup("/auth/signup/landlord/", formData);
+export const signupArtisan = (formData) => signup("/auth/signup/artisan/", formData);
 
 /* ------------------------------------------------------------
    PROFILE
@@ -87,7 +89,8 @@ export const getUserProfile = async () => {
   }
 
   try {
-    const { data } = await apiClient.get("/auth/profile");
+    // Backend profile endpoint: /api/auth/profile/
+    const { data } = await apiClient.get("/auth/profile/");
     return data.user || data.profile || data;
   } catch (err) {
     throw new Error(extractError(err, "Unable to load profile"));
@@ -99,7 +102,8 @@ export const getUserProfile = async () => {
 ------------------------------------------------------------ */
 export const forgotPassword = async (email) => {
   try {
-    const { data } = await apiClient.post("/auth/forgot-password", { email });
+    // Backend forgot password endpoint: /api/auth/forgot-password/
+    const { data } = await apiClient.post("/auth/forgot-password/", { email });
     return data;
   } catch (err) {
     throw new Error(extractError(err, "Unable to send reset email"));
@@ -108,7 +112,8 @@ export const forgotPassword = async (email) => {
 
 export const resetPassword = async (token, payload) => {
   try {
-    const { data } = await apiClient.post(`/auth/reset-password/${token}`, payload);
+    // Backend reset endpoint: /api/auth/reset-password/<token>/
+    const { data } = await apiClient.post(`/auth/reset-password/${token}/`, payload);
     return data;
   } catch (err) {
     throw new Error(extractError(err, "Password reset failed"));

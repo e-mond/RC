@@ -178,7 +178,7 @@ function PropertyCard({ property, onRemove, removing, isPremium }) {
             <span className="text-sm text-gray-500 ml-1">/{property.period || "month"}</span>
           </div>
           <Link
-            to={`/properties/${propertyId}`}
+            to={`/tenant/properties/${propertyId}`}
             className="px-4 py-2 bg-[#0b6e4f] text-white rounded-lg hover:bg-[#095c42] transition-colors flex items-center gap-2 text-sm font-medium"
           >
             View
@@ -202,7 +202,7 @@ function EmptyWishlistState() {
         Start exploring properties and save your favorites to view them here later.
       </p>
       <Link
-        to="/properties"
+        to="/tenant/properties"
         className="inline-flex items-center gap-2 px-6 py-3 bg-[#0b6e4f] text-white rounded-lg hover:bg-[#095c42] transition-colors font-medium"
       >
         Browse Properties

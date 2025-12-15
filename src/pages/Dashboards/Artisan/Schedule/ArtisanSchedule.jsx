@@ -71,13 +71,12 @@ export default function ArtisanSchedule() {
         {dayTasks.map((task, idx) => (
           <div
             key={idx}
-            className={`h-1 w-full rounded ${
-              task.status === "completed"
-                ? "bg-green-500"
-                : task.status === "in_progress"
+            className={`h-1 w-full rounded ${task.status === "completed"
+              ? "bg-green-500"
+              : task.status === "in_progress"
                 ? "bg-blue-500"
                 : "bg-yellow-500"
-            }`}
+              }`}
             title={task.title}
           />
         ))}
@@ -98,21 +97,21 @@ export default function ArtisanSchedule() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <header>
-        <h2 className="text-2xl font-bold text-[#0f1724]">Job Schedule</h2>
-        <p className="text-sm text-gray-600">Manage your task schedule and availability</p>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Job Schedule</h2>
+        <p className="text-sm text-gray-600 dark:text-gray-400">Manage your task schedule and availability</p>
       </header>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+        <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg">
           {error}
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar */}
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
+            <h3 className="text-lg font-semibold flex items-center gap-2 text-gray-900 dark:text-white">
               <CalendarIcon size={20} />
               Schedule Calendar
             </h3>
@@ -143,10 +142,13 @@ export default function ArtisanSchedule() {
             .react-calendar {
               border: none;
               font-family: inherit;
+              background: transparent;
+              width: 100%;
             }
             .react-calendar__tile {
               padding: 0.5rem;
               position: relative;
+              color: inherit;
             }
             .react-calendar__tile--active {
               background: #0b6e4f !important;
@@ -162,12 +164,34 @@ export default function ArtisanSchedule() {
             .react-calendar__navigation button:hover {
               background-color: #e0f2e9;
             }
+            .react-calendar__month-view__weekdays {
+              color: inherit;
+            }
+            .react-calendar__month-view__days__day {
+              color: inherit;
+            }
+            .react-calendar__month-view__days__day--neighboringMonth {
+              color: #9ca3af;
+            }
+            /* Dark mode styles */
+            .dark .react-calendar {
+              color: white;
+            }
+            .dark .react-calendar__tile:hover {
+              background-color: #374151;
+            }
+            .dark .react-calendar__navigation button:hover {
+              background-color: #374151;
+            }
+            .dark .react-calendar__month-view__days__day--neighboringMonth {
+              color: #6b7280;
+            }
           `}</style>
         </div>
 
         {/* Selected Date Tasks */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <h3 className="text-md font-semibold mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+          <h3 className="text-md font-semibold mb-4 text-gray-900 dark:text-white">
             Tasks on {format(selectedDate, "MMMM d, yyyy")}
           </h3>
           {selectedDateTasks.length === 0 ? (
@@ -203,10 +227,10 @@ function TaskScheduleItem({ task }) {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-3 border border-gray-200 rounded-lg hover:border-[#0b6e4f] transition-colors"
+      className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-[#0b6e4f] transition-colors"
     >
       <div className="flex items-start justify-between mb-2">
-        <h4 className="font-medium text-sm text-gray-900">{task.title}</h4>
+        <h4 className="font-medium text-sm text-gray-900 dark:text-white">{task.title}</h4>
         <span className={`px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1 ${config.color}`}>
           <StatusIcon size={12} />
         </span>
