@@ -4,6 +4,7 @@ import PropTypes from "prop-types";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
+import AdBanner from "@/pages/Ads/AdBanner";
 
 /**
  * DashboardLayout
@@ -32,6 +33,8 @@ export default function DashboardLayout({ children, aside }) {
         >
           <div className="max-w-7xl mx-auto w-full">
             {content}
+            {/* Role-aware ads for freemium users across dashboards */}
+            <AdBanner position="bottom" />
           </div>
         </main>
       </div>

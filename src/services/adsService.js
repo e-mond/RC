@@ -1,126 +1,57 @@
-import apiClient from "./apiClient";
+// src/services/adsService.js
+// Handles user-promoted ads (boosting own listings)
+// Separate from admin ads management
+
+import apiClient from "@/services/apiClient";
 
 /**
- * Ads Service
- * Handles all advertisement-related API calls
+ * Get current user's active promoted ads
  */
-
-/**
- * Get all active ads
- * @param {Object} filters - Filter options (ad_type, role, region)
- * @returns {Promise} Ad list with pagination
- */
-export const getAds = async (filters = {}) => {
+export const getMyAds = async () => {
   try {
-    const params = new URLSearchParams();
-    Object.keys(filters).forEach((key) => {
-      if (filters[key] !== null && filters[key] !== undefined && filters[key] !== "") {
-        params.append(key, filters[key]);
-      }
-    });
-    
-    const { data } = await apiClient.get(`/ads/?${params.toString()}`);
+    const { data } = await apiClient.get("/ads/my-boosts/");
+    return data.data || [];
+  } catch (err) {
+    console.error("Failed to fetch my ads:", err);
+    throw err.response?.data || { message: "Failed to load your promotions" };
+  }
+};
+
+/**
+ * Create a new promoted ad (boost)
+ * @param {Object} payload - { packageId, listingId }
+ */
+export const createBoost = async (payload) => {
+  try {
+    const { data } = await apiClient.post("/ads/boost/", payload);
     return data;
   } catch (err) {
-    console.error("Get ads error:", err);
-    throw err.response?.data || { message: "Failed to fetch ads" };
+    console.error("Boost creation failed:", err);
+    throw err.response?.data || { message: "Failed to activate boost" };
   }
 };
 
 /**
- * Get ad by ID (admin only)
- * @param {number} id - Ad ID
- * @returns {Promise} Ad details
+ * Renew an existing boost
+ * @param {number} adId
  */
-export const getAd = async (id) => {
+export const renewBoost = async (adId) => {
   try {
-    const { data } = await apiClient.get(`/ads/${id}/`);
+    const { data } = await apiClient.patch(`/ads/boost/${adId}/renew/`);
     return data;
   } catch (err) {
-    console.error("Get ad error:", err);
-    throw err.response?.data || { message: "Failed to fetch ad" };
+    throw err.response?.data || { message: "Renew failed" };
   }
 };
 
 /**
- * Create a new ad (admin only)
- * @param {FormData|Object} adData - Ad data including image
- * @returns {Promise} Created ad
+ * Cancel/delete a boost
+ * @param {number} adId
  */
-export const createAd = async (adData) => {
+export const cancelBoost = async (adId) => {
   try {
-    const isFormData = adData instanceof FormData;
-    const config = isFormData
-      ? { headers: { "Content-Type": "multipart/form-data" } }
-      : {};
-    
-    const { data } = await apiClient.post("/ads/create/", adData, config);
-    return data;
+    await apiClient.delete(`/ads/boost/${adId}/`);
   } catch (err) {
-    console.error("Create ad error:", err);
-    throw err.response?.data || { message: "Failed to create ad" };
-  }
-};
-
-/**
- * Update an ad (admin only)
- * @param {number} id - Ad ID
- * @param {FormData|Object} adData - Updated ad data
- * @returns {Promise} Updated ad
- */
-export const updateAd = async (id, adData) => {
-  try {
-    const isFormData = adData instanceof FormData;
-    const config = isFormData
-      ? { headers: { "Content-Type": "multipart/form-data" } }
-      : {};
-    
-    const { data } = await apiClient.patch(`/ads/${id}/`, adData, config);
-    return data;
-  } catch (err) {
-    console.error("Update ad error:", err);
-    throw err.response?.data || { message: "Failed to update ad" };
-  }
-};
-
-/**
- * Delete an ad (admin only)
- * @param {number} id - Ad ID
- * @returns {Promise}
- */
-export const deleteAd = async (id) => {
-  try {
-    await apiClient.delete(`/ads/${id}/`);
-  } catch (err) {
-    console.error("Delete ad error:", err);
-    throw err.response?.data || { message: "Failed to delete ad" };
-  }
-};
-
-/**
- * Track ad click (public)
- * @param {number} id - Ad ID
- * @returns {Promise}
- */
-export const trackAdClick = async (id) => {
-  try {
-    await apiClient.post(`/ads/${id}/click/`);
-  } catch (err) {
-    console.error("Track ad click error:", err);
-    // Don't throw error for tracking - it's not critical
-  }
-};
-
-/**
- * Track ad view (public)
- * @param {number} id - Ad ID
- * @returns {Promise}
- */
-export const trackAdView = async (id) => {
-  try {
-    await apiClient.post(`/ads/${id}/view/`);
-  } catch (err) {
-    console.error("Track ad view error:", err);
-    // Don't throw error for tracking - it's not critical
+    throw err.response?.data || { message: "Cancel failed" };
   }
 };

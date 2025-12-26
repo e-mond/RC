@@ -44,14 +44,12 @@ function extractError(err, fallback = "Server error") {
 
 export const fetchProperties = async (opts = {}) => {
   if (USE_MOCK) {
-    // Always return a plain array in mock mode
     const list = mockData.mockProperties || [];
     return withDelay(list, 450);
   }
 
   try {
     const { data } = await apiClient.get("/properties", { params: opts });
-    // Normalize various possible backend shapes into a flat array
     return (
       data?.properties ||
       data?.results ||
@@ -139,9 +137,14 @@ export const deleteProperty = async (id) => {
   }
 };
 
+/**
+ * Upload image directly to Cloudinary (unsigned upload)
+ * Uses VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET
+ */
 export const uploadImage = async (file) => {
   if (!file) throw new Error("uploadImage: file required");
 
+  // Mock mode: return placeholder
   if (USE_MOCK) {
     const mockUrl = `https://placehold.co/800x600/orange/white?text=${encodeURIComponent(
       file.name.split(".")[0]
@@ -149,48 +152,52 @@ export const uploadImage = async (file) => {
     return withDelay({ url: mockUrl }, 800);
   }
 
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+  if (!cloudName || !uploadPreset) {
+    throw new Error("Cloudinary config missing. Check .env: VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET");
+  }
+
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("upload_preset", uploadPreset);
+  fd.append("folder", "rental_connects/properties"); // Optional organization
+
   try {
-    const fd = new FormData();
-    fd.append("file", file);
-    // Backend: POST /api/properties/uploads/images/
-    const { data } = await apiClient.post("/properties/uploads/images/", fd, {
-      headers: { "Content-Type": "multipart/form-data" },
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      method: "POST",
+      body: fd,
     });
-    return data;
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || "Cloudinary upload failed");
+    }
+
+    const data = await res.json();
+    return { url: data.secure_url }; // Cloudinary returns secure_url
   } catch (err) {
-    throw extractError(err, "Image upload failed");
+    throw extractError(err, "Image upload to Cloudinary failed");
   }
 };
 
 export const getAmenities = async () => {
   if (USE_MOCK) {
-    // Import mock amenities
     try {
       const { mockAmenities } = await import("@/mocks/propertyMock");
       return withDelay(mockAmenities.map((name, idx) => ({ id: `amenity_${idx}`, name })), 300);
     } catch {
-      // Fallback amenities
       const fallback = [
-        "Parking",
-        "Water",
-        "Electricity",
-        "Internet",
-        "Kitchen",
-        "Washing Machine",
-        "Balcony",
-        "Fenced Compound",
-        "Air Conditioning",
-        "Security",
+        "Parking", "Water", "Electricity", "Internet", "Kitchen",
+        "Washing Machine", "Balcony", "Fenced Compound", "Air Conditioning", "Security",
       ];
       return withDelay(fallback.map((name, idx) => ({ id: `amenity_${idx}`, name })), 300);
     }
   }
 
   try {
-    // Backend exposes amenities under /api/properties/amenities/
     const { data } = await apiClient.get("/properties/amenities/");
-
-    // Normalize into array of { id, name }
     const list = Array.isArray(data?.amenities)
       ? data.amenities
       : Array.isArray(data?.results)
@@ -212,7 +219,23 @@ export const getAmenities = async () => {
     throw extractError(err, "Failed to fetch amenities");
   }
 };
-export { fetchProperties as getAllProperties }
+
+/**
+ * Fetch properties for tenant browse (includes boosted ones sorted by promotion)
+ * @param {Object} filters - e.g., location, price, bedrooms
+ */
+export const getTenantProperties = async (filters = {}) => {
+  try {
+    const params = new URLSearchParams(filters);
+    const { data } = await apiClient.get(`/properties/?${params.toString()}`);
+    return data.data || []; // Backend should sort boosted first
+  } catch (err) {
+    console.error("Failed to fetch properties:", err);
+    throw err.response?.data || { message: "Failed to load properties" };
+  }
+};
+
+export { fetchProperties as getAllProperties };
 
 export default {
   fetchProperty,

@@ -1,12 +1,26 @@
-import { Link } from "react-router-dom";
+// src/pages/Landing/components/LandingNavbar.jsx
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Search } from "lucide-react";
 
-export default function Navbar() {
+export default function LandingNavbar({
+  searchTerm = "",
+  setSearchTerm,
+}) {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const isPropertiesPage = location.pathname.startsWith("/properties");
   const [activeSection, setActiveSection] = useState("hero");
 
-  // Smooth scroll to section
+  /* ------------------ SCROLL TO SECTION (LANDING ONLY) ------------------ */
   const scrollToSection = (id) => {
+    if (isPropertiesPage) {
+      navigate("/");
+      return;
+    }
+
     const section = document.getElementById(id);
     if (section) {
       section.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -14,124 +28,152 @@ export default function Navbar() {
     }
   };
 
-  // Track scroll position to highlight current section
+  /* ------------------ SCROLL SPY (LANDING ONLY) ------------------ */
   useEffect(() => {
+    if (isPropertiesPage) return;
+
+    const sections = [
+      "hero",
+      "how-it-works",
+      "features",
+      "benefits",
+      "plans",
+      "trust",
+      "advertise",
+    ];
+
     const handleScroll = () => {
-      const sections = ["hero", "how-it-works", "features", "plans", "trust", "advertise"];
-      let current = activeSection;
+      let current = "hero";
 
       for (const id of sections) {
         const el = document.getElementById(id);
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          if (rect.top <= 120 && rect.bottom >= 120) {
-            current = id;
-            break;
-          }
+        if (!el) continue;
+
+        const rect = el.getBoundingClientRect();
+        if (rect.top <= 120 && rect.bottom >= 120) {
+          current = id;
+          break;
         }
       }
-      if (current !== activeSection) setActiveSection(current);
+
+      setActiveSection(current);
     };
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [activeSection]);
+  }, [isPropertiesPage]);
 
-  // Animation Variants
+  /* ------------------ ANIMATION ------------------ */
   const navVariants = {
-    hidden: { opacity: 0, y: -30 },
+    hidden: { opacity: 0, y: -24 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.6, ease: "easeOut" },
+      transition: { duration: 0.5, ease: "easeOut" },
     },
   };
 
   return (
     <motion.nav
-      className="bg-[#ffffff] border-b border-[#e6e8ea] shadow-sm fixed top-0 w-full z-50 backdrop-blur-lg bg-opacity-95"
       variants={navVariants}
       initial="hidden"
       animate="visible"
+      className="fixed top-0 z-50 w-full border-b border-[#e6e8ea] bg-white/95 backdrop-blur-lg"
     >
-      <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-        {/* === LOGO / BRAND === */}
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 md:px-6">
+        {/* ------------------ LEFT: LOGO ------------------ */}
         <motion.div
-          className="flex items-center gap-2 cursor-pointer"
           whileHover={{ scale: 1.05 }}
-          onClick={() => scrollToSection("hero")}
+          onClick={() => (isPropertiesPage ? navigate("/") : scrollToSection("hero"))}
+          className="flex cursor-pointer items-center gap-2"
         >
           <motion.div
-            className="w-6 h-6 bg-[#0b6e4f] rounded-md"
-            whileHover={{ rotate: 15 }}
+            className="h-6 w-6 rounded-md bg-[#0b6e4f]"
+            whileHover={{ rotate: 12 }}
             transition={{ type: "spring", stiffness: 200 }}
-          ></motion.div>
-          <span className="text-lg font-semibold text-[#0f1724]">
+          />
+          <span className="hidden text-lg font-semibold text-[#0f1724] sm:block">
             Rental Connects
           </span>
         </motion.div>
 
-        {/* === NAV LINKS === */}
-        <div className="hidden md:flex items-center gap-8 text-sm font-medium text-[#0f1724]">
-          {[
-            { id: "properties", label: "Properties", isRoute: true },
-            { id: "how-it-works", label: "How it works" },
-            { id: "features", label: "Features" },
-            { id: "benefits", label: "Benefits" },
-            { id: "plans", label: "Pricing" },
-            { id: "trust", label: "Trust" },
-            { id: "advertise", label: "Advertise" },
-          ].map((item) => (
-            item.isRoute ? (
-              <motion.div key={item.id} whileHover={{ scale: 1.05 }}>
+        {/* ------------------ CENTER: SEARCH (PROPERTIES ONLY) ------------------ */}
+        {isPropertiesPage && setSearchTerm && (
+          <div className="flex flex-1 justify-center px-2">
+            <div className="relative w-full max-w-xl">
+              <Search
+                size={18}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by location, title, or description..."
+                className="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-11 pr-4 text-sm shadow-sm focus:border-transparent focus:ring-2 focus:ring-[#0b6e4f]"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ------------------ LANDING NAV LINKS ------------------ */}
+        {!isPropertiesPage && (
+          <div className="hidden flex-1 items-center justify-center gap-8 text-sm font-medium text-[#0f1724] md:flex">
+            {[
+              { id: "how-it-works", label: "How it works" },
+              { id: "features", label: "Features" },
+              { id: "benefits", label: "Benefits" },
+              { id: "plans", label: "Pricing" },
+              { id: "trust", label: "Trust" },
+              { id: "advertise", label: "Advertise" },
+              { id: "properties", label: "Browse Properties", route: true },
+            ].map((item) =>
+              item.route ? (
                 <Link
+                  key={item.id}
                   to="/properties"
-                  className="relative pb-1 transition-colors hover:text-[#0b6e4f]"
+                  className="transition-colors hover:text-[#0b6e4f]"
                 >
                   {item.label}
                 </Link>
-              </motion.div>
-            ) : (
-              <motion.button
-                key={item.id}
-                onClick={() => scrollToSection(item.id)}
-                className={`relative pb-1 transition-colors ${activeSection === item.id
-                    ? "text-[#0b6e4f] font-semibold"
-                    : "hover:text-[#0b6e4f]"
+              ) : (
+                <button
+                  key={item.id}
+                  onClick={() => scrollToSection(item.id)}
+                  className={`relative transition-colors ${
+                    activeSection === item.id
+                      ? "font-semibold text-[#0b6e4f]"
+                      : "hover:text-[#0b6e4f]"
                   }`}
-                whileHover={{ scale: 1.05 }}
-              >
-                {item.label}
-                {activeSection === item.id && (
-                  <motion.div
-                    layoutId="nav-underline"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0b6e4f] rounded-full"
-                    transition={{ type: "spring", stiffness: 250, damping: 20 }}
-                  />
-                )}
-              </motion.button>
-            )
-          ))}
-        </div>
+                >
+                  {item.label}
+                  {activeSection === item.id && (
+                    <motion.span
+                      layoutId="nav-underline"
+                      className="absolute -bottom-2 left-0 right-0 h-0.5 rounded-full bg-[#0b6e4f]"
+                    />
+                  )}
+                </button>
+              )
+            )}
+          </div>
+        )}
 
-        {/* === RIGHT ACTION BUTTONS === */}
-        <div className="flex items-center gap-4">
-          <motion.div whileHover={{ scale: 1.05 }}>
-            <Link
-              to="/login"
-              className="px-4 py-2 border border-[#e6e8ea] text-[#0f1724] rounded-lg hover:bg-[#f1f3f5] transition"
-            >
-              Log in
-            </Link>
-          </motion.div>
-          <motion.div whileHover={{ scale: 1.05 }}>
-            <Link
-              to="/role-selection"
-              className="px-4 py-2 bg-[#0b6e4f] text-white font-medium rounded-lg hover:bg-[#095c42] transition"
-            >
-              Get started
-            </Link>
-          </motion.div>
+        {/* ------------------ RIGHT: ACTIONS ------------------ */}
+        <div className="flex items-center gap-3">
+          <Link
+            to="/login"
+            className="hidden rounded-lg border border-[#e6e8ea] px-4 py-2 text-sm text-[#0f1724] transition hover:bg-gray-100 sm:block"
+          >
+            Log in
+          </Link>
+
+          <Link
+            to="/role-selection"
+            className="rounded-lg bg-[#0b6e4f] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#095c42]"
+          >
+            Get started
+          </Link>
         </div>
       </div>
     </motion.nav>
