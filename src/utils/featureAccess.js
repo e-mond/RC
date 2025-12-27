@@ -1,31 +1,51 @@
 // utils/featureAccess.js
+// Central feature matrix for freemium vs premium behaviour across roles.
+// All gating decisions should flow through this file so that FeatureAccessContext
+// and FeatureProtectedRoute remain the single source of truth.
 
 const PLAN_ORDER = ["free", "premium", "system"];
 
+/**
+ * FEATURE_MATRIX
+ * - Keys are stable feature identifiers consumed via useFeatureAccess().can(key)
+ * - minPlan: lowest subscription required ("free" | "premium" | "system")
+ * - roles: which roles the feature applies to
+ *
+ * NOTE: Keys are intentionally lower_snake_case so components can use
+ * human‑readable strings like "direct_messaging" without worrying about
+ * internal casing.
+ */
 export const FEATURE_MATRIX = {
-  PROPERTY_CRUD: { minPlan: "free", roles: ["landlord"] },
-  BOOKING_CALENDAR: { minPlan: "free", roles: ["landlord"] },
-  AMENITIES_LIST: { minPlan: "free", roles: ["landlord"] },
-  BASIC_NOTIFICATIONS: { minPlan: "free", roles: ["tenant", "landlord", "artisan"] },
+  // ------- Cross‑role basics -------
+  basic_notifications: { minPlan: "free", roles: ["tenant", "landlord", "artisan"] },
 
-  TENANT_PAYMENTS: { minPlan: "premium", roles: ["tenant"] },
-  TENANT_MAINTENANCE: { minPlan: "premium", roles: ["tenant"] },
-  TENANT_HISTORY: { minPlan: "premium", roles: ["tenant"] },
+  // ------- Tenant -------
+  tenant_payments: { minPlan: "premium", roles: ["tenant"] },
+  tenant_maintenance: { minPlan: "premium", roles: ["tenant"] },
+  tenant_history: { minPlan: "premium", roles: ["tenant"] },
+  // Encrypted direct chat (tenants need Premium; other roles are always allowed)
+  direct_messaging: { minPlan: "premium", roles: ["tenant"] },
 
-  LANDLORD_ANALYTICS: { minPlan: "premium", roles: ["landlord"] },
-  TENANT_SCREENING: { minPlan: "premium", roles: ["landlord"] },
-  DIGITAL_RENT_COLLECTION: { minPlan: "premium", roles: ["landlord"] },
-  AUTO_INVOICING: { minPlan: "premium", roles: ["landlord"] },
-  REVENUE_ANALYTICS: { minPlan: "premium", roles: ["landlord"] },
-  AUTO_RENEW_CONTRACT: { minPlan: "premium", roles: ["landlord"] },
-  ADVERTISEMENT_MANAGER: { minPlan: "premium", roles: ["landlord"] },
+  // ------- Landlord -------
+  property_crud: { minPlan: "free", roles: ["landlord"] },
+  booking_calendar: { minPlan: "free", roles: ["landlord"] },
+  amenities_list: { minPlan: "free", roles: ["landlord"] },
 
-  ARTISAN_EARNINGS: { minPlan: "free", roles: ["artisan"] },
-  ARTISAN_MESSAGES: { minPlan: "free", roles: ["artisan"] },
+  landlord_advanced_analytics: { minPlan: "premium", roles: ["landlord"] },
+  tenant_screening: { minPlan: "premium", roles: ["landlord"] },
+  digital_rent_collection: { minPlan: "premium", roles: ["landlord"] },
+  auto_invoicing: { minPlan: "premium", roles: ["landlord"] },
+  auto_renew_contract: { minPlan: "premium", roles: ["landlord"] },
+  advertisement_manager: { minPlan: "premium", roles: ["landlord", "artisan"] },
 
-  ADMIN_INSIGHTS: { minPlan: "system", roles: ["admin", "super-admin"] },
-  ADMIN_APPROVALS: { minPlan: "system", roles: ["admin", "super-admin"] },
-  SUPERADMIN_MOCK_EDITOR: { minPlan: "system", roles: ["super-admin"] },
+  // ------- Artisan -------
+  artisan_earnings: { minPlan: "free", roles: ["artisan"] },
+  artisan_messages: { minPlan: "free", roles: ["artisan"] },
+
+  // ------- Admin / Super Admin (system‑level, always on for those roles) -------
+  admin_insights: { minPlan: "system", roles: ["admin", "super-admin"] },
+  admin_approvals: { minPlan: "system", roles: ["admin", "super-admin"] },
+  superadmin_mock_editor: { minPlan: "system", roles: ["super-admin"] },
 };
 
 const planRank = (plan) => {
@@ -33,9 +53,13 @@ const planRank = (plan) => {
   return idx === -1 ? 0 : idx;
 };
 
+/**
+ * canUseFeature
+ * - Returns true if the given role on the given plan may access featureKey.
+ */
 export const canUseFeature = (plan = "free", role = "tenant", featureKey) => {
   const rule = FEATURE_MATRIX[featureKey];
-  if (!rule) return true;
+  if (!rule) return true; // unknown feature => do not block
 
   const normalizedRole = role.toLowerCase();
   const allowedRoles = rule.roles?.map((r) => r.toLowerCase());
@@ -46,5 +70,10 @@ export const canUseFeature = (plan = "free", role = "tenant", featureKey) => {
   return planRank(plan) >= planRank(rule.minPlan || "free");
 };
 
+/**
+ * listFeaturesForRole
+ * - Convenience helper used by FeatureAccessContext to surface
+ *   all enabled features for a given role/plan.
+ */
 export const listFeaturesForRole = (role = "tenant", plan = "free") =>
   Object.keys(FEATURE_MATRIX).filter((feature) => canUseFeature(plan, role, feature));

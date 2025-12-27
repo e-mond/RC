@@ -2,10 +2,12 @@
 import React, { useEffect, useState } from "react";
 import { fetchProperties } from "@/services/propertyService";
 import { addToFavorites, removeFromFavorites, isFavorited } from "@/services/tenantService";
-import { Heart, MapPin, Bed, Bath, Search, Filter, Loader2, ExternalLink } from "lucide-react";
+import { Heart, MapPin, Bed, Bath, Search, Loader2, ExternalLink, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
+import { useFeatureAccess } from "@/context/FeatureAccessContext";
+import AdBanner from "@/pages/Ads/AdBanner";
 
 /**
  * TenantProperties - Browse all available properties
@@ -13,8 +15,11 @@ import { toast } from "react-hot-toast";
  * - Search and filter properties
  * - Add/remove from favorites
  * - Navigate to property details
+ * - Boosted/Promoted properties appear first with visual indicators
+ * - Premium users see no ads
  */
 export default function TenantProperties() {
+    const { isPremium } = useFeatureAccess(); // For ad-free experience
     const [properties, setProperties] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -29,7 +34,15 @@ export default function TenantProperties() {
                 const data = await fetchProperties();
                 if (mounted) {
                     const propertyList = Array.isArray(data) ? data : [];
-                    setProperties(propertyList);
+
+                    // Sort: Boosted properties first
+                    const sortedProperties = propertyList.sort((a, b) => {
+                        if (a.isBoosted && !b.isBoosted) return -1;
+                        if (!a.isBoosted && b.isBoosted) return 1;
+                        return 0;
+                    });
+
+                    setProperties(sortedProperties);
 
                     // Check favorites for each property
                     const favoriteIds = new Set();
@@ -38,7 +51,6 @@ export default function TenantProperties() {
                             const isFav = await isFavorited(property.id);
                             if (isFav) favoriteIds.add(property.id);
                         } catch (err) {
-                            // Ignore individual check failures
                             console.warn("Failed to check favorite:", err);
                         }
                     }
@@ -123,6 +135,9 @@ export default function TenantProperties() {
                 />
             </div>
 
+            {/* Ad Banner - Only for non-premium tenants */}
+            {!isPremium && <AdBanner position="top" />}
+
             {error && (
                 <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg">
                     {error}
@@ -140,18 +155,22 @@ export default function TenantProperties() {
                                 property={property}
                                 isFavorited={favorites.has(property.id)}
                                 onToggleFavorite={handleToggleFavorite}
+                                isBoosted={!!property.isBoosted} // Pass boosted status
                             />
                         ))}
                     </AnimatePresence>
                 </div>
             )}
+
+            {/* Bottom Ad Banner */}
+            {!isPremium && <AdBanner position="bottom" />}
         </div>
     );
 }
 
-// Property Card Component
-function PropertyCard({ property, isFavorited, onToggleFavorite }) {
-    const imageUrl = property.images?.[0] || property.image || "https://placehold.co/400x300?text=Property";
+// Enhanced Property Card with Boosted Ribbon
+function PropertyCard({ property, isFavorited, onToggleFavorite, isBoosted = false }) {
+    const imageUrl = property.images?.[0]?.image || property.images?.[0] || property.image || "https://placehold.co/400x300?text=Property";
     const price = property.price || property.priceGhs || property.rent || 0;
     const currency = property.currency || "GHS";
 
@@ -160,8 +179,22 @@ function PropertyCard({ property, isFavorited, onToggleFavorite }) {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-shadow"
+            className={`relative bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all ${isBoosted ? "ring-4 ring-amber-400/40" : ""
+                }`}
         >
+            {/* Boosted Ribbon Badge */}
+            {isBoosted && (
+                <div className="absolute top-0 left-0 z-10">
+                    <div className="relative">
+                        <div className="bg-linear-to-br from-amber-500 to-orange-600 text-white px-6 py-2 rounded-br-2xl font-bold text-sm flex items-center gap-2 shadow-lg">
+                            <Zap className="w-5 h-5 animate-pulse" />
+                            BOOSTED
+                        </div>
+                        <div className="absolute top-full left-0 w-0 h-0 border-l-10 border-l-amber-600 border-b-10 border-b-transparent" />
+                    </div>
+                </div>
+            )}
+
             {/* Image */}
             <div className="relative h-48 bg-gray-200 dark:bg-gray-700">
                 <img
@@ -239,6 +272,14 @@ function PropertyCard({ property, isFavorited, onToggleFavorite }) {
                         <ExternalLink size={14} />
                     </Link>
                 </div>
+
+                {/* Boosted Footer Note */}
+                {isBoosted && (
+                    <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-xs font-medium pt-2">
+                        <Zap className="w-4 h-4" />
+                        <span>Promoted • Appears at the top of search results</span>
+                    </div>
+                )}
             </div>
         </motion.div>
     );

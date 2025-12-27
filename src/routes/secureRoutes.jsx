@@ -2,6 +2,7 @@
 import React, { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import RoleProtectedRoute from "@/routes/RoleProtectedRoute";
+import FeatureProtectedRoute from "@/routes/FeatureProtectedRoute";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useAuthStore } from "@/stores/authStore";
 import ProfilePage from "@/pages/Profile/ProfilePage";
@@ -28,6 +29,7 @@ const PropertyDetailsPage = lazy(() => import("@/pages/Dashboards/Landlord/Prope
 const PropertyForm = lazy(() => import("@/pages/Dashboards/Landlord/Properties/PropertyForm"));
 const LandingBookingPage = lazy(() => import("@/pages/Dashboards/Landlord/Bookings/LandingBookingPage"));
 const AnalyticsDashboard = lazy(() => import("@/pages/Dashboards/Landlord/Analytics/AnalyticsDashboard"));
+const LandlordWallet = lazy(() => import("@/pages/Dashboards/Landlord/LandlordWallet"));
 
 // Artisan
 const ArtisanDashboard = lazy(() => import("@/pages/Dashboards/Artisan/ArtisanDashboard"));
@@ -35,7 +37,10 @@ const ArtisanTasks = lazy(() => import("@/pages/Dashboards/Artisan/ArtisanTasks"
 const ArtisanEarnings = lazy(() => import("@/pages/Dashboards/Artisan/ArtisanEarnings"));
 const TaskDetailsPage = lazy(() => import("@/pages/Dashboards/Artisan/Tasks/TaskDetailsPage"));
 const ArtisanSchedule = lazy(() => import("@/pages/Dashboards/Artisan/Schedule/ArtisanSchedule"));
-const ArtisanMessages = lazy(() => import("@/pages/Dashboards/Artisan/Messages/ArtisanMessages"));
+
+// Shared New Pages
+const MessagesInbox = lazy(() => import("@/pages/Messages/MessagesInbox"));
+const ManageAds = lazy(() => import("@/pages/Ads/ManageAds"));
 
 // Admin
 const AdminDashboard = lazy(() => import("@/pages/Dashboards/Admin/AdminDashboard"));
@@ -47,12 +52,13 @@ const SuperAdminDashboard = lazy(() => import("@/pages/Dashboards/SuperAdmin/Sup
 const SA_UsersPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/users/SA_UsersPage"));
 const SA_RolesPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/roles/SA_RolesPage"));
 const SA_AuditPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/audit/SA_AuditPage"));
+const SA_AnnouncementsPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/announcements/SA_AnnouncementsPage"));
 
 // ---------------------------
 // Suspense Loader
 // ---------------------------
 const PageLoader = ({ children }) => (
-  <Suspense fallback={<div className="p-6">Loading...</div>}>
+  <Suspense fallback={<div className="p-6 text-center">Loading...</div>}>
     {children}
   </Suspense>
 );
@@ -79,6 +85,7 @@ const dashboardRoutes = [
       { path: "maintenance", element: <TenantMaintenance /> },
       { path: "wishlist", element: <TenantWishlist /> },
       { path: "history", element: <TenantRentalHistory /> },
+      { path: "messages", element: <MessagesInbox /> },
     ],
   },
 
@@ -90,18 +97,36 @@ const dashboardRoutes = [
     children: [
       { index: true, element: <LandlordDashboard /> },
       { path: "overview", element: <LandlordDashboard /> },
-
-      // Property CRUD
       { path: "properties", element: <PropertiesPage /> },
       { path: "properties/new", element: <PropertyForm /> },
       { path: "properties/:id", element: <PropertyDetailsPage /> },
       { path: "properties/:id/edit", element: <PropertyForm /> },
-
-      // Bookings
       { path: "bookings", element: <LandingBookingPage /> },
-
-      // Analytics (Premium)
-      { path: "analytics", element: <AnalyticsDashboard /> },
+      {
+        path: "analytics",
+        element: (
+          <FeatureProtectedRoute feature="landlord_advanced_analytics">
+            <AnalyticsDashboard />
+          </FeatureProtectedRoute>
+        ),
+      },
+      {
+        path: "wallet",
+        element: (
+          <FeatureProtectedRoute feature="digital_rent_collection">
+            <LandlordWallet />
+          </FeatureProtectedRoute>
+        ),
+      },
+      { path: "messages", element: <MessagesInbox /> }, // ← Messages
+      {
+        path: "ads",
+        element: (
+          <FeatureProtectedRoute feature="advertisement_manager">
+            <ManageAds />
+          </FeatureProtectedRoute>
+        ),
+      }, // ← Promoted Ads
     ],
   },
 
@@ -117,7 +142,15 @@ const dashboardRoutes = [
       { path: "tasks/:id", element: <TaskDetailsPage /> },
       { path: "earnings", element: <ArtisanEarnings /> },
       { path: "schedule", element: <ArtisanSchedule /> },
-      { path: "messages", element: <ArtisanMessages /> },
+      { path: "messages", element: <MessagesInbox /> }, // ← Unified Messages (replaces old ArtisanMessages)
+      {
+        path: "ads",
+        element: (
+          <FeatureProtectedRoute feature="advertisement_manager">
+            <ManageAds />
+          </FeatureProtectedRoute>
+        ),
+      }, // ← Promoted Ads
     ],
   },
 
@@ -132,6 +165,8 @@ const dashboardRoutes = [
       { path: "users", element: <SA_UsersPage /> },
       { path: "roles", element: <SA_RolesPage /> },
       { path: "audit", element: <SA_AuditPage /> },
+      { path: "announcements", element: <SA_AnnouncementsPage /> },
+      { path: "messages", element: <MessagesInbox /> }, // ← Messages
     ],
   },
 
@@ -143,9 +178,10 @@ const dashboardRoutes = [
     children: [
       { index: true, element: <Navigate to="overview" replace /> },
       { path: "overview", element: <AdminDashboard /> },
-      { path: "dashboard", element: <Navigate to="overview" replace /> }, // Redirect for backward compatibility
+      { path: "dashboard", element: <Navigate to="overview" replace /> },
       { path: "approvals", element: <AdminApprovals /> },
       { path: "reports", element: <AdminReports /> },
+      { path: "messages", element: <MessagesInbox /> }, // ← Messages
     ],
   },
 ];

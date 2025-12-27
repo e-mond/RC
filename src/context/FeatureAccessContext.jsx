@@ -31,5 +31,6 @@ export const FeatureAccessProvider = ({ children }) => {
   return <FeatureAccessContext.Provider value={derived}>{children}</FeatureAccessContext.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useFeatureAccess = () => useContext(FeatureAccessContext);
 export default FeatureAccessContext;

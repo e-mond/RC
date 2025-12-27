@@ -214,7 +214,7 @@ export default function PropertyDetail() {
                                         <button
                                             key={index}
                                             onClick={() => setCurrentImageIndex(index)}
-                                            className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${index === currentImageIndex
+                                            className={`shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${index === currentImageIndex
                                                 ? "border-[#0b6e4f]"
                                                 : "border-gray-200 hover:border-gray-300"
                                                 }`}
@@ -258,7 +258,7 @@ export default function PropertyDetail() {
                             <h2 className="text-xl font-bold text-gray-900 mb-4">Location</h2>
                             <div className="space-y-2 text-gray-700">
                                 <p className="flex items-start gap-2">
-                                    <MapPin size={20} className="text-[#0b6e4f] flex-shrink-0 mt-0.5" />
+                                    <MapPin size={20} className="text-[#0b6e4f] shrink-0 mt-0.5" />
                                     <span>
                                         {property.address}
                                         {property.city && `, ${property.city}`}
@@ -307,6 +307,19 @@ export default function PropertyDetail() {
                                     </p>
                                 )}
                             </div>
+
+                            
+                            {property.isBoosted && (
+                            <div className="mb-6 p-4 bg-linear-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                                <div className="flex items-center gap-3 text-amber-800 dark:text-amber-400 font-semibold">
+                                <Zap className="w-6 h-6 animate-pulse" />
+                                <div>
+                                    <p className="font-bold">Boosted Listing</p>
+                                    <p className="text-sm">This property is promoted for maximum visibility</p>
+                                </div>
+                                </div>
+                            </div>
+                            )}
 
                             {/* Specs */}
                             <div className="grid grid-cols-3 gap-4 py-4 border-t border-b border-gray-200">

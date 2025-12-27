@@ -1,22 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { getLandlordDashboardStats, getLandlordRecentActivity } from "@/services/landlordService";
-import { BarChart,Bar,XAxis,YAxis,Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, } from "recharts";
-
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from "recharts";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { useTheme } from "@/context/ThemeContext";
-
 export default function LandlordDashboard() {
   const [stats, setStats] = useState(null);
   const [activity, setActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  const { theme } = useTheme();
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }, [theme]);
 
   const loadDashboard = async () => {
     setLoading(true);
@@ -142,6 +134,11 @@ export default function LandlordDashboard() {
             <Link to="/landlord/bookings">
               <Button variant="outline" className="w-full">
                 View Booking Requests
+              </Button>
+            </Link>
+            <Link to="/landlord/analytics">
+              <Button variant="outline" className="w-full">
+                View Analytics
               </Button>
             </Link>
           </CardContent>

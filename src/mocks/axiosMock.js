@@ -85,6 +85,40 @@ export const enableMock = () => {
     return [200, { user }];
   });
 
+  // Preferences endpoints
+  mock.onGet("/auth/preferences/").reply(() => {
+    const stored = localStorage.getItem("demo.preferences");
+    if (stored) {
+      return [200, JSON.parse(stored)];
+    }
+    return [200, {
+      emailNotifications: true,
+      smsNotifications: false,
+      twoFactorAuth: false,
+      profileVisibility: "public",
+      marketingEmails: true,
+      dataSharing: false,
+      language: "en",
+    }];
+  });
+
+  mock.onPatch("/auth/preferences/").reply((config) => {
+    const updates = JSON.parse(config.data);
+    const stored = localStorage.getItem("demo.preferences");
+    const current = stored ? JSON.parse(stored) : {
+      emailNotifications: true,
+      smsNotifications: false,
+      twoFactorAuth: false,
+      profileVisibility: "public",
+      marketingEmails: true,
+      dataSharing: false,
+      language: "en",
+    };
+    const updated = { ...current, ...updates };
+    localStorage.setItem("demo.preferences", JSON.stringify(updated));
+    return [200, updated];
+  });
+
   // ================================================================
   // SUPER ADMIN & ADMIN ENDPOINTS
   // ================================================================
