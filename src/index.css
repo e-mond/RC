@@ -1,10 +1,64 @@
 @import "tailwindcss";
 
+/* ===================================
+   Tailwind CSS v4 Dark Mode Support
+   ===================================
+   In Tailwind v4, dark mode is controlled via CSS.
+   Using the 'class' selector strategy.
+*/
 
-html,
-body {
-  background-color: #f8f9f9; /* page bg */
-  color: #0f1724;           /* main text */
-  font-family: 'Inter', sans-serif;
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ===================================
+   CSS Variables for Theme
+   =================================== */
+:root {
+  --color-bg-primary: #f8f9fa;
+  --color-bg-secondary: #ffffff;
+  --color-text-primary: #0f1724;
+  --color-text-secondary: #4a5568;
+  --color-border: #e2e8f0;
+}
+
+.dark {
+  --color-bg-primary: #0f172a;
+  --color-bg-secondary: #1e293b;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-border: #334155;
+}
+
+/* ===================================
+   Base Styles
+   =================================== */
+html {
   scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Dark mode body */
+.dark body {
+  background-color: #0f172a;
+}
+
+/* ===================================
+   Smooth Theme Transitions
+   =================================== */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.15s;
+  transition-timing-function: ease-out;
+}
+
+/* Exclude animations from transition */
+.animate-spin,
+.animate-pulse,
+.animate-bounce {
+  transition: none;
 }
