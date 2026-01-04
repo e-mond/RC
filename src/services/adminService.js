@@ -2,7 +2,7 @@
 /**
  * Unified Admin & Super Admin API Service
  * - Single source of truth for all admin endpoints
- * - Mock/real API toggle via VITE_USE_MOCK or DEV mode
+ * - Mock/real API toggle via VITE_USE_MOCK only (not DEV mode)
  * - Used by: AdminDashboard, SuperAdminDashboard, widgets
  */
 
@@ -11,16 +11,16 @@ import apiClient from "./apiClient";
 /* =====================
    CONFIGURATION (only once!)
    ===================== */
+// Only use mock when explicitly set to true - NOT just because we're in dev mode
 const USE_MOCK = String(import.meta.env.VITE_USE_MOCK || "").toLowerCase() === "true";
-const IS_DEV = import.meta.env.DEV === true;
 
 let mockImports = {};
 
 /* =====================
    LOAD MOCKS ASYNCHRONOUSLY (fire & forget)
-   Only attempt to load if we're in dev or mock mode
+   Only attempt to load if mock mode is explicitly enabled
    ===================== */
-if (USE_MOCK || IS_DEV) {
+if (USE_MOCK) {
   (async () => {
     try {
       const [superAdminMock, axiosMock] = await Promise.all([
@@ -54,14 +54,14 @@ const withDelay =
   typeof mockImports.withDelay === "function"
     ? mockImports.withDelay
     : (result, ms = 600) =>
-        new Promise((res) => setTimeout(() => res(result), ms));
+      new Promise((res) => setTimeout(() => res(result), ms));
 
 /* ========================================
    ADMIN ENDPOINTS
    ======================================== */
 
 export const fetchInsights = async () => {
-  const useMock = USE_MOCK || IS_DEV;
+  const useMock = USE_MOCK;
 
   if (useMock && mockImports.fetchInsightsMock) {
     return withDelay(mockImports.fetchInsightsMock(), 800);
@@ -76,7 +76,7 @@ export const fetchInsights = async () => {
 };
 
 export const fetchPendingUsers = async () => {
-  const useMock = USE_MOCK || IS_DEV;
+  const useMock = USE_MOCK;
 
   if (useMock && mockImports.fetchPendingUsersMock) {
     return withDelay(mockImports.fetchPendingUsersMock(), 600);
@@ -92,7 +92,7 @@ export const fetchPendingUsers = async () => {
 
 export const approveUser = async (id) => {
   if (!id) throw new Error("approveUser: id is required");
-  const useMock = USE_MOCK || IS_DEV;
+  const useMock = USE_MOCK;
 
   if (useMock && mockImports.approveUserMock) {
     return withDelay(mockImports.approveUserMock(id), 500);
@@ -108,7 +108,7 @@ export const approveUser = async (id) => {
 
 export const rejectUser = async (id, reason = "") => {
   if (!id) throw new Error("rejectUser: id is required");
-  const useMock = USE_MOCK || IS_DEV;
+  const useMock = USE_MOCK;
 
   if (useMock && mockImports.rejectUserMock) {
     return withDelay(mockImports.rejectUserMock(id, reason), 500);
@@ -123,7 +123,7 @@ export const rejectUser = async (id, reason = "") => {
 };
 
 export const fetchPendingProperties = async () => {
-  const useMock = USE_MOCK || IS_DEV;
+  const useMock = USE_MOCK;
 
   if (useMock && mockImports.fetchPendingPropertiesMock) {
     return withDelay(mockImports.fetchPendingPropertiesMock(), 700);
@@ -139,7 +139,7 @@ export const fetchPendingProperties = async () => {
 
 export const approveProperty = async (id) => {
   if (!id) throw new Error("approveProperty: id is required");
-  const useMock = USE_MOCK || IS_DEV;
+  const useMock = USE_MOCK;
 
   if (useMock && mockImports.approvePropertyMock) {
     return withDelay(mockImports.approvePropertyMock(id), 500);
@@ -155,7 +155,7 @@ export const approveProperty = async (id) => {
 
 export const rejectProperty = async (id, reason = "") => {
   if (!id) throw new Error("rejectProperty: id is required");
-  const useMock = USE_MOCK || IS_DEV;
+  const useMock = USE_MOCK;
 
   if (useMock && mockImports.rejectPropertyMock) {
     return withDelay(mockImports.rejectPropertyMock(id, reason), 500);
@@ -170,7 +170,7 @@ export const rejectProperty = async (id, reason = "") => {
 };
 
 export const fetchMaintenance = async () => {
-  const useMock = USE_MOCK || IS_DEV;
+  const useMock = USE_MOCK;
 
   if (useMock && mockImports.fetchMaintenanceMock) {
     return withDelay(mockImports.fetchMaintenanceMock(), 900);
@@ -186,7 +186,7 @@ export const fetchMaintenance = async () => {
 
 export const assignMaintenance = async (id, assignedTo) => {
   if (!id || !assignedTo) throw new Error("assignMaintenance: id and assignedTo are required");
-  const useMock = USE_MOCK || IS_DEV;
+  const useMock = USE_MOCK;
 
   if (useMock && mockImports.assignMaintenanceMock) {
     return withDelay(mockImports.assignMaintenanceMock(id, assignedTo), 600);
@@ -201,7 +201,7 @@ export const assignMaintenance = async (id, assignedTo) => {
 };
 
 export const fetchReports = async (start = "", end = "") => {
-  const useMock = USE_MOCK || IS_DEV;
+  const useMock = USE_MOCK;
 
   if (useMock && mockImports.fetchReportsMock) {
     return withDelay(mockImports.fetchReportsMock(start, end), 1000);
@@ -224,14 +224,14 @@ export const fetchReports = async (start = "", end = "") => {
    ======================================== */
 
 export const fetchSystemStats = async () => {
-  const useMock = USE_MOCK || IS_DEV;
+  const useMock = USE_MOCK;
 
   if (useMock && mockImports.mockSystemStats) {
     return withDelay(mockImports.mockSystemStats, 1000);
   }
 
   try {
-    const { data } = await apiClient.get("/super-admin/system/stats");
+    const { data } = await apiClient.get("/super-admin/system/stats/");
     return data;
   } catch (err) {
     throw extractError(err, "Failed to load system stats");
@@ -239,14 +239,14 @@ export const fetchSystemStats = async () => {
 };
 
 export const fetchAllUsers = async () => {
-  const useMock = USE_MOCK || IS_DEV;
+  const useMock = USE_MOCK;
 
   if (useMock && mockImports.mockUsers) {
     return withDelay({ users: mockImports.mockUsers }, 800);
   }
 
   try {
-    const { data } = await apiClient.get("/super-admin/users");
+    const { data } = await apiClient.get("/super-admin/users/");
     return data;
   } catch (err) {
     throw extractError(err, "Failed to load users");
@@ -255,7 +255,7 @@ export const fetchAllUsers = async () => {
 
 export const createUser = async (payload) => {
   if (!payload) throw new Error("createUser: payload is required");
-  const useMock = USE_MOCK || IS_DEV;
+  const useMock = USE_MOCK;
 
   if (useMock) {
     return withDelay(
@@ -268,7 +268,7 @@ export const createUser = async (payload) => {
   }
 
   try {
-    const { data } = await apiClient.post("/super-admin/users/create", payload);
+    const { data } = await apiClient.post("/super-admin/users/create/", payload);
     return data;
   } catch (err) {
     throw extractError(err, "User creation failed");
@@ -277,7 +277,7 @@ export const createUser = async (payload) => {
 
 export const deleteUser = async (userId) => {
   if (!userId) throw new Error("deleteUser: userId is required");
-  const useMock = USE_MOCK || IS_DEV;
+  const useMock = USE_MOCK;
 
   if (useMock) return withDelay({ success: true }, 500);
 
@@ -290,15 +290,16 @@ export const deleteUser = async (userId) => {
 };
 
 export const fetchAuditLogs = async () => {
-  const useMock = USE_MOCK || IS_DEV;
+  const useMock = USE_MOCK;
 
   if (useMock && mockImports.mockAuditLogs) {
     return withDelay(mockImports.mockAuditLogs, 900);
   }
 
   try {
-    const { data } = await apiClient.get("/super-admin/audit");
-    return data;
+    const { data } = await apiClient.get("/super-admin/audit/");
+    // Backend returns { logs: [...], total: ... }, frontend expects array
+    return data.logs || data || [];
   } catch (err) {
     throw extractError(err, "Failed to load audit logs");
   }
@@ -306,7 +307,7 @@ export const fetchAuditLogs = async () => {
 
 export const assignRole = async (userId, role) => {
   if (!userId || !role) throw new Error("assignRole: userId and role are required");
-  const useMock = USE_MOCK || IS_DEV;
+  const useMock = USE_MOCK;
 
   if (useMock) return withDelay({ success: true }, 600);
 
