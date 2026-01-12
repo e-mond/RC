@@ -3,120 +3,72 @@ import React, { useEffect, useState } from "react";
 import Calendar from "react-calendar";
 import { format } from "date-fns";
 import { getSchedule } from "@/services/artisanService";
-
-// Lucide Icons
-import {
-  Calendar as CalendarIcon,
-  Clock,
-  MapPin,
-  CheckCircle,
-  AlertCircle,
-  Loader2,
-} from "lucide-react";
-
-// CRITICAL: motion + AnimatePresence both imported
-// Without AnimatePresence → "ReferenceError: AnimatePresence is not defined"
-import { motion, AnimatePresence } from "framer-motion";
-
+import { Calendar as CalendarIcon, Clock, MapPin, CheckCircle, AlertCircle } from "lucide-react";
+import { motion } from "framer-motion";
 import "react-calendar/dist/Calendar.css";
 
 /**
- * ArtisanSchedule - Premium Job Scheduling Dashboard
- * Features:
- * • Full dark mode support with glassmorphism
- * • Smooth task animations when switching dates
- * • Visual indicators on calendar (colored dots + count)
- * • Responsive layout (mobile → desktop)
- * • Error handling & loading states
+ * ArtisanSchedule - Job scheduling and availability management
  */
 export default function ArtisanSchedule() {
-  // Current selected date on the calendar
   const [selectedDate, setSelectedDate] = useState(new Date());
-
-  // Full schedule data from API
   const [schedule, setSchedule] = useState([]);
-
-  // UI states
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  /* ========================================
-     Fetch schedule data (past 1 month → next 2 months)
-     ======================================== */
   useEffect(() => {
     let mounted = true;
-
-    const loadSchedule = async () => {
+    const load = async () => {
       try {
         setLoading(true);
-        setError("");
-
         const startDate = new Date();
-        startDate.setMonth(startDate.getMonth() - 1); // 1 month back
-
+        startDate.setMonth(startDate.getMonth() - 1);
         const endDate = new Date();
-        endDate.setMonth(endDate.getMonth() + 2); // 2 months forward
+        endDate.setMonth(endDate.getMonth() + 2);
 
-        const response = await getSchedule(
+        const res = await getSchedule(
           startDate.toISOString(),
           endDate.toISOString()
         );
-
         if (mounted) {
-          // Handle various API response shapes
-          const data = response?.schedule || response?.data || response || [];
-          setSchedule(data);
+          setSchedule(res.schedule || res.data || res || []);
         }
       } catch (err) {
-        console.error("Failed to load schedule:", err);
-        if (mounted) {
-          setError(err.message || "Unable to load your schedule");
-        }
+        console.error("getSchedule:", err);
+        if (mounted) setError(err.message || "Failed to load schedule");
       } finally {
         if (mounted) setLoading(false);
       }
     };
-
-    loadSchedule();
-
-    // Cleanup: prevent state updates after unmount
+    load();
     return () => {
       mounted = false;
     };
   }, []);
 
-  /* ========================================
-     Group tasks by date (yyyy-MM-dd) for fast lookup
-     ======================================== */
+  // Group schedule by date
   const scheduleByDate = schedule.reduce((acc, item) => {
-    const dateKey = format(
-      new Date(item.start || item.assignedDate),
-      "yyyy-MM-dd"
-    );
-    if (!acc[dateKey]) acc[dateKey] = [];
+    const dateKey = format(new Date(item.start || item.assignedDate), "yyyy-MM-dd");
+    if (!acc[dateKey]) {
+      acc[dateKey] = [];
+    }
     acc[dateKey].push(item);
     return acc;
   }, {});
 
-  // Helper: get tasks for a specific date
   const getTasksForDate = (date) => {
     const dateKey = format(date, "yyyy-MM-dd");
     return scheduleByDate[dateKey] || [];
   };
 
-  /* ========================================
-     Calendar tile content – shows colored dots
-     ======================================== */
   const tileContent = ({ date, view }) => {
     if (view !== "month") return null;
-
     const dayTasks = getTasksForDate(date);
     if (dayTasks.length === 0) return null;
 
     return (
       <div className="flex flex-col gap-0.5 mt-1">
-        {/* Show up to 4 colored dots */}
-        {dayTasks.slice(0, 4).map((task, idx) => (
+        {dayTasks.map((task, idx) => (
           <div
             key={idx}
             className={`h-1 w-full rounded ${task.status === "completed"
@@ -128,33 +80,20 @@ export default function ArtisanSchedule() {
             title={task.title}
           />
         ))}
-        {/* Show "+X" if more than 4 tasks */}
-        {dayTasks.length > 4 && (
-          <div className="text-[10px] text-center text-gray-600 dark:text-gray-400 font-medium">
-            +{dayTasks.length - 4}
-          </div>
-        )}
       </div>
     );
   };
 
-  // Tasks for the currently selected date
   const selectedDateTasks = getTasksForDate(selectedDate);
 
-  /* ========================================
-     Loading State
-     ======================================== */
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
-        <Loader2 className="w-12 h-12 animate-spin text-[#0b6e4f]" />
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin w-8 h-8 border-4 border-[#0b6e4f] border-t-transparent rounded-full" />
       </div>
     );
   }
 
-  /* ========================================
-     Main Render
-     ======================================== */
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <header>
@@ -162,14 +101,12 @@ export default function ArtisanSchedule() {
         <p className="text-sm text-gray-600 dark:text-gray-400">Manage your task schedule and availability</p>
       </header>
 
-      {/* Error Alert */}
       {error && (
         <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg">
           {error}
-        </motion.div>
+        </div>
       )}
 
-      {/* Main Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar */}
         <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700">
@@ -270,91 +207,16 @@ export default function ArtisanSchedule() {
           )}
         </div>
       </div>
-
-      {/* ==================== Custom Calendar Styling ==================== */}
-      <style jsx>{`
-        .custom-calendar {
-          background: transparent;
-          font-family: inherit;
-          line-height: 1.5;
-        }
-        .custom-calendar .react-calendar__navigation {
-          margin-bottom: 1rem;
-        }
-        .custom-calendar .react-calendar__navigation button {
-          color: #0b6e4f;
-          font-weight: 600;
-          font-size: 1rem;
-          background: none;
-          border-radius: 8px;
-        }
-        .custom-calendar .react-calendar__navigation button:hover {
-          background-color: #e0f2e9;
-          color: #095c42;
-        }
-        .custom-calendar .react-calendar__month-view__weekdays {
-          text-transform: uppercase;
-          font-size: 0.75rem;
-          font-weight: 600;
-          color: #6b7280;
-          margin-bottom: 0.5rem;
-        }
-        .custom-calendar .react-calendar__tile {
-          padding: 0.75rem 0.5rem;
-          border-radius: 12px;
-          transition: all 0.2s ease;
-          position: relative;
-        }
-        .custom-calendar .react-calendar__tile:hover {
-          background-color: #e0f2e9;
-          transform: translateY(-2px);
-        }
-        .custom-calendar .react-calendar__tile--now {
-          background: #0b6e4f10;
-          font-weight: bold;
-        }
-        .custom-calendar .react-calendar__tile--active {
-          background: #0b6e4f !important;
-          color: white !important;
-          font-weight: bold;
-          box-shadow: 0 4px 12px rgba(11, 110, 79, 0.3);
-        }
-
-        /* Dark Mode Overrides */
-        .dark .custom-calendar .react-calendar__navigation button:hover {
-          background-color: #095c4230;
-        }
-        .dark .custom-calendar .react-calendar__tile:hover {
-          background-color: #095c4240;
-        }
-        .dark .custom-calendar .react-calendar__tile--now {
-          background: #095c4230;
-        }
-      `}</style>
     </div>
   );
 }
 
-/* ========================================
-   Task Card Component (Individual Task)
-   ======================================== */
+// Task Schedule Item
 function TaskScheduleItem({ task }) {
   const statusConfig = {
-    pending: {
-      color: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400",
-      icon: Clock,
-      label: "Pending",
-    },
-    in_progress: {
-      color: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400",
-      icon: AlertCircle,
-      label: "In Progress",
-    },
-    completed: {
-      color: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400",
-      icon: CheckCircle,
-      label: "Completed",
-    },
+    pending: { color: "bg-yellow-100 text-yellow-700", icon: Clock },
+    in_progress: { color: "bg-blue-100 text-blue-700", icon: AlertCircle },
+    completed: { color: "bg-green-100 text-green-700", icon: CheckCircle },
   };
 
   const status = task.status || "pending";
@@ -373,19 +235,13 @@ function TaskScheduleItem({ task }) {
           <StatusIcon size={12} />
         </span>
       </div>
-
-      {/* Location */}
-      <p className="text-gray-600 dark:text-gray-400 flex items-center gap-2 text-sm">
-        <MapPin size={16} className="text-[#0b6e4f]" />
-        {task.address || "Location not specified"}
+      <p className="text-xs text-gray-600 flex items-center gap-1">
+        <MapPin size={12} />
+        {task.address || "Address not specified"}
       </p>
-
-      {/* Time Range */}
       {task.start && task.end && (
-        <p className="text-gray-500 dark:text-gray-500 flex items-center gap-2 text-sm mt-2">
-          <Clock size={16} />
-          {format(new Date(task.start), "h:mm a")} →{" "}
-          {format(new Date(task.end), "h:mm a")}
+        <p className="text-xs text-gray-500 mt-1">
+          {format(new Date(task.start), "h:mm a")} - {format(new Date(task.end), "h:mm a")}
         </p>
       )}
     </motion.div>

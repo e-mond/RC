@@ -5,7 +5,7 @@ export default function OnboardingHeader({ backTo = "/" }) {
   const navigate = useNavigate();
 
   return (
-    <header className="w-full px-0 py-6 md:py-4">
+    <header className="w-full px-0 py-4 md:py-4">
       <div className="max-w-6xl mx-auto flex justify-between items-center">
         {/* === Logo (Clickable) === */}
         <button

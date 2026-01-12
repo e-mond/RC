@@ -7,6 +7,7 @@ import PageHeader from "@/modules/dashboard/PageHeader";
 import MetricGrid from "@/modules/dashboard/MetricGrid";
 import ActionGrid from "@/modules/dashboard/ActionGrid";
 import SectionCard from "@/modules/dashboard/SectionCard";
+import UpgradeBanner from "@/components/common/UpgradeBanner";
 
 export default function TenantDashboard() {
   const { isPremium } = useFeatureAccess();
@@ -124,9 +125,16 @@ export default function TenantDashboard() {
 
   return (
     <div className="p-6 space-y-8">
+      {/* Upgrade Banner */}
+      <UpgradeBanner
+        message="Unlock maintenance requests, payment tracking, and ad-free browsing"
+        position="top"
+        dismissible={true}
+      />
+
       <PageHeader
         title="Welcome back"
-        subtitle="Here’s your rental overview as of today."
+        subtitle="Here's your rental overview as of today."
         badge={isPremium ? "Premium Tenant" : null}
       />
 

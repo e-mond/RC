@@ -2,11 +2,14 @@ import { useState } from "react";
 import { forgotPassword } from "@/services/authService";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { EmailStatusBanner } from "@/components/email";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailStatus, setEmailStatus] = useState("pending"); // 'pending' | 'sent' | 'failed'
   const navigate = useNavigate();
 
   // === Handle form submission ===
@@ -18,8 +21,11 @@ export default function ForgotPassword() {
     try {
       const res = await forgotPassword(email);
       setMessage(res.message || "If your email exists, a reset link has been sent.");
+      setEmailSent(true);
+      setEmailStatus("sent");
     } catch (err) {
       setMessage(err.message || "Error sending reset link.");
+      setEmailStatus("failed");
     } finally {
       setLoading(false);
     }
@@ -71,8 +77,24 @@ export default function ForgotPassword() {
           </button>
         </form>
 
-        {/*  Display message feedback  */}
-        {message && (
+        {/* Email Status Banner */}
+        {emailSent && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-4"
+          >
+            <EmailStatusBanner
+              type="password_reset"
+              status={emailStatus}
+              message={message}
+              onResend={emailStatus === "failed" ? handleSubmit : undefined}
+            />
+          </motion.div>
+        )}
+
+        {/* Display message feedback (fallback) */}
+        {message && !emailSent && (
           <motion.p
             className="text-center text-sm text-gray-600 mt-4"
             initial={{ opacity: 0 }}

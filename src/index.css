@@ -1,34 +1,75 @@
 @import "tailwindcss";
 
+/* OpenLayers CSS - Required for map components (MapPicker) */
+@import "ol/ol.css";
 
-html,
-body {
-  background-color: #f8f9f9; /* page background */
-  color: #0f1724;            /* main text */
-  font-family: 'Inter', sans-serif;
+/* ===================================
+   Tailwind CSS v4 Dark Mode Support
+   ===================================
+   In Tailwind v4, dark mode is controlled via CSS.
+   Using the 'class' selector strategy.
+*/
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ===================================
+   CSS Variables for Theme
+   =================================== */
+:root {
+  --color-bg-primary: #f8f9fa;
+  --color-bg-secondary: #ffffff;
+  --color-text-primary: #0f1724;
+  --color-text-secondary: #4a5568;
+  --color-border: #e2e8f0;
+}
+
+.dark {
+  --color-bg-primary: #0f172a;
+  --color-bg-secondary: #1e293b;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-border: #334155;
+}
+
+/* ===================================
+   Base Styles
+   =================================== */
+html {
   scroll-behavior: smooth;
 }
 
-
-.app-logo-wrapper {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: #f5f0f0;
-  border: 3px solid #0b6e4f;
-  border-radius: 50px;
-  padding: 8px;
-  width: fit-content;
-  transition: background 0.3s, border-color 0.3s;
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.app-logo-wrapper img {
-  height: 18px;
-  width: auto;
-  display: block;
+/* Dark mode body */
+.dark body {
+  background-color: #0f172a;
 }
 
+/* ===================================
+   Smooth Theme Transitions
+   =================================== */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.15s;
+  transition-timing-function: ease-out;
+}
 
-/* .dark .app-logo-wrapper {
-  background: #0f1724;
-  border-color: #0b6e4f;} */
+/* Exclude animations from transition */
+.animate-spin,
+.animate-pulse,
+.animate-bounce {
+  transition: none;
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+.animate-pulse-slow {
+  animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

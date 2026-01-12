@@ -1,20 +1,15 @@
 // src/pages/Dashboards/Artisan/Messages/ArtisanMessages.jsx
 import React, { useEffect, useState, useRef } from "react";
 import { getArtisanConversations, sendArtisanMessage } from "@/services/artisanService";
-import {
-  MessageSquare,
-  Send,
-  Paperclip,
-  Loader2,
-  Search,
-  MoreVertical,
-} from "lucide-react";
+import { MessageSquare, Send, Paperclip, User, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "@/stores/authStore";
 
 /**
- * ArtisanMessages - Premium Messaging Dashboard
- * Full dark mode + glassmorphism + smooth animations
+ * ArtisanMessages - Messaging with landlords and tenants
+ * - Conversation list
+ * - Chat interface
+ * - File sharing
  */
 export default function ArtisanMessages() {
   const user = useAuthStore((state) => state.user);
@@ -24,7 +19,6 @@ export default function ArtisanMessages() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [messageText, setMessageText] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -41,11 +35,15 @@ export default function ArtisanMessages() {
       }
     };
     load();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
     if (selectedConversation) {
+      // Load messages for selected conversation
+      // This would typically come from chatService
       setMessages(selectedConversation.messages || []);
     }
   }, [selectedConversation]);
@@ -56,20 +54,21 @@ export default function ArtisanMessages() {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!messageText.trim() || !selectedConversation || sending) return;
-
-    const newMsg = {
-      id: Date.now(),
-      message: messageText,
-      senderId: user?.id,
-      senderName: user?.name || "You",
-      timestamp: new Date().toISOString(),
-    };
+    if (!messageText.trim() || !selectedConversation) return;
 
     setSending(true);
     try {
       await sendArtisanMessage(selectedConversation.id, messageText);
-      setMessages((prev) => [...prev, newMsg]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          message: messageText,
+          senderId: user?.id,
+          senderName: user?.name || "You",
+          timestamp: new Date().toISOString(),
+        },
+      ]);
       setMessageText("");
     } catch (err) {
       console.error("sendArtisanMessage:", err);
@@ -79,14 +78,10 @@ export default function ArtisanMessages() {
     }
   };
 
-  const filteredConversations = conversations.filter((conv) =>
-    conv.recipientName?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
-        <Loader2 className="w-12 h-12 animate-spin text-[#0b6e4f]" />
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#0b6e4f]" />
       </div>
     );
   }
@@ -104,14 +99,11 @@ export default function ArtisanMessages() {
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <h3 className="font-semibold text-gray-900 dark:text-white">Conversations</h3>
           </div>
-
           <div className="flex-1 overflow-y-auto">
-            {filteredConversations.length === 0 ? (
-              <div className="p-12 text-center">
-                <MessageSquare className="w-16 h-16 mx-auto mb-4 text-gray-400 dark:text-gray-600" />
-                <p className="text-gray-500 dark:text-gray-400">
-                  {searchQuery ? "No conversations found" : "No conversations yet"}
-                </p>
+            {conversations.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                <p className="text-sm">No conversations yet</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -126,7 +118,7 @@ export default function ArtisanMessages() {
               </div>
             )}
           </div>
-        </motion.div>
+        </div>
 
         {/* Chat Interface */}
         <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
@@ -145,16 +137,14 @@ export default function ArtisanMessages() {
                     {selectedConversation.recipientRole || "User"}
                   </p>
                 </div>
-                <button className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                  <MoreVertical size={20} className="text-gray-600 dark:text-gray-400" />
-                </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-linear-to-b from-transparent to-gray-50/50 dark:to-gray-900/50">
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 <AnimatePresence>
-                  {messages.map((msg, i) => (
+                  {messages.map((msg) => (
                     <MessageBubble
-                      key={msg.id || i}
+                      key={msg.id}
                       message={msg}
                       isOwn={msg.senderId === user?.id}
                     />
@@ -183,108 +173,80 @@ export default function ArtisanMessages() {
                   <button
                     type="submit"
                     disabled={sending || !messageText.trim()}
-                    className="p-4 bg-linear-to-r from-[#0b6e4f] to-[#095c42] text-white rounded-2xl hover:shadow-lg transform hover:scale-105 transition-all disabled:opacity-50 flex items-center gap-2"
+                    className="p-2 bg-[#0b6e4f] text-white rounded-lg hover:bg-[#095c42] transition-colors disabled:opacity-50 flex items-center gap-2"
                   >
-                    {sending ? <Loader2 size={22} className="animate-spin" /> : <Send size={22} />}
+                    {sending ? (
+                      <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                      <Send size={18} />
+                    )}
                   </button>
                 </div>
               </form>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center text-gray-500">
               <div className="text-center">
-                <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
-                  <MessageSquare size={48} className="text-gray-400 dark:text-gray-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  Select a conversation
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 max-w-sm">
-                  Choose a conversation from the list to start messaging
-                </p>
+                <MessageSquare className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                <p>Select a conversation to start messaging</p>
               </div>
             </div>
           )}
-        </motion.div>
+        </div>
       </div>
     </div>
   );
 }
 
-/* Fixed: No TypeScript syntax, pure JS */
-function ConversationItem({ conversation, isSelected, onClick, currentUserId }) {
+// Conversation Item
+function ConversationItem({ conversation, isSelected, onClick }) {
   const lastMessage = conversation.lastMessage || conversation.messages?.[conversation.messages.length - 1];
 
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ x: 8 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       onClick={onClick}
       className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${isSelected ? "bg-[#0b6e4f]/5 border-l-4 border-[#0b6e4f]" : ""
         }`}
     >
-      <div className="flex items-center gap-4">
-        <div className="relative">
-          <div className="w-14 h-14 bg-linear-to-br from-[#0b6e4f] to-[#095c42] rounded-full flex items-center justify-center text-white text-lg font-bold shadow-md">
-            {conversation.recipientName?.[0]?.toUpperCase() || "U"}
-          </div>
-          {conversation.unreadCount > 0 && (
-            <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-lg">
-              {conversation.unreadCount}
-            </div>
-          )}
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 bg-[#0b6e4f] rounded-full flex items-center justify-center text-white font-semibold">
+          {conversation.recipientName?.[0] || "U"}
         </div>
-
         <div className="flex-1 min-w-0">
           <h4 className="font-medium text-gray-900 dark:text-white truncate">
             {conversation.recipientName || "Unknown"}
           </h4>
           {lastMessage && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 truncate mt-1">
-              {lastMessage.senderId === currentUserId ? "You: " : ""}
-              {lastMessage.message || lastMessage.text || "No messages"}
-            </p>
+            <p className="text-sm text-gray-600 truncate">{lastMessage.message || lastMessage.text}</p>
           )}
-          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-            {lastMessage?.timestamp
-              ? new Date(lastMessage.timestamp).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : ""}
-          </p>
         </div>
+        {conversation.unreadCount > 0 && (
+          <div className="w-5 h-5 bg-[#0b6e4f] rounded-full flex items-center justify-center text-white text-xs font-medium">
+            {conversation.unreadCount}
+          </div>
+        )}
       </div>
     </motion.div>
   );
 }
 
+// Message Bubble
 function MessageBubble({ message, isOwn }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.9 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ type: "spring", stiffness: 300 }}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
       className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
     >
       <div
         className={`max-w-[70%] rounded-lg p-3 ${isOwn ? "bg-[#0b6e4f] text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
           }`}
       >
-        <p className="text-sm leading-relaxed">{message.message || message.text}</p>
-        <p
-          className={`text-xs mt-2 ${
-            isOwn ? "text-white/70" : "text-gray-500 dark:text-gray-400"
-          } text-right`}
-        >
-          {message.timestamp
-            ? new Date(message.timestamp).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : ""}
+        <p className="text-sm">{message.message || message.text}</p>
+        <p className={`text-xs mt-1 ${isOwn ? "text-white/70" : "text-gray-500"}`}>
+          {message.timestamp ? new Date(message.timestamp).toLocaleTimeString() : ""}
         </p>
       </div>
     </motion.div>

@@ -1,19 +1,68 @@
+/**
+ * authService.js - Authentication Service
+ * 
+ * Handles all authentication-related API calls:
+ * - User login (with mock mode support for development)
+ * - User signup (tenant, landlord, artisan)
+ * - Password reset flows
+ * - User profile management
+ * 
+ * Mock Mode:
+ * - Enabled in development when VITE_USE_MOCK=true or localStorage.demoMockEnabled=true
+ * - Provides demo users for all roles (tenant@demo.com, landlord@demo.com, etc.)
+ * - Returns mock JWT tokens and user data
+ * 
+ * Real API:
+ * - Uses apiClient for authenticated requests
+ * - Handles JWT token responses
+ * - Normalizes user roles to lowercase
+ * 
+ * @module authService
+ * @requires ./apiClient
+ * @requires @/mocks/mockManager
+ * @requires @/utils/session
+ */
+
 // src/services/authService.js
 import apiClient from "./apiClient";
 import { isMockMode } from "@/mocks/mockManager";
 import { session } from "@/utils/session";
 
-
-/* ------------------------------------------------------------
-   Utility: Extracts error messages consistently
------------------------------------------------------------- */
+/**
+ * Extract Error Message
+ * 
+ * Utility function to consistently extract error messages from API responses.
+ * Handles various error response formats from Django backend.
+ * 
+ * @param {Error} err - Error object from API call
+ * @param {string} fallback - Default error message if extraction fails
+ * @returns {string} Error message
+ */
 const extractError = (err, fallback = "Request failed") =>
   err?.response?.data?.message || err?.response?.data?.error || err?.message || fallback;
 
-/* ------------------------------------------------------------
-   LOGIN
-   Works with real backend and mock mode
------------------------------------------------------------- */
+/**
+ * Login User
+ * 
+ * Authenticates user with email and password.
+ * Supports both mock mode (development) and real API (production).
+ * 
+ * Mock Mode:
+ * - Maps demo emails to roles (tenant@demo.com → tenant, etc.)
+ * - Returns mock JWT token and user data
+ * - Stores token in session
+ * 
+ * Real API:
+ * - POST /auth/login/
+ * - Expects: { email, password }
+ * - Returns: { token, user }
+ * 
+ * @param {Object} credentials - Login credentials
+ * @param {string} credentials.email - User email
+ * @param {string} credentials.password - User password
+ * @returns {Promise<Object>} { token, user }
+ * @throws {Error} If login fails
+ */
 export const loginUser = async (credentials) => {
   // ----- MOCK MODE -----
   if (import.meta.env.DEV && isMockMode()) {

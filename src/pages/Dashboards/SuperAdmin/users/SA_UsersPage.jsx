@@ -2,9 +2,9 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { fetchAllUsers } from "@/services/adminService";
-import SA_UserTable from "../components/SA_UserTable";
-import SA_CreateUserModal from "../components/SA_CreateUserModal";
-import SA_DeleteUserModal from "../components/SA_DeleteUserModal";
+import SA_UserTable from "@/pages/Dashboards/SuperAdmin/components/SA_UserTable";
+import SA_CreateUserModal from "@/pages/Dashboards/SuperAdmin/components/SA_CreateUserModal";
+import SA_DeleteUserModal from "@/pages/Dashboards/SuperAdmin/components/SA_DeleteUserModal";
 import PageHeader from "@/modules/dashboard/PageHeader";
 import { Users, UserPlus, AlertCircle } from "lucide-react";
 import { toast } from "react-hot-toast";

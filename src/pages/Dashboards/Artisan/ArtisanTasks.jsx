@@ -2,32 +2,21 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchArtisanTasks } from "@/services/artisanService";
-import {
-  Filter,
-  Search,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  MapPin,
-  DollarSign,
-  Loader2,
-  Briefcase,
-  Timer,
-  Calendar,
-  AlertOctagon,
-} from "lucide-react";
+import { Filter, Search, Clock, CheckCircle, AlertCircle, MapPin, DollarSign, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 /**
- * ArtisanTasks - Premium Task Management Dashboard
- * Full dark mode + glassmorphism + smooth animations
+ * ArtisanTasks Page - Enhanced Task Management
+ * - Task list with filters
+ * - Status updates
+ * - Task details navigation
  */
 export default function ArtisanTasks() {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState("all"); // 'all', 'pending', 'in_progress', 'completed'
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -42,15 +31,13 @@ export default function ArtisanTasks() {
 
         const res = await fetchArtisanTasks(filters);
         if (mounted) {
-          let taskList = res?.tasks || res?.data || res || [];
-
-          if (searchQuery.trim()) {
-            const query = searchQuery.toLowerCase();
+          let taskList = res.tasks || res.data || res || [];
+          // Client-side search
+          if (searchQuery) {
             taskList = taskList.filter(
               (t) =>
-                t.title?.toLowerCase().includes(query) ||
-                t.address?.toLowerCase().includes(query) ||
-                t.description?.toLowerCase().includes(query)
+                t.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                t.address?.toLowerCase().includes(searchQuery.toLowerCase())
             );
           }
           setTasks(taskList);
@@ -63,7 +50,9 @@ export default function ArtisanTasks() {
       }
     };
     load();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [filter, priorityFilter, searchQuery]);
 
   const stats = {
@@ -75,8 +64,8 @@ export default function ArtisanTasks() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
-        <Loader2 className="w-12 h-12 animate-spin text-[#0b6e4f]" />
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#0b6e4f]" />
       </div>
     );
   }
@@ -88,26 +77,25 @@ export default function ArtisanTasks() {
         <p className="text-sm text-gray-600 dark:text-gray-400">Manage your assigned maintenance tasks</p>
       </header>
 
-      {/* Error Alert */}
       {error && (
         <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg">
           {error}
-        </motion.div>
+        </div>
       )}
 
-      {/* Stats Cards - Gradient + Icons */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-8">
-        <StatsCard title="Total Tasks" value={stats.total} icon={Briefcase} gradient="from-blue-500 to-blue-600" />
-        <StatsCard title="Pending" value={stats.pending} icon={Clock} gradient="from-amber-500 to-amber-600" />
-        <StatsCard title="In Progress" value={stats.inProgress} icon={Timer} gradient="from-indigo-500 to-indigo-600" />
-        <StatsCard title="Completed" value={stats.completed} icon={CheckCircle} gradient="from-emerald-500 to-emerald-600" />
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <StatsCard title="Total Tasks" value={stats.total} color="bg-blue-500" />
+        <StatsCard title="Pending" value={stats.pending} color="bg-yellow-500" />
+        <StatsCard title="In Progress" value={stats.inProgress} color="bg-blue-600" />
+        <StatsCard title="Completed" value={stats.completed} color="bg-green-500" />
       </div>
 
       {/* Filters */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border border-gray-200 dark:border-gray-700">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
               value={searchQuery}
@@ -116,14 +104,8 @@ export default function ArtisanTasks() {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             />
           </div>
-
-          {/* Filter Buttons */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-              <Filter size={20} />
-              <span className="text-sm font-medium">Filter:</span>
-            </div>
-
+          <div className="flex items-center gap-2">
+            <Filter size={18} className="text-gray-600" />
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
@@ -134,11 +116,10 @@ export default function ArtisanTasks() {
               <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
             </select>
-
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
-              className="px-5 py-3 bg-gray-100 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[#0b6e4f] text-gray-900 dark:text-white"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b6e4f]"
             >
               <option value="all">All Priorities</option>
               <option value="low">Low</option>
@@ -148,19 +129,18 @@ export default function ArtisanTasks() {
             </select>
           </div>
         </div>
-      </motion.div>
+      </div>
 
-      {/* Task List */}
+      {/* Tasks List */}
       {tasks.length === 0 ? (
-        <EmptyTasksState searchQuery={searchQuery} filter={filter} priorityFilter={priorityFilter} />
+        <EmptyTasksState />
       ) : (
-        <div className="space-y-5">
-          <AnimatePresence mode="popLayout">
-            {tasks.map((task, index) => (
+        <div className="space-y-4">
+          <AnimatePresence>
+            {tasks.map((task) => (
               <TaskCard
                 key={task.id}
                 task={task}
-                index={index}
                 onClick={() => navigate(`/artisan/tasks/${task.id}`)}
               />
             ))}
@@ -171,8 +151,8 @@ export default function ArtisanTasks() {
   );
 }
 
-// Premium Gradient Stats Card
-function StatsCard({ title, value, icon: Icon, gradient }) {
+// Stats Card Component
+function StatsCard({ title, value, color }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -185,19 +165,19 @@ function StatsCard({ title, value, icon: Icon, gradient }) {
   );
 }
 
-// Premium Task Card with Glassmorphism
-function TaskCard({ task, index, onClick }) {
+// Task Card Component
+function TaskCard({ task, onClick }) {
   const statusConfig = {
-    pending: { color: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400", icon: Clock, label: "Pending" },
-    in_progress: { color: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400", icon: Timer, label: "In Progress" },
-    completed: { color: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400", icon: CheckCircle, label: "Completed" },
+    pending: { color: "bg-yellow-100 text-yellow-700", icon: Clock, label: "Pending" },
+    in_progress: { color: "bg-blue-100 text-blue-700", icon: AlertCircle, label: "In Progress" },
+    completed: { color: "bg-green-100 text-green-700", icon: CheckCircle, label: "Completed" },
   };
 
   const priorityConfig = {
-    low: "bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300",
-    medium: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
-    high: "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300",
-    urgent: "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border border-red-500/50",
+    low: "bg-gray-100 text-gray-700",
+    medium: "bg-blue-100 text-blue-700",
+    high: "bg-orange-100 text-orange-700",
+    urgent: "bg-red-100 text-red-700",
   };
 
   const status = task.status || "pending";
@@ -206,12 +186,8 @@ function TaskCard({ task, index, onClick }) {
 
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, x: -40 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 40 }}
-      transition={{ delay: index * 0.05 }}
-      whileHover={{ scale: 1.02, x: 10 }}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
       onClick={onClick}
       className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-all cursor-pointer"
     >
@@ -223,20 +199,16 @@ function TaskCard({ task, index, onClick }) {
               <StatusIcon size={14} />
               {config.label}
             </span>
-            <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${priorityConfig[task.priority || "medium"]}`}>
-              {task.priority ? task.priority.toUpperCase() : "MEDIUM"}
+            <span className={`px-2 py-1 rounded text-xs font-medium ${priorityConfig[task.priority] || priorityConfig.medium}`}>
+              {task.priority || "medium"}
             </span>
           </div>
-
-          <p className="text-gray-600 dark:text-gray-400 flex items-center gap-2 mb-3">
-            <MapPin size={18} className="text-[#0b6e4f]" />
-            {task.address || "No location specified"}
+          <p className="text-sm text-gray-600 flex items-center gap-1 mb-2">
+            <MapPin size={14} />
+            {task.address || "Address not specified"}
           </p>
-
           {task.description && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mt-2">
-              {task.description}
-            </p>
+            <p className="text-sm text-gray-700 mt-2 line-clamp-2">{task.description}</p>
           )}
         </div>
       </div>
@@ -244,28 +216,24 @@ function TaskCard({ task, index, onClick }) {
       <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
           {task.propertyTitle && (
-            <span className="text-gray-600 dark:text-gray-400">
-              Property: <span className="font-medium text-gray-900 dark:text-white">{task.propertyTitle}</span>
+            <span>
+              <span className="font-medium">Property:</span> {task.propertyTitle}
             </span>
           )}
           {task.estimatedHours && (
-            <span className="text-gray-600 dark:text-gray-400">
-              Est. Time: <span className="font-medium text-gray-900 dark:text-white">{task.estimatedHours}h</span>
+            <span>
+              <span className="font-medium">Est. Time:</span> {task.estimatedHours}h
             </span>
           )}
           {task.dueDate && (
-            <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
-              <Calendar size={16} />
-              Due: <span className="font-medium text-gray-900 dark:text-white">
-                {new Date(task.dueDate).toLocaleDateString()}
-              </span>
+            <span>
+              <span className="font-medium">Due:</span> {new Date(task.dueDate).toLocaleDateString()}
             </span>
           )}
         </div>
-
-        {task.payment > 0 && (
-          <div className="flex items-center gap-2 text-2xl font-bold text-[#0b6e4f]">
-            <DollarSign size={28} />
+        {task.payment && (
+          <div className="flex items-center gap-1 text-lg font-bold text-[#0b6e4f]">
+            <DollarSign size={18} />
             ₵{task.payment.toLocaleString()}
           </div>
         )}
@@ -274,10 +242,8 @@ function TaskCard({ task, index, onClick }) {
   );
 }
 
-// Beautiful Empty State
-function EmptyTasksState({ searchQuery, filter, priorityFilter }) {
-  const hasActiveFilter = searchQuery || filter !== "all" || priorityFilter !== "all";
-
+// Empty State
+function EmptyTasksState() {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-12 text-center border border-gray-200 dark:border-gray-700">
       <div className="mx-auto w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-6">
@@ -287,6 +253,6 @@ function EmptyTasksState({ searchQuery, filter, priorityFilter }) {
       <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
         You don't have any tasks matching your current filters. Check back later for new assignments.
       </p>
-    </motion.div>
+    </div>
   );
 }

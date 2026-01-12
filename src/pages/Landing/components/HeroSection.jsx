@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 void motion; 
 import { PrimaryButton, SecondaryButton } from "@/components/ui/Button"; 
-import heroImage from "../../../assets/images/hero2.jpg";
+import heroImage from "@/assets/images/hero2.jpg";
 
 export default function HeroSection() {
   // Animation variants for parent and children

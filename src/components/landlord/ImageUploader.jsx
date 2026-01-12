@@ -5,7 +5,33 @@ import { uploadImage } from "@/services/propertyService";
 import { motion, AnimatePresence } from "framer-motion";
 
 /**
- * Enhanced ImageUploader with drag-drop, preview, and better UX
+ * Enhanced ImageUploader Component
+ * 
+ * Features:
+ * - Drag & drop support
+ * - Image preview with grid layout
+ * - Remove/delete functionality
+ * - File validation (type, size)
+ * - Error handling with user-friendly messages
+ * - Loading states per file
+ * - Memory leak prevention (object URL cleanup)
+ * - Accessible (ARIA labels, keyboard navigation)
+ * 
+ * Props:
+ * - value: Array of image URLs or File objects
+ * - onChange: Callback function (value) => void
+ * - multiple: Boolean - allow multiple file selection (default: true)
+ * - maxFiles: Number - maximum number of files (default: 10)
+ * - maxSizeMB: Number - maximum file size in MB (default: 5)
+ * 
+ * Usage:
+ * <ImageUploader
+ *   value={images}
+ *   onChange={(newImages) => setValue("images", newImages)}
+ *   multiple={true}
+ *   maxFiles={10}
+ *   maxSizeMB={5}
+ * />
  */
 export default function ImageUploader({
   value = [],
@@ -43,34 +69,65 @@ export default function ImageUploader({
       return;
     }
 
+    // Validate all files first before uploading
+    const validationErrors = [];
+    for (let i = 0; i < fileArray.length; i++) {
+      try {
+        validateFile(fileArray[i]);
+      } catch (err) {
+        validationErrors.push(`${fileArray[i].name}: ${err.message}`);
+      }
+    }
+
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join("; "));
+      return;
+    }
+
     setError("");
     setUploading(true);
 
     try {
       const uploaded = [];
       const existingUrls = value.filter((img) => typeof img === "string");
+      const uploadErrors = [];
 
       for (let i = 0; i < fileArray.length; i++) {
         const file = fileArray[i];
         try {
-          validateFile(file);
-          setUploading ? setUploadingIndex(i) : null;
+          setUploadingIndex(i);
           const res = await uploadImage(file);
           const url = res?.url ?? res;
-          uploaded.push(url);
+          if (url) {
+            uploaded.push(url);
+          } else {
+            uploadErrors.push(`${file.name}: Upload failed - no URL returned`);
+          }
         } catch (err) {
           console.error(`Failed to upload ${file.name}:`, err);
-          setError(err.message || `Failed to upload ${file.name}`);
+          uploadErrors.push(`${file.name}: ${err.message || "Upload failed"}`);
         }
       }
 
       setUploadingIndex(null);
-      const next = multiple ? [...existingUrls, ...uploaded] : uploaded;
-      onChange(next);
+
+      if (uploadErrors.length > 0 && uploaded.length === 0) {
+        // All uploads failed
+        setError(`All uploads failed: ${uploadErrors.join("; ")}`);
+      } else if (uploadErrors.length > 0) {
+        // Some uploads succeeded, some failed
+        setError(`Some uploads failed: ${uploadErrors.join("; ")}`);
+      }
+
+      if (uploaded.length > 0) {
+        const next = multiple ? [...existingUrls, ...uploaded] : uploaded;
+        onChange(next);
+      }
     } catch (err) {
       setError(err.message || "Upload failed");
     } finally {
       setUploading(false);
+      setUploadingIndex(null);
     }
   };
 
@@ -81,7 +138,15 @@ export default function ImageUploader({
   };
 
   const removeImage = (index) => {
+    const img = value[index];
+    // Note: Object URLs are automatically cleaned up when the component unmounts
+    // or when the URL is no longer referenced. We don't need to manually revoke
+    // them here as React will handle the cleanup when the img element is removed.
     onChange(value.filter((_, i) => i !== index));
+    // Clear error if removing last item
+    if (value.length === 1) {
+      setError("");
+    }
   };
 
   const handleDragEnter = (e) => {
@@ -177,11 +242,24 @@ export default function ImageUploader({
       </div>
 
       {/* Error Message */}
-      {error && (
-        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg text-sm">
-          {error}
-        </div>
-      )}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg text-sm flex items-start gap-2"
+          >
+            <X
+              size={16}
+              className="mt-0.5 flex-shrink-0 cursor-pointer"
+              onClick={() => setError("")}
+              aria-label="Dismiss error"
+            />
+            <span className="flex-1">{error}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Image Preview Grid */}
       {value.length > 0 && (
@@ -190,6 +268,8 @@ export default function ImageUploader({
             {value.map((img, index) => {
               const url = getImageUrl(img);
               if (!url) return null;
+
+              const isUploading = uploading && uploadingIndex === index;
 
               return (
                 <motion.div
@@ -202,13 +282,23 @@ export default function ImageUploader({
                   <img
                     src={url}
                     alt={`Property image ${index + 1}`}
-                    className="w-full h-full object-cover"
+                    className={`w-full h-full object-cover ${isUploading ? "opacity-50" : ""}`}
+                    onError={(e) => {
+                      console.error(`Failed to load image: ${url}`);
+                      e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect fill='%23e5e7eb' width='400' height='400'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='18' x='50%25' y='50%25' text-anchor='middle' dy='.3em'%3EImage not found%3C/text%3E%3C/svg%3E";
+                    }}
                   />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
+                  {isUploading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() => removeImage(index)}
-                    className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600 hover:scale-110"
+                    disabled={isUploading}
+                    className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label="Remove image"
                   >
                     <X size={16} />

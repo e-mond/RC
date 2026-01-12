@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import LoginForm from "@/components/auth/LoginForm";
-import LoginIllustration from "../../components/auth/LoginIllustration";
+import LoginIllustration from "@/components/auth/LoginIllustration";
 import { Button } from "@/components/ui/Button";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react"; 

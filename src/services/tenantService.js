@@ -1,183 +1,260 @@
 // src/services/tenantService.js
-// Tenant-specific API calls – fully error-handled & Ghana-ready
+/**
+ * Tenant-specific API service layer
+ * All tenant-related API calls with proper error handling
+ * Designed for Ghanaian rental market (mobile money, maintenance, etc.)
+ */
+
 import apiClient from "./apiClient";
 import { session } from "@/utils/session";
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Helper to extract meaningful error messages from API responses
+// ──────────────────────────────────────────────────────────────────────────────
+const getErrorMessage = (err, defaultMsg) => {
+  return (
+    err?.response?.data?.message ||
+    err?.response?.data?.error ||
+    err?.message ||
+    defaultMsg ||
+    "An unexpected error occurred. Please try again."
+  );
+};
+
+// ──────────────────────────────────────────────────────────────────────────────
+// AUTHENTICATION / REGISTRATION
+// ──────────────────────────────────────────────────────────────────────────────
+
 /**
- * Register a new tenant with ID upload support
+ * Register a new tenant (with Ghana Card / ID upload support)
+ * @param {FormData} formData - Contains profile info + ID documents
+ * @returns {Promise<Object>} Registration response data
  */
 export const registerTenant = async (formData) => {
   try {
     const { data } = await apiClient.post("/auth/signup/tenant/", formData, {
       headers: { "Content-Type": "multipart/form-data" },
+      timeout: 45000, // 45s timeout for file uploads
     });
     return data;
   } catch (err) {
-    const message = err.response?.data?.message || "Tenant signup failed. Please try again.";
-    throw new Error(message);
+    throw new Error(getErrorMessage(err, "Tenant registration failed"));
   }
 };
 
+// ──────────────────────────────────────────────────────────────────────────────
+// RENTALS
+// ──────────────────────────────────────────────────────────────────────────────
+
 /**
- * Fetch all rentals for the logged-in tenant
- * Handles 401 (expired), 404 (no rentals), and normalizes response
+ * Fetch all active/current rentals for the logged-in tenant
+ * @returns {Promise<Array>} List of rental objects
  */
 export const fetchTenantRentals = async () => {
   try {
     const { data } = await apiClient.get("/tenant/rentals");
 
-    // Normalize response: backend may return { rentals: [] }, { data: [] }, or direct array
+    // Handle different possible response shapes
     return data.rentals || data.data || data || [];
   } catch (err) {
-    console.error("fetchTenantRentals error:", err.response || err);
+    console.error("fetchTenantRentals failed:", err);
 
-    // Auto logout on expired session
-    if (err.response?.status === 401) {
+    if (err?.response?.status === 401) {
       session.clearAll();
       window.location.href = "/login?expired=true";
-      throw new Error("Session expired. Logging you out...");
+      throw new Error("Session expired. Redirecting to login...");
     }
 
-    // No rentals yet → return empty array (not an error)
-    if (err.response?.status === 404) {
-      return [];
+    if (err?.response?.status === 404) {
+      return []; // No rentals yet - not an error
     }
 
-    const message = err.response?.data?.message || "Unable to fetch your rentals";
-    throw new Error(message);
+    throw new Error(getErrorMessage(err, "Could not load your rentals"));
   }
 };
 
 /**
- * Get full details of a specific rental
+ * Get detailed information about a specific rental agreement
+ * @param {string|number} rentalId
+ * @returns {Promise<Object>} Rental details
  */
 export const fetchRentalDetails = async (rentalId) => {
   try {
     const { data } = await apiClient.get(`/tenant/rentals/${rentalId}`);
     return data.rental || data.data || data;
   } catch (err) {
-    const message = err.response?.data?.message || "Unable to load rental details";
-    throw new Error(message);
+    throw new Error(getErrorMessage(err, "Could not load rental details"));
   }
 };
 
 /**
- * Initiate rent payment
+ * Initiate rent payment (supports mobile money, bank transfer, etc.)
+ * @param {string|number} rentalId
+ * @param {Object} payload - Payment details (amount, method, reference, etc.)
+ * @returns {Promise<Object>} Payment initiation response
  */
 export const payRent = async (rentalId, payload) => {
   try {
     const { data } = await apiClient.post(`/tenant/rentals/${rentalId}/pay`, payload);
     return data;
   } catch (err) {
-    const message = err.response?.data?.message || "Payment failed. Try again.";
-    throw new Error(message);
+    throw new Error(getErrorMessage(err, "Rent payment initiation failed"));
   }
 };
 
-/**
- * ============ WISHLIST/FAVORITES ============
- */
+// ──────────────────────────────────────────────────────────────────────────────
+// FAVORITES / WISHLIST
+// ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * Get all favorited properties
+ * Get all properties favorited by the current tenant
+ * @returns {Promise<Array>} List of favorited properties
  */
 export const getFavorites = async () => {
   try {
     const { data } = await apiClient.get("/tenant/favorites");
     return data.favorites || data.data || data || [];
   } catch (err) {
-    if (err.response?.status === 404) return [];
-    const message = err.response?.data?.message || "Unable to fetch favorites";
-    throw new Error(message);
+    if (err?.response?.status === 404) return [];
+    throw new Error(getErrorMessage(err, "Could not load favorites"));
   }
 };
 
 /**
- * Add property to favorites
+ * Add a property to tenant's favorites
+ * @param {string|number} propertyId
+ * @returns {Promise<Object>} Success response
  */
 export const addToFavorites = async (propertyId) => {
   try {
     const { data } = await apiClient.post("/tenant/favorites", { propertyId });
     return data;
   } catch (err) {
-    const message = err.response?.data?.message || "Failed to add to favorites";
-    throw new Error(message);
+    throw new Error(getErrorMessage(err, "Could not add property to favorites"));
   }
 };
 
 /**
- * Remove property from favorites
+ * Remove a property from tenant's favorites
+ * @param {string|number} propertyId
+ * @returns {Promise<Object>} Success response
  */
 export const removeFromFavorites = async (propertyId) => {
   try {
     const { data } = await apiClient.delete(`/tenant/favorites/${propertyId}`);
     return data;
   } catch (err) {
-    const message = err.response?.data?.message || "Failed to remove from favorites";
-    throw new Error(message);
+    throw new Error(getErrorMessage(err, "Could not remove property from favorites"));
   }
 };
 
 /**
- * Check if property is favorited
+ * Check if a specific property is in tenant's favorites
+ * @param {string|number} propertyId
+ * @returns {Promise<boolean>}
  */
 export const isFavorited = async (propertyId) => {
   try {
     const { data } = await apiClient.get(`/tenant/favorites/${propertyId}/check`);
-    return data.isFavorited || false;
+    return !!data.isFavorited;
   } catch {
+    // Silent fail → assume not favorited if check fails
     return false;
   }
 };
 
-/**
- * ============ MAINTENANCE REQUESTS (Premium) ============
- */
+// ──────────────────────────────────────────────────────────────────────────────
+// VIEWING REQUESTS (new - connects to PropertyDetail.jsx)
+// ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * Get all maintenance requests
+ * Create Viewing Request
+ * 
+ * Submits a request to view a property (Tenant only).
+ * Creates a viewing request that requires landlord approval.
+ * 
+ * API Contract (Django):
+ * - POST /api/tenant/viewing-requests
+ * - Alternative endpoint: POST /api/properties/:id/viewing-request (see propertyService.js)
+ * - Request: { propertyId, preferredDate, message?, contact_phone? }
+ * - Response: { id, property_id, tenant_id, status: "pending", preferred_date, ... }
+ * 
+ * Note: Viewing requests default to "pending" status and require landlord acceptance.
+ * Status flow: pending → accepted/declined → completed/no-show
+ * 
+ * @param {Object} payload - Viewing request data
+ * @param {string|number} payload.propertyId - Property ID
+ * @param {string} payload.preferredDate - ISO date string (YYYY-MM-DD) or ISO datetime
+ * @param {string} [payload.message] - Optional message to landlord
+ * @param {string} [payload.contact_phone] - Optional contact phone number
+ * @returns {Promise<Object>} Created viewing request data
+ * @throws {Error} If request fails or validation errors
+ */
+export const createViewingRequest = async (payload) => {
+  try {
+    const { data } = await apiClient.post("/tenant/viewing-requests", payload);
+    return data;
+  } catch (err) {
+    throw new Error(
+      getErrorMessage(err, "Failed to submit property viewing request")
+    );
+  }
+};
+
+// ──────────────────────────────────────────────────────────────────────────────
+// MAINTENANCE REQUESTS
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Get all maintenance requests submitted by the tenant
+ * @returns {Promise<Array>}
  */
 export const getMaintenanceRequests = async () => {
   try {
     const { data } = await apiClient.get("/tenant/maintenance");
     return data.requests || data.data || data || [];
   } catch (err) {
-    if (err.response?.status === 404) return [];
-    const message = err.response?.data?.message || "Unable to fetch maintenance requests";
-    throw new Error(message);
+    if (err?.response?.status === 404) return [];
+    throw new Error(getErrorMessage(err, "Could not load maintenance requests"));
   }
 };
 
 /**
- * Create a new maintenance request
+ * Create new maintenance request (with photo upload support)
+ * @param {FormData} formData
+ * @returns {Promise<Object>}
  */
 export const createMaintenanceRequest = async (formData) => {
   try {
     const { data } = await apiClient.post("/tenant/maintenance", formData, {
       headers: { "Content-Type": "multipart/form-data" },
+      timeout: 60000,
     });
     return data;
   } catch (err) {
-    const message = err.response?.data?.message || "Failed to create maintenance request";
-    throw new Error(message);
+    throw new Error(getErrorMessage(err, "Failed to submit maintenance request"));
   }
 };
 
 /**
- * Get maintenance request details
+ * Get details of a specific maintenance request
+ * @param {string|number} requestId
+ * @returns {Promise<Object>}
  */
 export const getMaintenanceRequest = async (requestId) => {
   try {
     const { data } = await apiClient.get(`/tenant/maintenance/${requestId}`);
     return data.request || data.data || data;
   } catch (err) {
-    const message = err.response?.data?.message || "Unable to load maintenance request";
-    throw new Error(message);
+    throw new Error(getErrorMessage(err, "Could not load maintenance request details"));
   }
 };
 
 /**
- * Update maintenance request (add photos, comments)
+ * Update existing maintenance request (add photos, status update, comments)
+ * @param {string|number} requestId
+ * @param {FormData} formData
+ * @returns {Promise<Object>}
  */
 export const updateMaintenanceRequest = async (requestId, formData) => {
   try {
@@ -186,31 +263,32 @@ export const updateMaintenanceRequest = async (requestId, formData) => {
     });
     return data;
   } catch (err) {
-    const message = err.response?.data?.message || "Failed to update maintenance request";
-    throw new Error(message);
+    throw new Error(getErrorMessage(err, "Failed to update maintenance request"));
   }
 };
 
-/**
- * ============ PAYMENT HISTORY ============
- */
+// ──────────────────────────────────────────────────────────────────────────────
+// PAYMENT HISTORY
+// ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * Get payment history
+ * Get complete payment history for the tenant
+ * @returns {Promise<Array>}
  */
 export const getPaymentHistory = async () => {
   try {
     const { data } = await apiClient.get("/tenant/payments");
     return data.payments || data.data || data || [];
   } catch (err) {
-    if (err.response?.status === 404) return [];
-    const message = err.response?.data?.message || "Unable to fetch payment history";
-    throw new Error(message);
+    if (err?.response?.status === 404) return [];
+    throw new Error(getErrorMessage(err, "Could not load payment history"));
   }
 };
 
 /**
- * Get payment receipt
+ * Download payment receipt as Blob (PDF/image)
+ * @param {string|number} paymentId
+ * @returns {Promise<Blob>}
  */
 export const getPaymentReceipt = async (paymentId) => {
   try {
@@ -219,38 +297,38 @@ export const getPaymentReceipt = async (paymentId) => {
     });
     return data;
   } catch (err) {
-    const message = err.response?.data?.message || "Unable to download receipt";
-    throw new Error(message);
+    throw new Error(getErrorMessage(err, "Could not download payment receipt"));
   }
 };
 
-/**
- * ============ RENTAL HISTORY ============
- */
+// ──────────────────────────────────────────────────────────────────────────────
+// RENTAL HISTORY / REFERENCES
+// ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * Get rental history timeline
+ * Get full rental history timeline (past + current)
+ * @returns {Promise<Array>}
  */
 export const getRentalHistory = async () => {
   try {
     const { data } = await apiClient.get("/tenant/rental-history");
     return data.history || data.data || data || [];
   } catch (err) {
-    if (err.response?.status === 404) return [];
-    const message = err.response?.data?.message || "Unable to fetch rental history";
-    throw new Error(message);
+    if (err?.response?.status === 404) return [];
+    throw new Error(getErrorMessage(err, "Could not load rental history"));
   }
 };
 
 /**
- * Generate rental reference
+ * Generate official rental reference letter/document
+ * @param {string|number} rentalId
+ * @returns {Promise<Object>}
  */
 export const generateRentalReference = async (rentalId) => {
   try {
     const { data } = await apiClient.post(`/tenant/rentals/${rentalId}/reference`);
     return data;
   } catch (err) {
-    const message = err.response?.data?.message || "Failed to generate reference";
-    throw new Error(message);
+    throw new Error(getErrorMessage(err, "Failed to generate rental reference"));
   }
 };

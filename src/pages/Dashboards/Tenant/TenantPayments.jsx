@@ -4,13 +4,16 @@ import { fetchTenantRentals, getPaymentHistory, getPaymentReceipt } from "@/serv
 import RentPaymentModal from "@/components/tenant/RentPaymentModal";
 import { motion } from "framer-motion";
 import { Download, Receipt, CreditCard, Smartphone, CheckCircle, Clock, XCircle } from "lucide-react";
-import { useFeatureStore } from "@/stores/featureStore";
+import { useFeatureAccess } from "@/context/FeatureAccessContext";
+import PremiumGate from "@/components/common/PremiumGate";
 
 /**
  * TenantPayments Page - Full Dark Mode Support
+ * Premium feature: Payment history requires premium subscription
  */
 export default function TenantPayments() {
-  const isPremium = useFeatureStore((state) => state.isPremium());
+  const { isPremium, can } = useFeatureAccess();
+  const hasPaymentAccess = can("TENANT_PAYMENTS");
   const [rentals, setRentals] = useState([]);
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [loading, setLoading] = useState(true);

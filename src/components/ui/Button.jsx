@@ -40,9 +40,9 @@ export function Button({
     primary:
       "bg-[#0b6e4f] hover:bg-[#095c42] text-white focus:ring-[#0b6e4f]",
     outline:
-      "border border-gray-300 text-[#0f1724] bg-white hover:bg-gray-50 focus:ring-gray-200",
+      "border border-gray-300 dark:border-gray-600 text-[#0f1724] dark:text-gray-100 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-gray-200 dark:focus:ring-gray-600",
     ghost:
-      "text-[#0b6e4f] bg-transparent hover:bg-[#e6f4ef] focus:ring-[#0b6e4f]",
+      "text-[#0b6e4f] dark:text-[#0b8d63] bg-transparent hover:bg-[#e6f4ef] dark:hover:bg-gray-800 focus:ring-[#0b6e4f]",
   };
 
   return (

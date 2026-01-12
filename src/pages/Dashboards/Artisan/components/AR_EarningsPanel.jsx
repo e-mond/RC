@@ -1,7 +1,10 @@
 // src/pages/Dashboards/Artisan/components/AR_EarningsPanel.jsx
+/* eslint-disable react-refresh/only-export-components */
 import React, { useEffect, useState } from "react";
 import { getEarningsSummary, getEarningsHistory, generateInvoice } from "@/services/artisanService";
 import {
+  LineChart,
+  Line,
   BarChart,
   Bar,
   XAxis,
@@ -9,14 +12,16 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
-  Cell,
 } from "recharts";
 import { DollarSign, TrendingUp, Download, Loader2, Calendar } from "lucide-react";
 import { motion } from "framer-motion";
 
-import SummaryCard from "./SummaryCard";
-import PaymentHistoryItem from "./PaymentHistoryItem";
-
+/**
+ * AR_EarningsPanel - Comprehensive earnings dashboard
+ * - Earnings summary
+ * - Payment history
+ * - Invoice generation
+ */
 export default function AR_EarningsPanel() {
   const [summary, setSummary] = useState(null);
   const [history, setHistory] = useState([]);
@@ -37,13 +42,16 @@ export default function AR_EarningsPanel() {
           setHistory(Array.isArray(historyData.earnings) ? historyData.earnings : []);
         }
       } catch (err) {
+        console.error("loadEarnings:", err);
         if (mounted) setError(err.message || "Failed to load earnings");
       } finally {
         if (mounted) setLoading(false);
       }
     };
     load();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleGenerateInvoice = async (taskId) => {
@@ -58,14 +66,15 @@ export default function AR_EarningsPanel() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err) {
+      console.error("generateInvoice:", err);
       alert(err.message || "Failed to generate invoice");
     }
   };
 
   if (loading) {
     return (
-      <div className="p-16 flex items-center justify-center min-h-[500px] bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 rounded-3xl">
-        <Loader2 className="w-12 h-12 animate-spin text-[#0b6e4f]" />
+      <div className="p-6 flex items-center justify-center min-h-[300px]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#0b6e4f]" />
       </div>
     );
   }
@@ -80,30 +89,55 @@ export default function AR_EarningsPanel() {
     );
   }
 
+  // Prepare chart data
   const monthlyData = history.reduce((acc, earning) => {
     const month = new Date(earning.date).toLocaleDateString("en-US", { month: "short", year: "numeric" });
-    acc[month] = (acc[month] || 0) + (earning.amount || 0);
+    if (!acc[month]) {
+      acc[month] = 0;
+    }
+    acc[month] += earning.amount || 0;
     return acc;
   }, {});
 
-  const chartData = Object.entries(monthlyData).map(([month, amount]) => ({ month, amount }));
-
-  const COLORS = ["#0b6e4f", "#095c42", "#0a5a40", "#084d38", "#073f30"];
+  const chartData = Object.entries(monthlyData).map(([month, amount]) => ({
+    month,
+    amount,
+  }));
 
   return (
-    <div className="space-y-10 p-4 sm:p-8">
+    <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-nowrap">
-        <SummaryCard title="Total Earnings" value={`₵${(summary?.totalEarnings || 0).toLocaleString()}`} gradient="from-emerald-400 to-teal-600" icon={<DollarSign className="w-6 h-6" />} />
-        <SummaryCard title="Pending Payout" value={`₵${(summary?.pendingEarnings || 0).toLocaleString()}`} gradient="from-amber-400 to-orange-600" icon={<TrendingUp className="w-6 h-6" />} />
-        <SummaryCard title="Completed Tasks" value={summary?.completedTasks || 0} gradient="from-blue-400 to-cyan-600" icon={<Calendar className="w-6 h-6" />} />
-        <SummaryCard title="Total Tasks" value={summary?.totalTasks || 0} gradient="from-violet-400 to-purple-600" icon={<Calendar className="w-6 h-6" />} />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <SummaryCard
+          title="Total Earnings"
+          value={`₵${(summary?.totalEarnings || 0).toLocaleString()}`}
+          icon={<DollarSign className="h-6 w-6 text-emerald-600" />}
+          color="bg-green-500"
+        />
+        <SummaryCard
+          title="Pending"
+          value={`₵${(summary?.pendingEarnings || 0).toLocaleString()}`}
+          icon={<TrendingUp className="h-6 w-6 text-amber-600" />}
+          color="bg-yellow-500"
+        />
+        <SummaryCard
+          title="Completed Tasks"
+          value={summary?.completedTasks || 0}
+          icon={<Calendar className="h-6 w-6 text-blue-600" />}
+          color="bg-blue-500"
+        />
+        <SummaryCard
+          title="Total Tasks"
+          value={summary?.totalTasks || 0}
+          icon={<Calendar className="h-6 w-6 text-gray-600" />}
+          color="bg-gray-500"
+        />
       </div>
 
-      {/*  Vertical Bar Chart */}
+      {/* Earnings Chart */}
       {chartData.length > 0 && (
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700"
         >
@@ -132,16 +166,12 @@ export default function AR_EarningsPanel() {
             {history.map((earning) => (
               <PaymentHistoryItem
                 key={earning.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.08 }}
-                className="p-8 hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-all duration-300"
-              >
-                <PaymentHistoryItem earning={earning} onGenerateInvoice={handleGenerateInvoice} />
-              </motion.div>
-            ))
-          )}
-        </div>
+                earning={earning}
+                onGenerateInvoice={handleGenerateInvoice}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

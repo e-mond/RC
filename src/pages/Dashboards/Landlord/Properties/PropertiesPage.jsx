@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getAllProperties } from "@/services/propertyService";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { Link } from "react-router-dom";
 
 export default function PropertiesPage() {
@@ -28,7 +28,7 @@ export default function PropertiesPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-transparent">
       <div className="flex justify-between mb-4">
         <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Properties</h1>
         <Button asChild>

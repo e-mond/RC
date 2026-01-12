@@ -1,7 +1,48 @@
+/**
+ * landlordService.js - Landlord-Specific Service
+ * 
+ * Handles all landlord-scoped API calls for property and booking management.
+ * Used by: Landlord dashboard, property management, booking management.
+ * 
+ * Features:
+ * - Fetch landlord's properties
+ * - Create/update/delete properties (landlord-scoped)
+ * - Manage viewing requests/bookings
+ * - Dashboard statistics and analytics
+ * - Recent activity feed
+ * 
+ * Mock Mode:
+ * - Supports hybrid mock/real API system
+ * - Mock data loaded dynamically in development
+ * - Production uses real API endpoints
+ * 
+ * API Endpoints:
+ * - GET /properties/landlord/:ownerId/ - Get landlord's properties
+ * - GET /properties/:id - Get property details
+ * - POST /properties/ - Create property (multipart/form-data)
+ * - PUT /properties/:id/ - Update property (multipart/form-data)
+ * - DELETE /properties/:id/ - Delete property
+ * - GET /landlord/bookings/ - Get viewing requests
+ * - POST /landlord/bookings/:id/respond/ - Accept/decline viewing
+ * - GET /landlord/dashboard/stats/ - Dashboard statistics
+ * - GET /landlord/activity/ - Recent activity feed
+ * 
+ * Property Approval Flow:
+ * - New properties default to "pending" status
+ * - Require admin/super-admin approval before public visibility
+ * - Property edits also require re-approval
+ * 
+ * @module landlordService
+ * @requires ./apiClient
+ */
+
 // src/services/landlordService.js
 import apiClient from "./apiClient";
 
-// Dynamically import mocks only in development/mock mode (Vite-friendly)
+/**
+ * Default fallback mocks (always available)
+ * Used when mock file is not found or in production fallback scenarios
+ */
 let mocks = {
   withDelay: (data, ms) => new Promise((res) => setTimeout(() => res(data), ms)),
   fetchPropertiesMock: () => ({ data: [] }),
@@ -13,6 +54,11 @@ let mocks = {
   respondBookingMock: () => ({ success: true }),
 };
 
+/**
+ * Dynamically load real mocks only in development/mock mode (Vite-friendly)
+ * Only loads in development or when VITE_USE_MOCK=true
+ * Prevents mock code from being included in production builds
+ */
 if (import.meta.env.DEV || String(import.meta.env.VITE_USE_MOCK).toLowerCase() === "true") {
   import("@/mocks/landlordMock")
     .then((module) => {
@@ -24,8 +70,22 @@ if (import.meta.env.DEV || String(import.meta.env.VITE_USE_MOCK).toLowerCase() =
     });
 }
 
+/**
+ * Mock Mode Detection
+ * Checks if mock mode is enabled via environment variable
+ * 
+ * @returns {boolean} True if mock mode is enabled
+ */
 const isMockEnvEnabled = () => String(import.meta.env.VITE_USE_MOCK || "").toLowerCase() === "true";
 
+/**
+ * Extract Error Message
+ * Utility to consistently extract error messages from API responses
+ * 
+ * @param {Error} err - Error object
+ * @param {string} fallback - Fallback error message
+ * @returns {Error} Normalized error object
+ */
 function extractError(err, fallback = "Server error") {
   if (!err) return new Error(fallback);
   if (err.response?.data?.message) return new Error(err.response.data.message);
@@ -36,8 +96,18 @@ function extractError(err, fallback = "Server error") {
 /* ---------- Properties (landlord-scoped helpers) ---------- */
 
 /**
- * Fetch properties for a specific landlord.
- * NOTE: Backend exposes this under `/api/properties/landlord/<id>/`.
+ * Fetch Properties for Landlord
+ * 
+ * Retrieves all properties owned by a specific landlord.
+ * Used in landlord dashboard and property management pages.
+ * 
+ * API Contract (Django):
+ * - GET /api/properties/landlord/:ownerId/
+ * - Response: { data: [{ id, title, address, priceGhs, status, ... }] }
+ * 
+ * @param {string|number} ownerId - Landlord user ID
+ * @returns {Promise<Object>} { data: Array<Property> }
+ * @throws {Error} If ownerId is missing or fetch fails
  */
 export const fetchProperties = async (ownerId) => {
   if (!ownerId) {
@@ -58,6 +128,20 @@ export const fetchProperties = async (ownerId) => {
   }
 };
 
+/**
+ * Fetch Property By ID
+ * 
+ * Retrieves detailed information for a single property.
+ * Always uses real API (no mocks) to ensure landlord views are accurate.
+ * 
+ * API Contract (Django):
+ * - GET /api/properties/:id
+ * - Response: { id, title, address, priceGhs, status, images, amenities, ... }
+ * 
+ * @param {string|number} id - Property ID
+ * @returns {Promise<Object>} Property object with full details
+ * @throws {Error} If property not found or fetch fails
+ */
 export const fetchPropertyById = async (id) => {
   // Always use real API for property details to keep landlord views accurate.
   try {
@@ -68,6 +152,28 @@ export const fetchPropertyById = async (id) => {
   }
 };
 
+/**
+ * Create Property
+ * 
+ * Creates a new property listing for the authenticated landlord.
+ * Property is created with status="pending" and requires admin approval.
+ * 
+ * API Contract (Django):
+ * - POST /api/properties/
+ * - Content-Type: multipart/form-data
+ * - Request: FormData with title, address, priceGhs, description, images[], amenity_ids[], ...
+ * - Response: { id, title, address, status: "pending", ... }
+ * 
+ * Important:
+ * - Properties default to "pending" status
+ * - Require admin/super-admin approval before public visibility
+ * - Images must be uploaded as files in FormData
+ * - Amenities passed as amenity_ids[] array
+ * 
+ * @param {Object} payload - Property data (will be converted to FormData)
+ * @returns {Promise<Object>} Created property object
+ * @throws {Error} If creation fails or validation errors
+ */
 export const createProperty = async (payload) => {
   // Always create real properties against the backend (no mocks).
   try {

@@ -6,24 +6,24 @@
     <link rel="icon" type="image/png" href="/src/assets/images/Logo.png" />
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Rental Connect</title>
+    <meta name="description" content="Connect landlords, tenants, and artisans for seamless property rental management in Ghana" />
+    <meta name="theme-color" content="#0b6e4f" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="RentalConnects" />
     
-  
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icon-192x192.png" />
+    
+    <title>RentalConnects - Property Rental Platform</title>
+    
     <link rel="stylesheet" href="/src/index.css" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script src="https://js.paystack.co/v1/inline.js"></script>
 
-    <!-- Saved theme on load -->
-    <script>
-      if (
-        localStorage.theme === 'dark' ||
-        (!localStorage.theme &&
-          window.matchMedia('(prefers-color-scheme: dark)').matches)
-      ) {
-        document.documentElement.classList.add('dark');
-      }
-    </script>
+    
   </body>
 </html>

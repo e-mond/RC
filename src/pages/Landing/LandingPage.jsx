@@ -9,7 +9,7 @@ import AdsSection from "./components/AdsSection";
 import HowItWorksSection from "./components/HowItWorksSection";
 import TrustSection from "./components/TrustSection";
 import JoinBanner from "./components/JoinBanner";
-import Footer from "../../components/layout/Footer";
+import Footer from "@/components/layout/Footer";
 import ArticlesSection from "./components/ArticlesSection";
 
 // --- Animation variants ---

@@ -15,8 +15,8 @@ import { FileText, RefreshCw } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 import { fetchAuditLogs } from "@/services/adminService";
-import SA_AuditFilter from "../components/SA_AuditFilter";
-import SA_AuditTable from "../components/SA_AuditTable";
+import SA_AuditFilter from "@/pages/Dashboards/SuperAdmin/components/SA_AuditFilter";
+import SA_AuditTable from "@/pages/Dashboards/SuperAdmin/components/SA_AuditTable";
 
 export default function SA_AuditPage() {
   const [logs, setLogs] = useState([]);

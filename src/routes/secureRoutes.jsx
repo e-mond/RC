@@ -1,17 +1,18 @@
 // src/routes/secureRoutes.jsx
 import React, { lazy, Suspense } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
-import RoleProtectedRoute from "@/routes/RoleProtectedRoute";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useAuthStore } from "@/stores/authStore";
+import { Routes, Route, Navigate } from "react-router-dom";
+
+// Protection components
+import RoleProtectedRoute from "@/routes/RoleProtectedRoute";
+import FeatureProtectedRoute from "@/routes/FeatureProtectedRoute";
+
+// Layout & shared pages (not lazy-loaded)
+import DashboardLayout from "@/components/layout/DashboardLayout";
 import ProfilePage from "@/pages/Profile/ProfilePage";
 import NotificationsCenter from "@/pages/Notifications/NotificationsCenter";
 
-// ---------------------------
-// Lazy Imports
-// ---------------------------
-
-// Tenant
+// Lazy loaded dashboard pages
 const TenantDashboard = lazy(() => import("@/pages/Dashboards/Tenant/TenantDashboard"));
 const TenantRentals = lazy(() => import("@/pages/Dashboards/Tenant/TenantRentals"));
 const TenantPayments = lazy(() => import("@/pages/Dashboards/Tenant/TenantPayments"));
@@ -21,50 +22,59 @@ const TenantRentalHistory = lazy(() => import("@/pages/Dashboards/Tenant/TenantR
 const TenantProperties = lazy(() => import("@/pages/Dashboards/Tenant/TenantProperties"));
 const PropertyDetail = lazy(() => import("@/pages/PropertyDetail"));
 
-// Landlord
 const LandlordDashboard = lazy(() => import("@/pages/Dashboards/Landlord/LandlordDashboard"));
 const PropertiesPage = lazy(() => import("@/pages/Dashboards/Landlord/Properties/PropertiesPage"));
 const PropertyDetailsPage = lazy(() => import("@/pages/Dashboards/Landlord/Properties/PropertyDetailsPage"));
 const PropertyForm = lazy(() => import("@/pages/Dashboards/Landlord/Properties/PropertyForm"));
 const LandingBookingPage = lazy(() => import("@/pages/Dashboards/Landlord/Bookings/LandingBookingPage"));
 const AnalyticsDashboard = lazy(() => import("@/pages/Dashboards/Landlord/Analytics/AnalyticsDashboard"));
+const LandlordWallet = lazy(() => import("@/pages/Dashboards/Landlord/LandlordWallet"));
 
-// Artisan
 const ArtisanDashboard = lazy(() => import("@/pages/Dashboards/Artisan/ArtisanDashboard"));
 const ArtisanTasks = lazy(() => import("@/pages/Dashboards/Artisan/ArtisanTasks"));
 const ArtisanEarnings = lazy(() => import("@/pages/Dashboards/Artisan/ArtisanEarnings"));
 const TaskDetailsPage = lazy(() => import("@/pages/Dashboards/Artisan/Tasks/TaskDetailsPage"));
 const ArtisanSchedule = lazy(() => import("@/pages/Dashboards/Artisan/Schedule/ArtisanSchedule"));
-const ArtisanMessages = lazy(() => import("@/pages/Dashboards/Artisan/Messages/ArtisanMessages"));
 
-// Admin
+const MessagesInbox = lazy(() => import("@/pages/Messages/MessagesInbox"));
+const ManageAds = lazy(() => import("@/pages/Ads/ManageAds"));
+const PublicProfilePage = lazy(() => import("@/pages/Users/PublicProfilePage"));
+
 const AdminDashboard = lazy(() => import("@/pages/Dashboards/Admin/AdminDashboard"));
 const AdminApprovals = lazy(() => import("@/pages/Dashboards/Admin/components/AdminApprovals"));
 const AdminReports = lazy(() => import("@/pages/Dashboards/Admin/components/AD_ReportsPanel"));
+const AdminAssignedRoles = lazy(() => import("@/pages/Dashboards/Admin/AdminAssignedRoles"));
+const SA_MarketingCampaigns = lazy(() => import("@/pages/Dashboards/SuperAdmin/marketing/SA_MarketingCampaigns"));
 
-// Super Admin
 const SuperAdminDashboard = lazy(() => import("@/pages/Dashboards/SuperAdmin/SuperAdminDashboard"));
 const SA_UsersPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/users/SA_UsersPage"));
 const SA_RolesPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/roles/SA_RolesPage"));
 const SA_AuditPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/audit/SA_AuditPage"));
+const SA_AnnouncementsPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/announcements/SA_AnnouncementsPage"));
+const SA_PremiumPricing = lazy(() => import("@/pages/Dashboards/SuperAdmin/pricing/SA_PremiumPricing"));
 
 // ---------------------------
-// Suspense Loader
+// Components
 // ---------------------------
 const PageLoader = ({ children }) => (
-  <Suspense fallback={<div className="p-6">Loading...</div>}>
+  <Suspense
+    fallback={
+      <div className="flex items-center justify-center min-h-[60vh] text-gray-500 dark:text-gray-400">
+        Loading...
+      </div>
+    }
+  >
     {children}
   </Suspense>
 );
 
 // ---------------------------
-// Route Config Definitions
+// Route configuration
 // ---------------------------
-
 const allRoles = ["tenant", "landlord", "artisan", "admin", "super-admin"];
 
 const dashboardRoutes = [
-  // ---------------- Tenant ----------------
+  // Tenant section ───────────────────────────────────────────────
   {
     path: "tenant",
     role: "tenant",
@@ -79,10 +89,11 @@ const dashboardRoutes = [
       { path: "maintenance", element: <TenantMaintenance /> },
       { path: "wishlist", element: <TenantWishlist /> },
       { path: "history", element: <TenantRentalHistory /> },
+      { path: "messages", element: <MessagesInbox /> },
     ],
   },
 
-  // ---------------- Landlord ----------------
+  // Landlord section ─────────────────────────────────────────────
   {
     path: "landlord",
     role: "landlord",
@@ -90,22 +101,40 @@ const dashboardRoutes = [
     children: [
       { index: true, element: <LandlordDashboard /> },
       { path: "overview", element: <LandlordDashboard /> },
-
-      // Property CRUD
       { path: "properties", element: <PropertiesPage /> },
       { path: "properties/new", element: <PropertyForm /> },
       { path: "properties/:id", element: <PropertyDetailsPage /> },
       { path: "properties/:id/edit", element: <PropertyForm /> },
-
-      // Bookings
       { path: "bookings", element: <LandingBookingPage /> },
 
-      // Analytics (Premium)
-      { path: "analytics", element: <AnalyticsDashboard /> },
+      // ── Premium / feature-gated routes ──────────────────────────
+      {
+        path: "analytics", element: ( <FeatureProtectedRoute feature="landlord_advanced_analytics">
+            <AnalyticsDashboard />
+          </FeatureProtectedRoute>
+        ),
+      },
+      {
+        path: "wallet", element: (  <FeatureProtectedRoute feature="digital_rent_collection">
+            <LandlordWallet />
+          </FeatureProtectedRoute>
+        ),
+      },
+      {
+        path: "ads",
+        element: (
+          <FeatureProtectedRoute feature="advertisement_manager">
+            <ManageAds />
+          </FeatureProtectedRoute>
+        ),
+      },
+
+      // Always available
+      { path: "messages", element: <MessagesInbox /> },
     ],
   },
 
-  // ---------------- Artisan ----------------
+  // Artisan section ──────────────────────────────────────────────
   {
     path: "artisan",
     role: "artisan",
@@ -117,11 +146,23 @@ const dashboardRoutes = [
       { path: "tasks/:id", element: <TaskDetailsPage /> },
       { path: "earnings", element: <ArtisanEarnings /> },
       { path: "schedule", element: <ArtisanSchedule /> },
-      { path: "messages", element: <ArtisanMessages /> },
+
+      // Premium / feature-gated
+      {
+        path: "ads",
+        element: (
+          <FeatureProtectedRoute feature="advertisement_manager">
+            <ManageAds />
+          </FeatureProtectedRoute>
+        ),
+      },
+
+      // Always available
+      { path: "messages", element: <MessagesInbox /> },
     ],
   },
 
-  // ---------------- Super Admin ----------------
+  // Super Admin section ──────────────────────────────────────────
   {
     path: "super-admin",
     role: "super-admin",
@@ -132,10 +173,14 @@ const dashboardRoutes = [
       { path: "users", element: <SA_UsersPage /> },
       { path: "roles", element: <SA_RolesPage /> },
       { path: "audit", element: <SA_AuditPage /> },
+      { path: "announcements", element: <SA_AnnouncementsPage /> },
+      { path: "pricing", element: <SA_PremiumPricing /> },
+      { path: "marketing", element: <SA_MarketingCampaigns /> },
+      { path: "messages", element: <MessagesInbox /> },
     ],
   },
 
-  // ---------------- Admin ----------------
+  // Admin section (admin + super-admin) ─────────────────────────
   {
     path: "admin",
     role: ["admin", "super-admin"],
@@ -143,16 +188,17 @@ const dashboardRoutes = [
     children: [
       { index: true, element: <Navigate to="overview" replace /> },
       { path: "overview", element: <AdminDashboard /> },
-      { path: "dashboard", element: <Navigate to="overview" replace /> }, // Redirect for backward compatibility
+      { path: "dashboard", element: <Navigate to="overview" replace /> },
       { path: "approvals", element: <AdminApprovals /> },
+      { path: "assigned-roles", element: <AdminAssignedRoles /> },
+      { path: "marketing", element: <SA_MarketingCampaigns /> },
       { path: "reports", element: <AdminReports /> },
+      { path: "messages", element: <MessagesInbox /> },
     ],
   },
 ];
 
-// ---------------------------
-// Recursive Renderer
-// ---------------------------
+// Recursive route renderer
 const renderRoutes = (routes) =>
   routes.map(({ path, role, layout: Layout, children = [] }) => (
     <Route
@@ -160,13 +206,13 @@ const renderRoutes = (routes) =>
       path={path}
       element={
         <RoleProtectedRoute allowedRoles={role}>
-          {Layout ? <Layout /> : <></>}
+          {Layout ? <Layout /> : null}
         </RoleProtectedRoute>
       }
     >
       {children.map((child, index) => (
         <Route
-          key={child.path || index}
+          key={child.path || `idx-${index}`}
           index={child.index}
           path={child.path}
           element={<PageLoader>{child.element}</PageLoader>}
@@ -177,23 +223,26 @@ const renderRoutes = (routes) =>
     </Route>
   ));
 
-// ---------------------------
-// Secure Route Wrapper
-// ---------------------------
+// ────────────────────────────────────────────────────────────────
+// Main exported component
+// ────────────────────────────────────────────────────────────────
 export default function SecureRoutes() {
   const loading = useAuthStore((state) => state.loading);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin w-10 h-10 border-4 border-[#0b6e4f] border-t-transparent rounded-full" />
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
+        <div className="animate-spin w-14 h-14 border-4 border-emerald-600 border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
     <Routes>
+      {/* Dashboard sections */}
       {renderRoutes(dashboardRoutes)}
+
+      {/* Global pages - available to all authenticated users */}
       <Route
         path="profile"
         element={
@@ -204,6 +253,7 @@ export default function SecureRoutes() {
       >
         <Route index element={<PageLoader><ProfilePage /></PageLoader>} />
       </Route>
+
       <Route
         path="notifications"
         element={
@@ -215,7 +265,19 @@ export default function SecureRoutes() {
         <Route index element={<PageLoader><NotificationsCenter /></PageLoader>} />
       </Route>
 
-      {/* Fallback */}
+      {/* Public User Profiles */}
+      <Route
+        path="users/:id"
+        element={
+          <RoleProtectedRoute allowedRoles={allRoles}>
+            <DashboardLayout />
+          </RoleProtectedRoute>
+        }
+      >
+        <Route index element={<PageLoader><PublicProfilePage /></PageLoader>} />
+      </Route>
+
+      {/* Global fallback */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

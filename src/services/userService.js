@@ -20,6 +20,21 @@ export const getProfile = async () => {
 };
 
 /**
+ * Get public user profile by ID
+ * @param {string|number} userId - User ID
+ * @returns {Promise} User profile
+ */
+export const getUserProfile = async (userId) => {
+  try {
+    const { data } = await apiClient.get(`/users/${userId}/`);
+    return data;
+  } catch (err) {
+    console.error("Get user profile error:", err);
+    throw err.response?.data || { message: "Failed to fetch user profile" };
+  }
+};
+
+/**
  * Update user profile
  * @param {FormData|Object} profileData - Updated profile data (can include profile picture)
  * @returns {Promise} Updated profile

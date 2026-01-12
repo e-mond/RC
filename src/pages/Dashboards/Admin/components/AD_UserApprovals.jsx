@@ -3,6 +3,7 @@ import { fetchPendingUsers, approveUser, rejectUser } from "@/services/adminServ
 import Button from "@/components/ui/Button";
 import { CheckCircle, XCircle, Filter, Download, CheckSquare, Square, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "react-hot-toast";
 
 /**
  * Enhanced User Approvals with bulk actions and filtering
@@ -47,9 +48,12 @@ export default function AD_UserApprovals() {
         next.delete(id);
         return next;
       });
+      // Email notification is sent by backend
+      toast.success("User approved! Approval email has been sent to the user.");
     } catch (err) {
       console.error("approveUser:", err);
       setError(err.message || "Approve failed");
+      toast.error(err.message || "Failed to approve user");
     } finally {
       setActionLoading(null);
     }
@@ -67,9 +71,12 @@ export default function AD_UserApprovals() {
         next.delete(id);
         return next;
       });
+      // Email notification is sent by backend
+      toast.success("User rejected! Rejection email has been sent to the user.");
     } catch (err) {
       console.error("rejectUser:", err);
       setError(err.message || "Reject failed");
+      toast.error(err.message || "Failed to reject user");
     } finally {
       setActionLoading(null);
     }

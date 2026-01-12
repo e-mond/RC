@@ -1,6 +1,6 @@
-import Layout from "../components/Layout";
-import BlogCard from "../components/BlogCard";
-import { blogPosts } from "../data/posts";
+import Layout from "@/components/Layout";
+import BlogCard from "@/components/BlogCard";
+import { blogPosts } from "@/data/posts";
 
 export default function Blog() {
   return (

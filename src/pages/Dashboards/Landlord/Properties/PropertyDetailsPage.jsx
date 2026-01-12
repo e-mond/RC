@@ -2,8 +2,10 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { fetchProperty, deleteProperty } from "@/services/propertyService";
+import { useAuthStore } from "@/stores/authStore";
 import Button from "@/components/ui/Button";
 import ImageLightbox from "@/components/common/ImageLightbox";
+import PropertyApprovalBanner from "@/components/common/PropertyApprovalBanner";
 import { ArrowLeft, Edit, Trash2, MapPin, Bed, Bath, Square, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -139,7 +141,10 @@ export default function PropertyDetailsPage() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm p-6">
-        <h1 className="text-3xl font-bold text-[#0f1724] mb-2">{property.title}</h1>
+        {property.status && property.status !== "published" && property.status !== "active" && property.status !== "available" && (
+          <PropertyApprovalBanner status={property.status} isLandlord={true} />
+        )}
+        <h1 className="text-3xl font-bold text-[#0f1724] mb-2 mt-4">{property.title}</h1>
         <p className="text-gray-600 flex items-center gap-2">
           <MapPin size={16} />
           {property.address || "Address not specified"}
@@ -261,4 +266,3 @@ export default function PropertyDetailsPage() {
     </div>
   );
 }
-

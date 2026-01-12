@@ -1,3 +1,39 @@
+/**
+ * authStore.js - Authentication State Management
+ * 
+ * Zustand store with persistence for managing authentication state.
+ * 
+ * Features:
+ * - User authentication state (user, token, loading, error)
+ * - Session persistence via Zustand persist middleware
+ * - Automatic session restoration on app load
+ * - Role normalization (all roles stored in lowercase)
+ * - Role-based helper functions (isTenant, isLandlord, etc.)
+ * - Centralized logout with cleanup
+ * 
+ * State Structure:
+ * - user: Current authenticated user object
+ * - token: JWT authentication token
+ * - loading: Initial session hydration state
+ * - authLoading: Login/signup operation state
+ * - error: Authentication error message
+ * 
+ * Persistence:
+ * - Uses Zustand persist middleware
+ * - Stores state in localStorage
+ * - Automatically rehydrates on app load
+ * 
+ * Role Normalization:
+ * - All roles normalized to lowercase: "tenant", "landlord", "artisan", "admin", "super-admin"
+ * - Ensures consistent role comparison throughout the app
+ * 
+ * @module authStore
+ * @requires zustand
+ * @requires zustand/middleware
+ * @requires @/services/authService
+ * @requires @/utils/session
+ */
+
 // src/stores/authStore.js
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
