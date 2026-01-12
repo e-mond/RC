@@ -13,7 +13,7 @@ import {
 } from "recharts";
 
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card"; // ← Fixed: Capital 'C'
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { Link } from "react-router-dom";
 import UpgradeBanner from "@/components/common/UpgradeBanner";
 
