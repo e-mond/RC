@@ -1,28 +1,4 @@
-/**
- * LandlordDashboard.jsx - Landlord Dashboard Page
- * 
- * Main dashboard for landlords showing:
- * - Key Performance Indicators (KPIs): Total properties, active bookings, monthly revenue, occupancy rate
- * - Revenue chart: Monthly revenue trends
- * - Booking trends: Booking requests over time
- * - Recent activity: Latest property and booking updates
- * 
- * Features:
- * - Responsive design (mobile, tablet, desktop)
- * - Dark mode support
- * - Loading and error states
- * - Quick navigation to properties and bookings
- * 
- * API Dependencies:
- * - getLandlordDashboardStats(): Fetches KPI data
- * - getLandlordRecentActivity(): Fetches recent activity feed
- * 
- * @module LandlordDashboard
- * @requires react
- * @requires recharts
- * @requires @/services/landlordService
- */
-
+// src/pages/Dashboards/Landlord/LandlordDashboard.jsx
 import React, { useEffect, useState } from "react";
 import {
   BarChart,
@@ -36,7 +12,7 @@ import {
   CartesianGrid,
 } from "recharts";
 
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card"; // ← Fixed: Capital 'C'
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import UpgradeBanner from "@/components/common/UpgradeBanner";
@@ -44,9 +20,19 @@ import UpgradeBanner from "@/components/common/UpgradeBanner";
 import { getLandlordDashboardStats, getLandlordRecentActivity } from "@/services/landlordService";
 
 /**
- * LandlordDashboard Component
+ * LandlordDashboard – Main dashboard view for landlords
  * 
- * @returns {JSX.Element} Dashboard with KPIs, charts, and activity feed
+ * Displays:
+ * - Key metrics (KPIs)
+ * - Revenue & occupancy charts
+ * - Recent activity feed
+ * - Quick action buttons
+ * 
+ * Features:
+ * - Parallel data fetching
+ * - Loading & error handling
+ * - Dark mode support
+ * - Responsive layout
  */
 export default function LandlordDashboard() {
   const [stats, setStats] = useState(null);
@@ -55,20 +41,13 @@ export default function LandlordDashboard() {
   const [error, setError] = useState("");
 
   /**
-   * Load Dashboard Data
-   * 
-   * Fetches dashboard statistics and recent activity in parallel.
-   * Handles loading states and errors gracefully.
-   * 
-   * @async
-   * @function loadDashboard
+   * Fetches dashboard statistics and recent activity in parallel
    */
   const loadDashboard = async () => {
     setLoading(true);
     setError("");
 
     try {
-      // Fetch stats and activity in parallel for better performance
       const [statsData, activityData] = await Promise.all([
         getLandlordDashboardStats(),
         getLandlordRecentActivity(),
@@ -84,15 +63,11 @@ export default function LandlordDashboard() {
     }
   };
 
-  /**
-   * Effect: Load dashboard data on mount
-   * Runs once when component mounts to fetch initial data
-   */
   useEffect(() => {
     loadDashboard();
   }, []);
 
-  // Loading state
+  // ─── Loading State ────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
@@ -101,7 +76,7 @@ export default function LandlordDashboard() {
     );
   }
 
-  // Error state
+  // ─── Error State ──────────────────────────────────────────────────
   if (error || !stats) {
     return (
       <div className="p-6 max-w-7xl mx-auto">
@@ -128,7 +103,7 @@ export default function LandlordDashboard() {
         dismissible={true}
       />
 
-      {/* KPI Cards */}
+      {/* Overview KPIs */}
       <section>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
           Overview
@@ -144,8 +119,9 @@ export default function LandlordDashboard() {
         </div>
       </section>
 
-      {/* Charts */}
+      {/* Charts Section */}
       <section className="grid lg:grid-cols-2 gap-6">
+        {/* Revenue Chart */}
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle>Revenue — Last 6 Months</CardTitle>
@@ -173,6 +149,7 @@ export default function LandlordDashboard() {
           </CardContent>
         </Card>
 
+        {/* Occupancy Trend Chart */}
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle>Occupancy Trend</CardTitle>
@@ -278,7 +255,7 @@ export default function LandlordDashboard() {
 }
 
 // ────────────────────────────────────────────────
-// KPI Card Component
+// KPI Card Reusable Component
 // ────────────────────────────────────────────────
 function KPI({ title, value }) {
   return (
