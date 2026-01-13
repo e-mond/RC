@@ -20,6 +20,7 @@ const TenantMaintenance = lazy(() => import("@/pages/Dashboards/Tenant/TenantMai
 const TenantWishlist = lazy(() => import("@/pages/Dashboards/Tenant/TenantWishlist"));
 const TenantRentalHistory = lazy(() => import("@/pages/Dashboards/Tenant/TenantRentalHistory"));
 const TenantProperties = lazy(() => import("@/pages/Dashboards/Tenant/TenantProperties"));
+const TenantLeasesPage = lazy(() => import("@/pages/Dashboards/Tenant/Leases/TenantLeasesPage"));
 const PropertyDetail = lazy(() => import("@/pages/PropertyDetail"));
 
 const LandlordDashboard = lazy(() => import("@/pages/Dashboards/Landlord/LandlordDashboard"));
@@ -29,6 +30,7 @@ const PropertyForm = lazy(() => import("@/pages/Dashboards/Landlord/Properties/P
 const LandingBookingPage = lazy(() => import("@/pages/Dashboards/Landlord/Bookings/LandingBookingPage"));
 const AnalyticsDashboard = lazy(() => import("@/pages/Dashboards/Landlord/Analytics/AnalyticsDashboard"));
 const LandlordWallet = lazy(() => import("@/pages/Dashboards/Landlord/LandlordWallet"));
+const LandlordLeasesPage = lazy(() => import("@/pages/Dashboards/Landlord/Leases/LandlordLeasesPage"));
 
 const ArtisanDashboard = lazy(() => import("@/pages/Dashboards/Artisan/ArtisanDashboard"));
 const ArtisanTasks = lazy(() => import("@/pages/Dashboards/Artisan/ArtisanTasks"));
@@ -39,11 +41,15 @@ const ArtisanSchedule = lazy(() => import("@/pages/Dashboards/Artisan/Schedule/A
 const MessagesInbox = lazy(() => import("@/pages/Messages/MessagesInbox"));
 const ManageAds = lazy(() => import("@/pages/Ads/ManageAds"));
 const PublicProfilePage = lazy(() => import("@/pages/Users/PublicProfilePage"));
+const DocumentationPage = lazy(() => import("@/pages/Documentation/DocumentationPage"));
+const LeaseAgreementsPage = lazy(() => import("@/pages/Documentation/LeaseAgreementsPage"));
 
 const AdminDashboard = lazy(() => import("@/pages/Dashboards/Admin/AdminDashboard"));
 const AdminApprovals = lazy(() => import("@/pages/Dashboards/Admin/components/AdminApprovals"));
+const UserApprovalDetailPage = lazy(() => import("@/pages/Dashboards/Admin/UserApprovalDetailPage"));
 const AdminReports = lazy(() => import("@/pages/Dashboards/Admin/components/AD_ReportsPanel"));
 const AdminAssignedRoles = lazy(() => import("@/pages/Dashboards/Admin/AdminAssignedRoles"));
+const AdminLeasesPage = lazy(() => import("@/pages/Dashboards/Admin/Leases/AdminLeasesPage"));
 const SA_MarketingCampaigns = lazy(() => import("@/pages/Dashboards/SuperAdmin/marketing/SA_MarketingCampaigns"));
 
 const SuperAdminDashboard = lazy(() => import("@/pages/Dashboards/SuperAdmin/SuperAdminDashboard"));
@@ -87,9 +93,10 @@ const dashboardRoutes = [
       { path: "rentals", element: <TenantRentals /> },
       { path: "payments", element: <TenantPayments /> },
       { path: "maintenance", element: <TenantMaintenance /> },
-      { path: "wishlist", element: <TenantWishlist /> },
-      { path: "history", element: <TenantRentalHistory /> },
-      { path: "messages", element: <MessagesInbox /> },
+          { path: "wishlist", element: <TenantWishlist /> },
+          { path: "history", element: <TenantRentalHistory /> },
+          { path: "leases", element: <TenantLeasesPage /> },
+          { path: "messages", element: <MessagesInbox /> },
     ],
   },
 
@@ -189,11 +196,13 @@ const dashboardRoutes = [
       { index: true, element: <Navigate to="overview" replace /> },
       { path: "overview", element: <AdminDashboard /> },
       { path: "dashboard", element: <Navigate to="overview" replace /> },
-      { path: "approvals", element: <AdminApprovals /> },
-      { path: "assigned-roles", element: <AdminAssignedRoles /> },
-      { path: "marketing", element: <SA_MarketingCampaigns /> },
-      { path: "reports", element: <AdminReports /> },
-      { path: "messages", element: <MessagesInbox /> },
+          { path: "approvals", element: <AdminApprovals /> },
+          { path: "approvals/user/:id", element: <PageLoader><UserApprovalDetailPage /></PageLoader> },
+          { path: "assigned-roles", element: <AdminAssignedRoles /> },
+          { path: "marketing", element: <SA_MarketingCampaigns /> },
+          { path: "reports", element: <AdminReports /> },
+          { path: "leases", element: <AdminLeasesPage /> },
+          { path: "messages", element: <MessagesInbox /> },
     ],
   },
 ];
@@ -275,6 +284,19 @@ export default function SecureRoutes() {
         }
       >
         <Route index element={<PageLoader><PublicProfilePage /></PageLoader>} />
+      </Route>
+
+      {/* Documentation Pages */}
+      <Route
+        path="documentation"
+        element={
+          <RoleProtectedRoute allowedRoles={allRoles}>
+            <DashboardLayout />
+          </RoleProtectedRoute>
+        }
+      >
+        <Route index element={<PageLoader><DocumentationPage /></PageLoader>} />
+        <Route path="lease-agreements" element={<PageLoader><LeaseAgreementsPage /></PageLoader>} />
       </Route>
 
       {/* Global fallback */}

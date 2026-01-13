@@ -32,12 +32,64 @@ const getErrorMessage = (err, defaultMsg) => {
  */
 export const registerTenant = async (formData) => {
   try {
+    // Debug: Log FormData contents (for development only)
+    if (import.meta.env.DEV) {
+      console.log("FormData being sent:");
+      const entries = [];
+      for (const [key, value] of formData.entries()) {
+        const displayValue = value instanceof File 
+          ? `File: ${value.name} (${value.size} bytes, type: ${value.type})` 
+          : value;
+        console.log(`  ${key}:`, displayValue);
+        entries.push({ key, value: displayValue });
+      }
+      console.log("FormData entries array:", entries);
+    }
+    
+    // IMPORTANT: Don't set Content-Type header manually for FormData
+    // Let axios/browser set it automatically with the correct boundary
     const { data } = await apiClient.post("/auth/signup/tenant/", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+      // Remove Content-Type header - let axios handle it for FormData
       timeout: 45000, // 45s timeout for file uploads
     });
     return data;
   } catch (err) {
+    // Enhanced error logging
+    console.error("Tenant registration error:", err);
+    if (err.response?.data) {
+      console.error("Backend error response:", err.response.data);
+      // Try to extract detailed error messages
+      const errorData = err.response.data;
+      
+      // Handle Django REST Framework validation errors
+      if (errorData.details) {
+        const errorMessages = Object.entries(errorData.details)
+          .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(", ") : messages}`)
+          .join("; ");
+        throw new Error(errorMessages || errorData.message || "Registration failed");
+      }
+      
+      // Handle direct field errors (Django serializer format)
+      if (typeof errorData === 'object' && !errorData.message && !errorData.error) {
+        const fieldErrors = Object.entries(errorData)
+          .map(([field, messages]) => {
+            const msg = Array.isArray(messages) ? messages.join(", ") : messages;
+            return `${field}: ${msg}`;
+          })
+          .join("; ");
+        if (fieldErrors) {
+          throw new Error(fieldErrors);
+        }
+      }
+      
+      if (errorData.message) {
+        throw new Error(errorData.message);
+      }
+      
+      if (errorData.error) {
+        throw new Error(errorData.error);
+      }
+    }
     throw new Error(getErrorMessage(err, "Tenant registration failed"));
   }
 };

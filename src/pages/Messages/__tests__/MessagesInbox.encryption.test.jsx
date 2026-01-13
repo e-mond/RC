@@ -110,7 +110,7 @@ describe("MessagesInbox encryption behavior", () => {
 
     // Wait for conversation header to appear (indicates conversation is selected)
     await waitFor(() => {
-      const header = screen.getByText("Landlord One");
+      const header = screen.getByRole("heading", { name: "Landlord One" });
       expect(header).toBeInTheDocument();
     }, { timeout: 3000 });
 

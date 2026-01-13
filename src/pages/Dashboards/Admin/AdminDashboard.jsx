@@ -14,6 +14,7 @@ import MetricGrid from "@/modules/dashboard/MetricGrid";
 import ActionGrid from "@/modules/dashboard/ActionGrid";
 import SectionCard from "@/modules/dashboard/SectionCard";
 import MockModeCard from "@/components/admin/MockModeCard";
+import { isMockMode } from "@/mocks/mockManager";
 
 /**
  * AdminDashboard - Enhanced with stats and quick actions
@@ -133,7 +134,8 @@ export default function AdminDashboard() {
 
       <MetricGrid items={metricItems} />
       <ActionGrid items={actions} />
-      {(user?.role === "admin" || user?.role === "super-admin") && <MockModeCard />}
+      {/* Mock Mode Card - Only show in mock mode */}
+      {isMockMode() && (user?.role === "admin" || user?.role === "super-admin") && <MockModeCard />}
 
       <div className="space-y-6">
         {permissions.canViewInsights && (

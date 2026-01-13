@@ -3,118 +3,142 @@ import { forgotPassword } from "@/services/authService";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { EmailStatusBanner } from "@/components/email";
+import { Mail, ArrowLeft, Loader2 } from "lucide-react"; // ← Add lucide-react icons
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
+  const [status, setStatus] = useState("idle"); // 'idle' | 'loading' | 'success' | 'error'
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
-  const [emailStatus, setEmailStatus] = useState("pending"); // 'pending' | 'sent' | 'failed'
   const navigate = useNavigate();
 
-  // === Handle form submission ===
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setStatus("loading");
     setMessage("");
 
     try {
-      const res = await forgotPassword(email);
-      setMessage(res.message || "If your email exists, a reset link has been sent.");
-      setEmailSent(true);
-      setEmailStatus("sent");
+      const res = await forgotPassword(email.trim());
+      setMessage(res.message || "Reset link sent! Check your email (including spam).");
+      setStatus("success");
     } catch (err) {
-      setMessage(err.message || "Error sending reset link.");
-      setEmailStatus("failed");
-    } finally {
-      setLoading(false);
+      setMessage(err.message || "Something went wrong. Please try again.");
+      setStatus("error");
     }
   };
 
+  const isLoading = status === "loading";
+  const isSuccess = status === "success";
+  const isError = status === "error";
+
   return (
-    // Full page container with a soft gradient background
-    <div className="min-h-screen flex items-center justify-center bg-white p-6">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-6">
       <motion.div
-        className="bg-white p-8 rounded-2xl shadow-md border border-gray-100 w-full max-w-md text-center relative overflow-hidden"
-        initial={{ opacity: 0, y: 30 }}
+        className="bg-white p-8 md:p-10 rounded-2xl shadow-xl border border-gray-100 w-full max-w-md relative overflow-hidden"
+        initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
+        transition={{ duration: 0.7, ease: "easeOut" }}
       >
-        {/*  Illustration  */}
-        <div className="flex justify-center mb-4">
-          <img
-            src="https://cdn.dribbble.com/users/1187836/screenshots/16128537/media/233df33218704d18b4b6f4c99e94972a.png?resize=400x300&vertical=center"
-            alt="Reset password illustration"
-            className="w-40 h-40 object-contain rounded-lg"
-          />
+        {/* Decorative top accent */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#0b6e4f] to-[#0d8a63]" />
+
+        {/* Illustration / Icon */}
+        <div className="flex justify-center mb-6">
+          {isSuccess ? (
+            <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center">
+              <Mail className="w-12 h-12 text-green-600" />
+            </div>
+          ) : (
+            <img
+              src="https://cdn.dribbble.com/users/1187836/screenshots/16128537/media/233df33218704d18b4b6f4c99e94972a.png?resize=400x300"
+              alt="Forgot password illustration"
+              className="w-40 h-40 object-contain rounded-xl shadow-sm"
+              onError={(e) => {
+                e.target.src = "https://via.placeholder.com/160?text=Reset"; // fallback
+              }}
+            />
+          )}
         </div>
 
-        {/* Heading and subtitle  */}
-        <h2 className="text-2xl font-semibold text-[#0f1724] mb-2">
+        {/* Title & Subtitle */}
+        <h2 className="text-3xl font-bold text-gray-800 text-center mb-3">
           Forgot Password?
         </h2>
-        <p className="text-gray-600 mb-6 text-sm">
-          No worries — just enter your registered email, and we’ll send you a link to reset your password.
+        <p className="text-gray-600 text-center mb-8 text-base leading-relaxed">
+          No worries! Enter your registered email and we'll send you a password reset link.
         </p>
 
-        {/*  Forgot Password Form  */}
-        <form onSubmit={handleSubmit} className="space-y-4 text-left">
-          <input
-            type="email"
-            placeholder="Enter your registered email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
-            required
-          />
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700 mb-1.5"
+            >
+              Email address
+            </label>
+            <input
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all ${
+                isError
+                  ? "border-red-500 focus:ring-red-200"
+                  : "border-gray-300 focus:ring-[#0b6e4f]/30 focus:border-[#0b6e4f]"
+              }`}
+              required
+              disabled={isLoading || isSuccess}
+              aria-invalid={isError}
+              aria-describedby={isError ? "email-error" : undefined}
+            />
+          </div>
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full bg-[#0b6e4f] text-white py-2 rounded-lg hover:bg-[#095b40] transition disabled:opacity-70"
+            disabled={isLoading || isSuccess}
+            className={`w-full py-3.5 px-4 rounded-xl font-medium text-white transition-all flex items-center justify-center gap-2 shadow-md ${
+              isSuccess
+                ? "bg-green-600 hover:bg-green-700"
+                : isLoading
+                ? "bg-[#0b6e4f]/70 cursor-wait"
+                : "bg-[#0b6e4f] hover:bg-[#095b40]"
+            } disabled:opacity-70`}
           >
-            {loading ? "Sending..." : "Send Reset Link"}
+            {isLoading && <Loader2 className="w-5 h-5 animate-spin" />}
+            {isLoading
+              ? "Sending..."
+              : isSuccess
+              ? "Email Sent ✓"
+              : "Send Reset Link"}
           </button>
         </form>
 
-        {/* Email Status Banner */}
-        {emailSent && (
+        {/* Status Banner (only shows after attempt) */}
+        {(isSuccess || isError) && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-4"
+            className="mt-6"
           >
             <EmailStatusBanner
               type="password_reset"
-              status={emailStatus}
+              status={isSuccess ? "sent" : "failed"}
               message={message}
-              onResend={emailStatus === "failed" ? handleSubmit : undefined}
+              onResend={isError ? handleSubmit : undefined}
             />
           </motion.div>
         )}
 
-        {/* Display message feedback (fallback) */}
-        {message && !emailSent && (
-          <motion.p
-            className="text-center text-sm text-gray-600 mt-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+        {/* Back to Login */}
+        <div className="mt-8 text-center">
+          <button
+            onClick={() => navigate("/login")}
+            className="inline-flex items-center gap-2 text-[#0b6e4f] hover:text-[#095b40] font-medium transition-colors group"
           >
-            {message}
-          </motion.p>
-        )}
-
-        {/* Back to Login link */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-500">
-            Changed your mind?{" "}
-            <button
-              onClick={() => navigate("/login")}
-              className="text-[#0b6e4f] font-medium hover:underline"
-            >
-              Back to Login
-            </button>
-          </p>
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            Back to Login
+          </button>
         </div>
       </motion.div>
     </div>

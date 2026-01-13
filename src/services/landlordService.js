@@ -38,6 +38,7 @@
 
 // src/services/landlordService.js
 import apiClient from "./apiClient";
+import { isMockMode } from "@/mocks/mockManager";
 
 /**
  * Default fallback mocks (always available)
@@ -72,11 +73,11 @@ if (import.meta.env.DEV || String(import.meta.env.VITE_USE_MOCK).toLowerCase() =
 
 /**
  * Mock Mode Detection
- * Checks if mock mode is enabled via environment variable
+ * Checks if mock mode is enabled via environment variable or localStorage
  * 
  * @returns {boolean} True if mock mode is enabled
  */
-const isMockEnvEnabled = () => String(import.meta.env.VITE_USE_MOCK || "").toLowerCase() === "true";
+const isMockEnvEnabled = () => isMockMode();
 
 /**
  * Extract Error Message
@@ -119,11 +120,31 @@ export const fetchProperties = async (ownerId) => {
   }
 
   try {
-    const { data } = await apiClient.get(
-      `/properties/landlord/${encodeURIComponent(ownerId)}/`
-    );
-    return data;
+    // Use unified API endpoint configuration
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    const endpoint = API_ENDPOINTS.PROPERTIES.LANDLORD_PROPERTIES(ownerId);
+    
+    const { data } = await apiClient.get(endpoint);
+    
+    // Handle different response formats from backend
+    // Backend might return: { data: [...] }, { properties: [...] }, { results: [...] }, or direct array
+    if (Array.isArray(data)) {
+      return { data };
+    } else if (Array.isArray(data?.data)) {
+      return data;
+    } else if (Array.isArray(data?.properties)) {
+      return { data: data.properties };
+    } else if (Array.isArray(data?.results)) {
+      return { data: data.results };
+    } else {
+      // Return empty array if no properties found
+      return { data: [] };
+    }
   } catch (err) {
+    // Handle 404 gracefully - landlord might not have properties yet
+    if (err.response?.status === 404) {
+      return { data: [] };
+    }
     throw extractError(err, "Failed to fetch properties");
   }
 };

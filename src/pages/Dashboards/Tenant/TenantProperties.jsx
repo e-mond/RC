@@ -1,11 +1,14 @@
 // src/pages/Dashboards/Tenant/TenantProperties.jsx
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { fetchProperties } from "@/services/propertyService";
 import { addToFavorites, removeFromFavorites, isFavorited } from "@/services/tenantService";
-import { Heart, MapPin, Bed, Bath, Search, Filter, Loader2, ExternalLink } from "lucide-react";
+import { Heart, MapPin, Bed, Bath, Search, Filter, Loader2, ExternalLink, Map as MapIcon, Grid, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
+import EnhancedPropertyMapSearch from "@/components/property/EnhancedPropertyMapSearch";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 
 /**
  * TenantProperties - Browse all available properties
@@ -20,6 +23,7 @@ export default function TenantProperties() {
     const [error, setError] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
     const [favorites, setFavorites] = useState(new Set());
+    const [viewMode, setViewMode] = useState("grid"); // "grid" or "map"
 
     useEffect(() => {
         let mounted = true;
@@ -111,16 +115,42 @@ export default function TenantProperties() {
                 </div>
             </header>
 
-            {/* Search Bar */}
-            <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                    type="text"
-                    placeholder="Search by location, title, or description..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                />
+            {/* Search Bar and View Toggle */}
+            <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                    <input
+                        type="text"
+                        placeholder="Search by location, title, or description..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#0b6e4f] focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    />
+                </div>
+                <div className="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-1">
+                    <button
+                        onClick={() => setViewMode("grid")}
+                        className={`px-4 py-2 rounded-md transition-colors flex items-center gap-2 ${
+                            viewMode === "grid"
+                                ? "bg-[#0b6e4f] text-white"
+                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        }`}
+                    >
+                        <Grid size={18} />
+                        <span className="hidden sm:inline">Grid</span>
+                    </button>
+                    <button
+                        onClick={() => setViewMode("map")}
+                        className={`px-4 py-2 rounded-md transition-colors flex items-center gap-2 ${
+                            viewMode === "map"
+                                ? "bg-[#0b6e4f] text-white"
+                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        }`}
+                    >
+                        <MapIcon size={18} />
+                        <span className="hidden sm:inline">Map</span>
+                    </button>
+                </div>
             </div>
 
             {error && (
@@ -131,6 +161,14 @@ export default function TenantProperties() {
 
             {filteredProperties.length === 0 ? (
                 <EmptyState hasSearchTerm={!!searchTerm} />
+            ) : viewMode === "map" ? (
+                <EnhancedPropertyMapSearch
+                    properties={filteredProperties}
+                    onPropertySelect={(property) => {
+                        // Navigate to property detail
+                        navigate(`/tenant/properties/${property.id}`);
+                    }}
+                />
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <AnimatePresence>
@@ -231,13 +269,24 @@ function PropertyCard({ property, isFavorited, onToggleFavorite }) {
                         </span>
                         <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">/{property.period || "month"}</span>
                     </div>
-                    <Link
-                        to={`/tenant/properties/${property.id}`}
-                        className="px-4 py-2 bg-[#0b6e4f] text-white rounded-lg hover:bg-[#095c42] transition-colors flex items-center gap-2 text-sm font-medium"
-                    >
-                        View
-                        <ExternalLink size={14} />
-                    </Link>
+                    <div className="flex items-center gap-2">
+                        <Link
+                            to={`/tenant/properties/${property.id}`}
+                            className="px-4 py-2 bg-[#0b6e4f] text-white rounded-lg hover:bg-[#095c42] transition-colors flex items-center gap-2 text-sm font-medium"
+                        >
+                            View
+                            <ExternalLink size={14} />
+                        </Link>
+                        {isFavorited && (
+                            <button
+                                onClick={() => onToggleFavorite(property.id)}
+                                className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                                title="Remove from favorites"
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
         </motion.div>

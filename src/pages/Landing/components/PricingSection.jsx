@@ -1,22 +1,74 @@
+import { useEffect, useState } from "react";
 import { PrimaryButton, SecondaryButton } from "@/components/ui/Button";
-import { FaCheckCircle } from "react-icons/fa";
+import { CheckCircle, Loader2 } from "lucide-react";
+import { getPublicPricing } from "@/services/adminService";
 
 export default function PricingSection() {
+  const [pricing, setPricing] = useState({
+    monthly: 49.0,
+    yearly: 490.0,
+    currency: "GHS",
+    enabled: true,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadPricing = async () => {
+      try {
+        const data = await getPublicPricing();
+        if (mounted) {
+          setPricing(data);
+        }
+      } catch (err) {
+        console.error("Failed to load pricing:", err);
+        // Keep default pricing on error
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadPricing();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const formatPrice = (amount) => {
+    if (typeof amount !== "number") return "0";
+    return amount.toLocaleString("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
+  };
+
   const plans = [
     {
       name: "Freemium",
-      price: "GHS 0",
+      price: `${pricing.currency} 0`,
       period: "",
       features: [
         "Core tools: listing, search, messaging",
         "Digital rent payments",
         "Basic maintenance tracking",
       ],
-      button: <SecondaryButton label="Choose Free" />,
+      button: (
+        <SecondaryButton as="button" onClick={() => window.location.href = "/role-selection"}>
+          Choose Free
+        </SecondaryButton>
+      ),
     },
     {
       name: "Premium",
-      price: "GHS 49",
+      price: loading ? (
+        <Loader2 className="w-6 h-6 animate-spin text-gray-600 mx-auto" />
+      ) : (
+        `${pricing.currency} ${formatPrice(pricing.monthly)}`
+      ),
       period: "/mo",
       features: [
         "Advanced analytics & insights",
@@ -24,7 +76,11 @@ export default function PricingSection() {
         "Verified badges & priority support",
       ],
       highlight: true,
-      button: <PrimaryButton label="Go Premium" />,
+      button: (
+        <PrimaryButton as="button" onClick={() => window.location.href = "/role-selection"}>
+          Go Premium
+        </PrimaryButton>
+      ),
     },
     {
       name: "Business",
@@ -35,7 +91,11 @@ export default function PricingSection() {
         "API & integrations",
         "Dedicated success manager",
       ],
-      button: <SecondaryButton label="Contact Sales" />,
+      button: (
+        <SecondaryButton as="button" onClick={() => window.location.href = "/role-selection"}>
+          Contact Sales
+        </SecondaryButton>
+      ),
     },
   ];
 
@@ -46,7 +106,9 @@ export default function PricingSection() {
     >
       {/* Header */}
       <div className="max-w-3xl mx-auto mb-16">
-          <h4 className="text-sm font-semibold text-[#0b6e4f] mb-2 uppercase tracking-wide">PRICING</h4>
+        <h4 className="text-sm font-semibold text-[#0b6e4f] mb-2 uppercase tracking-wide">
+          PRICING
+        </h4>
         <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 mb-4">
           Start free. Upgrade for performance and visibility.
         </h2>
@@ -69,8 +131,14 @@ export default function PricingSection() {
             <h3 className="text-lg font-semibold text-gray-900 mb-3">
               {plan.name}
             </h3>
-            <p className="text-3xl font-bold text-gray-900 mb-1">
-              {plan.price}
+            <p className="text-3xl font-bold text-gray-900 mb-1 flex items-center justify-center gap-1">
+              {typeof plan.price === "string" ? (
+                plan.price
+              ) : (
+                <span className="flex items-center justify-center">
+                  {plan.price}
+                </span>
+              )}
               <span className="text-base font-medium text-gray-600">
                 {plan.period}
               </span>
@@ -79,7 +147,7 @@ export default function PricingSection() {
             <ul className="text-gray-700 text-sm space-y-2 mb-6 text-left mt-4">
               {plan.features.map((feature, fIdx) => (
                 <li key={fIdx} className="flex items-start gap-2">
-                  <FaCheckCircle className="text-[#0b6e4f] mt-0.5" />
+                  <CheckCircle size={16} className="text-[#0b6e4f] mt-0.5" />
                   <span>{feature}</span>
                 </li>
               ))}

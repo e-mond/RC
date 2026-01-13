@@ -11,7 +11,7 @@
  * - onSetupClick: function (callback when setup button clicked)
  */
 
-import { Wallet, CreditCard, Smartphone, AlertCircle, Loader2, Plus } from "lucide-react";
+import { Wallet, CreditCard, Smartphone, AlertCircle, Loader2, Plus, Shield } from "lucide-react";
 import Button from "@/components/ui/Button";
 
 export default function WalletDisplay({ wallet, showSetupButton = false, onSetupClick, onTopUpClick }) {
@@ -110,6 +110,14 @@ export default function WalletDisplay({ wallet, showSetupButton = false, onSetup
               )}
             </div>
           )}
+
+          {/* Payment Provider Info */}
+          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-2">
+              <Shield className="w-3 h-3" />
+              <span>Secured by Paystack</span>
+            </div>
+          </div>
 
           {/* Top Up Button */}
           {onTopUpClick && (

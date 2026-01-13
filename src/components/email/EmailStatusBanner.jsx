@@ -1,7 +1,7 @@
 /**
  * EmailStatusBanner Component
  * 
- * Displays email notification status and confirmation messages.
+ * Displays email notification status and confirmation messages with modern UI.
  * Used for password reset, account approval, payment confirmations, etc.
  * 
  * Props:
@@ -12,8 +12,17 @@
  * - className: string (additional classes)
  */
 
-import { Mail, CheckCircle, XCircle, Clock, AlertCircle, Send } from "lucide-react";
 import { useState } from "react";
+import { motion } from "framer-motion";
+import {
+  Mail,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  AlertCircle,
+  Send,
+  RefreshCw,
+} from "lucide-react";
 import Button from "@/components/ui/Button";
 import { useTranslation } from "@/hooks/useTranslation";
 
@@ -29,33 +38,51 @@ export default function EmailStatusBanner({
 
   const typeConfig = {
     password_reset: {
-      title: t("emailPasswordResetTitle", "Password Reset Email"),
-      defaultMessage: t("emailPasswordResetMessage", "A password reset link has been sent to your email address."),
+      title: t("emailPasswordResetTitle", "Password Reset Link"),
+      defaultMessage: t(
+        "emailPasswordResetMessage",
+        "We've sent a secure reset link to your email. Check inbox & spam folder."
+      ),
       icon: Mail,
     },
     account_approval: {
-      title: t("emailAccountApprovalTitle", "Account Approval"),
-      defaultMessage: t("emailAccountApprovalMessage", "Your account approval status has been updated. Check your email for details."),
-      icon: CheckCircle,
+      title: t("emailAccountApprovalTitle", "Account Approved"),
+      defaultMessage: t(
+        "emailAccountApprovalMessage",
+        "Your account has been approved. Check your email for next steps."
+      ),
+      icon: CheckCircle2,
     },
     account_suspension: {
-      title: t("emailAccountSuspensionTitle", "Account Suspension"),
-      defaultMessage: t("emailAccountSuspensionMessage", "Your account has been suspended. Check your email for details."),
+      title: t("emailAccountSuspensionTitle", "Account Suspended"),
+      defaultMessage: t(
+        "emailAccountSuspensionMessage",
+        "Your account has been suspended. Review the email for details."
+      ),
       icon: AlertCircle,
     },
     payment: {
-      title: t("emailPaymentTitle", "Payment Confirmation"),
-      defaultMessage: t("emailPaymentMessage", "Payment confirmation email has been sent to your email address."),
-      icon: CheckCircle,
+      title: t("emailPaymentTitle", "Payment Confirmed"),
+      defaultMessage: t(
+        "emailPaymentMessage",
+        "Payment successful! Confirmation sent to your email."
+      ),
+      icon: CheckCircle2,
     },
     booking: {
-      title: t("emailBookingTitle", "Booking Confirmation"),
-      defaultMessage: t("emailBookingMessage", "Booking confirmation email has been sent to your email address."),
-      icon: CheckCircle,
+      title: t("emailBookingTitle", "Booking Confirmed"),
+      defaultMessage: t(
+        "emailBookingMessage",
+        "Your booking is confirmed. Details sent to your email."
+      ),
+      icon: CheckCircle2,
     },
     message: {
-      title: t("emailMessageTitle", "Message Notification"),
-      defaultMessage: t("emailMessageMessage", "You have a new message. Check your email for details."),
+      title: t("emailMessageTitle", "New Message Received"),
+      defaultMessage: t(
+        "emailMessageMessage",
+        "You have a new message. Check your email for details."
+      ),
       icon: Mail,
     },
   };
@@ -63,81 +90,114 @@ export default function EmailStatusBanner({
   const statusConfig = {
     sent: {
       icon: Send,
-      color: "text-blue-600 dark:text-blue-400",
-      bg: "bg-blue-50 dark:bg-blue-900/20",
-      border: "border-blue-200 dark:border-blue-800",
-      label: t("emailStatusSent", "Email Sent"),
+      color: "text-teal-600 dark:text-teal-400",
+      bg: "bg-teal-50/90 dark:bg-teal-950/30",
+      border: "border-teal-200/70 dark:border-teal-800/40",
+      label: t("emailStatusSent", "Sent"),
     },
     delivered: {
-      icon: CheckCircle,
-      color: "text-green-600 dark:text-green-400",
-      bg: "bg-green-50 dark:bg-green-900/20",
-      border: "border-green-200 dark:border-green-800",
-      label: t("emailStatusDelivered", "Email Delivered"),
+      icon: CheckCircle2,
+      color: "text-emerald-600 dark:text-emerald-400",
+      bg: "bg-emerald-50/90 dark:bg-emerald-950/30",
+      border: "border-emerald-200/70 dark:border-emerald-800/40",
+      label: t("emailStatusDelivered", "Delivered"),
     },
     failed: {
       icon: XCircle,
-      color: "text-red-600 dark:text-red-400",
-      bg: "bg-red-50 dark:bg-red-900/20",
-      border: "border-red-200 dark:border-red-800",
-      label: t("emailStatusFailed", "Email Failed"),
+      color: "text-rose-600 dark:text-rose-400",
+      bg: "bg-rose-50/90 dark:bg-rose-950/30",
+      border: "border-rose-200/70 dark:border-rose-800/40",
+      label: t("emailStatusFailed", "Failed"),
     },
     pending: {
       icon: Clock,
       color: "text-amber-600 dark:text-amber-400",
-      bg: "bg-amber-50 dark:bg-amber-900/20",
-      border: "border-amber-200 dark:border-amber-800",
-      label: t("emailStatusPending", "Email Pending"),
+      bg: "bg-amber-50/90 dark:bg-amber-950/30",
+      border: "border-amber-200/70 dark:border-amber-800/40",
+      label: t("emailStatusPending", "Pending"),
     },
   };
 
   const typeInfo = typeConfig[type] || typeConfig.password_reset;
   const statusInfo = statusConfig[status] || statusConfig.sent;
-  const TypeIcon = typeInfo.icon;
-  const StatusIcon = statusInfo.icon;
 
   const handleResend = async () => {
-    if (!onResend) return;
+    if (!onResend || resending) return;
     setResending(true);
     try {
       await onResend();
     } catch (err) {
-      console.error("Failed to resend email:", err);
+      console.error("Resend failed:", err);
     } finally {
       setResending(false);
     }
   };
 
   return (
-    <div
-      className={`${statusInfo.bg} ${statusInfo.border} border rounded-lg p-4 flex items-start gap-3 ${className}`}
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className={`
+        ${statusInfo.bg}
+        ${statusInfo.border}
+        border rounded-2xl p-5 flex items-start gap-4
+        shadow-sm backdrop-blur-md transition-all
+        ${className}
+      `}
     >
-      <TypeIcon className={`w-5 h-5 ${statusInfo.color} mt-0.5 flex-shrink-0`} />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <h4 className="font-medium text-gray-900 dark:text-white">{typeInfo.title}</h4>
-          <StatusIcon className={`w-4 h-4 ${statusInfo.color}`} />
-          <span className={`text-xs font-medium ${statusInfo.color}`}>
-            {statusInfo.label}
-          </span>
+      {/* Icon Container */}
+      <div className={`p-3 rounded-xl ${statusInfo.bg.replace("50", "100").replace("950", "900")}`}>
+        <typeInfo.icon className={`w-6 h-6 ${statusInfo.color}`} />
+      </div>
+
+      {/* Content */}
+      <div className="flex-1">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-base md:text-lg">
+            {typeInfo.title}
+          </h4>
+
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/60 dark:bg-black/30">
+            <statusInfo.icon className={`w-4 h-4 ${statusInfo.color}`} />
+            <span className={`text-xs font-medium ${statusInfo.color}`}>
+              {statusInfo.label}
+            </span>
+          </div>
         </div>
-        <p className="text-sm text-gray-700 dark:text-gray-300">
+
+        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
           {message || typeInfo.defaultMessage}
         </p>
+
         {status === "failed" && onResend && (
-          <div className="mt-3">
+          <div className="mt-5">
             <Button
               onClick={handleResend}
               disabled={resending}
               variant="outline"
               size="sm"
+              className={`
+                gap-2 border-rose-200 hover:bg-rose-50 
+                dark:border-rose-800 dark:hover:bg-rose-950/50
+                text-rose-700 dark:text-rose-300
+              `}
             >
-              {resending ? t("emailResending", "Resending...") : t("emailResend", "Resend Email")}
+              {resending ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  {t("emailResending", "Resending...")}
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  {t("emailResend", "Resend Email")}
+                </>
+              )}
             </Button>
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
-

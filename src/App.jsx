@@ -36,6 +36,8 @@ import PublicProperties from "@/pages/Landing/PublicProperties";
 import PropertyDetail from "@/pages/PropertyDetail";
 import Blog from "@/pages/Blog";
 import BlogPost from "@/pages/BlogPost";
+import DocumentationPage from "@/pages/Documentation/DocumentationPage";
+import LeaseAgreementsPage from "@/pages/Documentation/LeaseAgreementsPage";
 
 // Auth Pages
 import Login from "@/pages/Auth/Login";
@@ -159,6 +161,8 @@ function AnimatedRoutes() {
             <Route path="/properties/:id" element={<PropertyDetail />} />
             <Route path="/learn-more" element={<LearnMore />} />
             <Route path="/role-selection" element={<RoleSelection />} />
+            <Route path="/documentation" element={<DocumentationPage />} />
+            <Route path="/documentation/lease-agreements" element={<LeaseAgreementsPage />} />
             {/* Blog - public */}
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogPost />} />

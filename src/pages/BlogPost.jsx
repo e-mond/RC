@@ -2,6 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { Calendar, Clock, Newspaper, Radio } from "lucide-react";
 import { blogPosts } from "@/data/posts";
 import Layout from "@/components/Layout";
+import { sanitizeBlogContentSync } from "@/utils/sanitize";
 
 const IconMap = { newspaper: Newspaper, radio: Radio };
 
@@ -47,10 +48,12 @@ export default function BlogPost() {
         </div>
 
         {/* Content */}
-        {/* Note: dangerouslySetInnerHTML is used for blog content. Backend should sanitize HTML before storing. */}
+        {/* Note: HTML is sanitized using DOMPurify before rendering to prevent XSS attacks. */}
         <div
           className="prose prose-lg max-w-none text-gray-700"
-          dangerouslySetInnerHTML={{ __html: post.content }}
+          dangerouslySetInnerHTML={{ 
+            __html: sanitizeBlogContentSync(post.content || '')
+          }}
         />
 
         {/* Share */}

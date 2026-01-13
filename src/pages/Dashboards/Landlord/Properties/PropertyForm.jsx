@@ -128,10 +128,12 @@ export default function PropertyForm() {
 
   // Sync map changes
   const handleLocationChange = useCallback(
-    ({ address, lat, lng } = {}) => {
+    ({ address, lat, lng, city, region } = {}) => {
       if (address !== undefined) setValue("address", address || "", { shouldDirty: true });
       if (lat !== undefined) setValue("lat", lat || "", { shouldDirty: true });
       if (lng !== undefined) setValue("lng", lng || "", { shouldDirty: true });
+      if (city !== undefined) setValue("city", city || "", { shouldDirty: true });
+      if (region !== undefined) setValue("region", region || "", { shouldDirty: true });
     },
     [setValue]
   );

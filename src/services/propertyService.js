@@ -34,6 +34,7 @@
 
 // src/services/propertyService.js
 import apiClient from "./apiClient";
+import { isMockMode } from "@/mocks/mockManager";
 
 /**
  * Default fallback mocks (always available)
@@ -97,9 +98,9 @@ if (import.meta.env.DEV || String(import.meta.env.VITE_USE_MOCK).toLowerCase() =
 
 /**
  * Mock Mode Detection
- * Checks if mock mode is enabled via environment variable
+ * Checks if mock mode is enabled via environment variable or localStorage
  */
-const USE_MOCK = String(import.meta.env.VITE_USE_MOCK).toLowerCase() === "true";
+const USE_MOCK = isMockMode();
 
 /**
  * Simulate Network Delay
@@ -157,7 +158,10 @@ export const fetchProperties = async (opts = {}) => {
   }
 
   try {
-    const { data } = await apiClient.get("/properties", { params: opts });
+    // Use unified API endpoint configuration
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    const { data } = await apiClient.get(API_ENDPOINTS.PROPERTIES.BASE, { params: opts });
+    
     // Normalize various possible backend shapes into a flat array
     // Handles: { properties: [] }, { results: [] }, { data: [] }, or direct array
     return (
@@ -195,7 +199,9 @@ export const fetchProperty = async (id) => {
   }
 
   try {
-    const { data } = await apiClient.get(`/properties/${encodeURIComponent(id)}`);
+    // Use unified API endpoint configuration
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    const { data } = await apiClient.get(API_ENDPOINTS.PROPERTIES.BY_ID(id));
     return data;
   } catch (err) {
     throw extractError(err, "Failed to fetch property");
@@ -234,7 +240,9 @@ export const createProperty = async (payload) => {
   }
 
   try {
-    const { data } = await apiClient.post("/properties/", payload);
+    // Use unified API endpoint configuration
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    const { data } = await apiClient.post(API_ENDPOINTS.PROPERTIES.BASE, payload);
     return data;
   } catch (err) {
     throw extractError(err, "Failed to create property");
@@ -279,7 +287,9 @@ export const updateProperty = async (id, payload) => {
   }
 
   try {
-    const { data } = await apiClient.put(`/properties/${encodeURIComponent(id)}/`, payload);
+    // Use unified API endpoint configuration
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    const { data } = await apiClient.put(API_ENDPOINTS.PROPERTIES.BY_ID(id), payload);
     return data;
   } catch (err) {
     throw extractError(err, "Failed to update property");
@@ -311,7 +321,9 @@ export const deleteProperty = async (id) => {
   }
 
   try {
-    const { data } = await apiClient.delete(`/properties/${encodeURIComponent(id)}/`);
+    // Use unified API endpoint configuration
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    const { data } = await apiClient.delete(API_ENDPOINTS.PROPERTIES.BY_ID(id));
     return data;
   } catch (err) {
     throw extractError(err, "Failed to delete property");
@@ -331,8 +343,9 @@ export const uploadImage = async (file) => {
   try {
     const fd = new FormData();
     fd.append("file", file);
-    // Backend: POST /api/properties/uploads/images/
-    const { data } = await apiClient.post("/properties/uploads/images/", fd, {
+    // Use unified API endpoint configuration
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    const { data } = await apiClient.post(API_ENDPOINTS.PROPERTIES.UPLOAD_IMAGE, fd, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return data;
@@ -418,7 +431,9 @@ export const getAmenities = async () => {
  */
 export const createViewingRequest = async (requestData) => {
   try {
-    const { data } = await apiClient.post(`/properties/${requestData.property}/viewing-request/`, {
+    // Use unified API endpoint configuration
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    const { data } = await apiClient.post(API_ENDPOINTS.PROPERTIES.CREATE_VIEWING_REQUEST(requestData.property), {
       preferred_date: requestData.preferred_date,
       alternative_date: requestData.alternative_date || null,
       message: requestData.message || "",

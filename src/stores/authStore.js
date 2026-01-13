@@ -75,16 +75,27 @@ export const useAuthStore = create(
 
           // Normalize role to lowercase
           const normalizedRole = profile.role?.toLowerCase().trim() || "tenant";
+          
+          // Ensure subscription defaults to "free" if not provided
+          const userData = {
+            ...profile,
+            role: normalizedRole,
+            subscription: profile?.subscription || "free", // Default to "free" plan
+          };
 
           set({
-            user: {
-              ...profile,
-              role: normalizedRole,
-            },
+            user: userData,
             token,
             loading: false,
             error: null,
           });
+          
+          // Sync subscription to feature store
+          const { useFeatureStore } = await import("@/stores/featureStore");
+          const subscription = userData.subscription?.toLowerCase() || "free";
+          if (subscription === "free" || subscription === "premium") {
+            useFeatureStore.getState().setPlan(subscription);
+          }
         } catch (err) {
           console.warn("Session invalid or expired:", err);
           get().logout(); // Centralized cleanup
@@ -101,26 +112,61 @@ export const useAuthStore = create(
         try {
           const data = await loginUser(credentials);
 
-          const token = data.token;
+          const token = data.token || data.access; // Backend returns 'access' token
+          const refreshToken = data.refresh;
+          
           // Normalize role to lowercase for consistency
-          const normalizedRole = data.user.role?.toLowerCase().trim() || "tenant";
+          const normalizedRole = data.user?.role?.toLowerCase().trim() || "tenant";
 
-          session.setToken(token);
+          // Store tokens
+          if (token) {
+            session.setToken(token);
+          }
+          if (refreshToken) {
+            session.setRefreshToken(refreshToken);
+          }
           session.setRole(normalizedRole);
+          if (data.user) {
+            session.setUser(data.user);
+          }
+
+          // Ensure subscription defaults to "free" if not provided
+          const userData = {
+            ...data.user,
+            role: normalizedRole,
+            subscription: data.user?.subscription || "free", // Default to "free" plan
+          };
 
           set({
-            user: { ...data.user, role: normalizedRole },
+            user: userData,
             token,
             authLoading: false,
             loading: false,
             error: null,
           });
+          
+          // Sync subscription to feature store
+          const { useFeatureStore } = await import("@/stores/featureStore");
+          const subscription = userData.subscription?.toLowerCase() || "free";
+          if (subscription === "free" || subscription === "premium") {
+            useFeatureStore.getState().setPlan(subscription);
+          }
+
+          // Debug logging
+          if (import.meta.env.DEV) {
+            console.log("Login successful:", {
+              hasToken: !!token,
+              tokenLength: token?.length,
+              role: normalizedRole,
+              userId: data.user?.id
+            });
+          }
 
           return { success: true, role: normalizedRole };
         } catch (err) {
           set({
             authLoading: false,
-            error: err?.response?.data?.message || "Login failed",
+            error: err?.response?.data?.message || err?.message || "Login failed",
           });
           return { success: false, error: get().error };
         }

@@ -109,11 +109,6 @@ export default function TrustSection() {
               to="/role-selection"
               className="px-5 py-2 text-sm bg-black text-white rounded-full hover:bg-gray-800 transition flex items-center gap-1"
             >
-            </Link>
-            <Link
-              to="/role-selection"
-              className="px-5 py-2 text-sm bg-black text-white rounded-full hover:bg-gray-800 transition flex items-center gap-1"
-            >
               Explore <ArrowRight size={16} />
             </Link>
           </motion.div>

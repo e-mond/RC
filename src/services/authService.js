@@ -90,10 +90,33 @@ export const loginUser = async (credentials) => {
 
   // ----- REAL API -----
   try {
-    // Backend expects trailing slash: /api/auth/login/
-    const { data } = await apiClient.post("/auth/login/", credentials);
+    // Use unified API endpoint configuration
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    const { data } = await apiClient.post(API_ENDPOINTS.AUTH.LOGIN, credentials);
+    
+    // Backend returns: { access, refresh, user } (Django JWT format)
+    // Extract tokens - backend uses 'access' not 'token'
+    const accessToken = data.access || data.token || data.access_token;
+    const refreshToken = data.refresh;
+    
+    // Store refresh token if provided
+    if (refreshToken) {
+      session.setRefreshToken(refreshToken);
+    }
+    
+    // Debug logging
+    if (import.meta.env.DEV) {
+      console.log("Login response:", {
+        hasAccess: !!data.access,
+        hasToken: !!data.token,
+        hasRefresh: !!refreshToken,
+        hasUser: !!data.user
+      });
+    }
+    
     return {
-      token: data.token || data.access_token,
+      token: accessToken, // Use 'access' token for Authorization header
+      refresh: refreshToken,
       user: data.user || data,
     };
   } catch (err) {
@@ -115,10 +138,36 @@ const signup = async (endpoint, formData) => {
   }
 };
 
-// Use trailing slashes to match Django routes exactly
-export const signupTenant = (formData) => signup("/auth/signup/tenant/", formData);
-export const signupLandlord = (formData) => signup("/auth/signup/landlord/", formData);
-export const signupArtisan = (formData) => signup("/auth/signup/artisan/", formData);
+/**
+ * Signup Functions
+ * 
+ * All signup functions use multipart/form-data for file uploads.
+ * Backend expects trailing slashes for Django compatibility.
+ */
+const getSignupEndpoint = async (role) => {
+  const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+  const endpoints = {
+    tenant: API_ENDPOINTS.AUTH.SIGNUP_TENANT,
+    landlord: API_ENDPOINTS.AUTH.SIGNUP_LANDLORD,
+    artisan: API_ENDPOINTS.AUTH.SIGNUP_ARTISAN,
+  };
+  return endpoints[role] || API_ENDPOINTS.AUTH.SIGNUP_TENANT;
+};
+
+export const signupTenant = async (formData) => {
+  const endpoint = await getSignupEndpoint("tenant");
+  return signup(endpoint, formData);
+};
+
+export const signupLandlord = async (formData) => {
+  const endpoint = await getSignupEndpoint("landlord");
+  return signup(endpoint, formData);
+};
+
+export const signupArtisan = async (formData) => {
+  const endpoint = await getSignupEndpoint("artisan");
+  return signup(endpoint, formData);
+};
 
 /* ------------------------------------------------------------
    PROFILE

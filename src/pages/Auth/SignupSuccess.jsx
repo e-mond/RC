@@ -71,11 +71,11 @@ export default function SignupSuccess() {
   const canLogin = emailVerified && accountApproved;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white dark:bg-gray-800 rounded-xl shadow-lg max-w-2xl w-full p-8"
+        className="bg-white rounded-xl shadow-lg max-w-2xl w-full p-8"
       >
         {/* Header */}
         <div className="text-center mb-8">
@@ -83,14 +83,14 @@ export default function SignupSuccess() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: "spring" }}
-            className="w-20 h-20 mx-auto mb-4 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center"
+            className="w-20 h-20 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center"
           >
-            <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-400" />
+            <CheckCircle className="w-10 h-10 text-green-600" />
           </motion.div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Account Created Successfully!
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-gray-600">
             We've sent a verification email to <strong>{email}</strong>
           </p>
         </div>
@@ -115,21 +115,21 @@ export default function SignupSuccess() {
           <div
             className={`p-4 rounded-lg border-2 ${
               emailVerified
-                ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20"
-                : "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20"
+                ? "border-green-200 bg-green-50"
+                : "border-amber-200 bg-amber-50"
             }`}
           >
             <div className="flex items-start gap-3">
               {emailVerified ? (
-                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
+                <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
               ) : (
-                <Mail className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                <Mail className="w-5 h-5 text-amber-600 mt-0.5" />
               )}
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                <h3 className="font-semibold text-gray-900 mb-1">
                   Email Verification
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-gray-600">
                   {emailVerified
                     ? "Your email has been verified. You can now log in."
                     : "Please check your inbox and click the verification link to activate your account."}
@@ -143,21 +143,21 @@ export default function SignupSuccess() {
             <div
               className={`p-4 rounded-lg border-2 ${
                 accountApproved
-                  ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20"
-                  : "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20"
+                  ? "border-green-200 bg-green-50"
+                  : "border-blue-200 bg-blue-50"
               }`}
             >
               <div className="flex items-start gap-3">
                 {accountApproved ? (
-                  <Shield className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
+                  <Shield className="w-5 h-5 text-green-600 mt-0.5" />
                 ) : (
-                  <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                  <Clock className="w-5 h-5 text-blue-600 mt-0.5" />
                 )}
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                  <h3 className="font-semibold text-gray-900 mb-1">
                     Account Approval
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-gray-600">
                     {accountApproved
                       ? "Your account has been approved. You can now create listings."
                       : `Your account is pending admin approval. You'll receive an email once it's approved. This usually takes 24-48 hours.`}
@@ -169,9 +169,9 @@ export default function SignupSuccess() {
         </div>
 
         {/* Next Steps */}
-        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6 mb-6">
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Next Steps:</h3>
-          <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+        <div className="bg-gray-50 rounded-lg p-6 mb-6">
+          <h3 className="font-semibold text-gray-900 mb-3">Next Steps:</h3>
+          <ul className="space-y-2 text-sm text-gray-600">
             <li className="flex items-start gap-2">
               <span className="text-[#0b6e4f] font-bold">1.</span>
               <span>Check your email inbox (and spam folder) for the verification link</span>
@@ -219,7 +219,7 @@ export default function SignupSuccess() {
         </div>
 
         {/* Help Text */}
-        <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
+        <p className="text-center text-sm text-gray-500 mt-6">
           Didn't receive the email?{" "}
           <button
             onClick={handleResendEmail}

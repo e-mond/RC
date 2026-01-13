@@ -81,19 +81,43 @@ export default function ArtisanForm() {
       const finalProfession =
         form.profession === "other" ? form.otherProfession : form.profession;
 
+      // Map frontend field names to backend expected field names
+      // Backend expects camelCase based on API reference
       const formData = new FormData();
-      formData.append("fullName", form.fullName);
-      formData.append("email", form.email);
-      formData.append("phone", form.phone);
+      
+      // Required fields - backend expects camelCase
+      formData.append("email", form.email.trim());
       formData.append("password", form.password);
-      formData.append("confirmPassword", form.confirmPassword);
-      formData.append("profession", finalProfession);
-      formData.append("experience", form.experience);
-      formData.append("region", form.region);
-      if (form.idUpload) {
-        formData.append("idUpload", form.idUpload);
+      formData.append("fullName", form.fullName.trim()); // Backend expects camelCase: fullName
+      formData.append("phone", form.phone.trim());
+      formData.append("confirmPassword", form.confirmPassword); // Backend expects confirmPassword
+      formData.append("profession", finalProfession); // Keep camelCase: profession
+      
+      // Optional fields
+      if (form.experience) {
+        formData.append("experience", form.experience); // Keep camelCase: experience
       }
-      formData.append("agree", String(form.agree));
+      if (form.region) {
+        formData.append("region", form.region.trim()); // Keep camelCase: region
+      }
+      if (form.idUpload) {
+        formData.append("idUpload", form.idUpload); // Keep camelCase: idUpload
+      }
+      
+      // Debug logging
+      if (import.meta.env.DEV) {
+        console.log("Artisan signup data:", {
+          email: form.email,
+          fullName: form.fullName,
+          phone: form.phone,
+          profession: finalProfession,
+          experience: form.experience,
+          region: form.region,
+          has_idUpload: !!form.idUpload
+        });
+      }
+      
+      // Note: agree is frontend-only and not sent to backend
 
       await signupArtisan(formData);
 
@@ -156,8 +180,10 @@ export default function ArtisanForm() {
             {step === 1 ? (
               <>
                 <input
+                  type="text"
                   name="fullName"
-                  placeholder="Full Name"
+                  placeholder="Full Name (e.g., John Doe)"
+                  value={form.fullName}
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
                   required
@@ -171,8 +197,10 @@ export default function ArtisanForm() {
                   required
                 />
                 <input
+                  type="tel"
                   name="phone"
-                  placeholder="Phone Number"
+                  placeholder="Phone Number (e.g., +233241234567)"
+                  value={form.phone}
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
                   required
@@ -180,18 +208,22 @@ export default function ArtisanForm() {
                 <input
                   type="password"
                   name="password"
-                  placeholder="Password"
+                  placeholder="Password (min. 8 characters)"
+                  value={form.password}
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
                   required
+                  minLength="8"
                 />
                 <input
                   type="password"
                   name="confirmPassword"
                   placeholder="Confirm Password"
+                  value={form.confirmPassword}
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
                   required
+                  minLength="8"
                 />
 
                 <PrimaryButton
@@ -238,26 +270,39 @@ export default function ArtisanForm() {
                 )}
 
                 <input
+                  type="number"
                   name="experience"
-                  placeholder="Years of Experience"
+                  placeholder="Years of Experience (e.g., 5)"
+                  value={form.experience}
                   onChange={handleChange}
+                  min="0"
+                  max="50"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
                   required
                 />
                 <input
+                  type="text"
                   name="region"
-                  placeholder="Service Region / City"
+                  placeholder="Service Region / City (e.g., Accra, Kumasi)"
+                  value={form.region}
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
-                  required
                 />
-                <input
-                  type="file"
-                  name="idUpload"
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 file:mr-3 file:px-4 file:py-2 file:border-0 file:bg-[#0b6e4f] file:text-white file:rounded-lg hover:file:bg-[#095b40]"
-                  required
-                />
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-gray-700">Upload ID Document (Optional)</label>
+                  <input
+                    type="file"
+                    name="idUpload"
+                    onChange={handleChange}
+                    accept="image/*,.pdf"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 file:mr-3 file:px-4 file:py-2 file:border-0 file:bg-[#0b6e4f] file:text-white file:rounded-lg hover:file:bg-[#095b40]"
+                  />
+                  {form.idUpload && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      Selected: <span className="font-medium">{form.idUpload.name}</span>
+                    </p>
+                  )}
+                </div>
 
                 <label className="flex items-center gap-2 text-sm">
                   <input

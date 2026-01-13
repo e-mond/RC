@@ -67,12 +67,43 @@ export default function LandlordForm() {
     setMessage(null);
 
     try {
+      // Map frontend field names to backend expected field names
+      // Backend expects camelCase based on API reference
       const formData = new FormData();
-      Object.entries(form).forEach(([key, value]) => {
-        // Backend serializer does not expect "agree" for landlords; avoid sending it
-        if (key === "agree") return;
-        if (value !== null) formData.append(key, value);
-      });
+      
+      // Required fields
+      if (!form.email || !form.password || !form.fullName || !form.phone || !form.confirmPassword) {
+        setMessage({ type: "error", text: "Please fill in all required fields." });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      formData.append("email", form.email.trim());
+      formData.append("password", form.password);
+      formData.append("fullName", form.fullName.trim()); // Backend expects camelCase: fullName
+      formData.append("phone", form.phone.trim());
+      formData.append("confirmPassword", form.confirmPassword); // Backend expects confirmPassword
+      
+      // Optional fields
+      if (form.businessType) {
+        formData.append("businessType", form.businessType.trim()); // Keep camelCase: businessType
+      }
+      if (form.idUpload) {
+        formData.append("idUpload", form.idUpload); // Keep camelCase: idUpload
+      }
+      
+      // Debug logging (development only)
+      if (import.meta.env.DEV) {
+        console.log("Landlord signup data:", {
+          email: form.email,
+          fullName: form.fullName, // camelCase
+          phone: form.phone,
+          businessType: form.businessType,
+          has_idUpload: !!form.idUpload
+        });
+      }
+      
+      // Note: location, agree are frontend-only and not sent to backend
 
       const data = await signupUser("landlord", formData);
       console.log("Signup success:", data);

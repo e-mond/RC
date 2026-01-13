@@ -12,16 +12,18 @@
  * - Template management
  */
 
-import { useEffect, useState } from "react";
-import { Mail, MessageSquare, Users, Send, History, Filter, Search } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Mail, MessageSquare, Users, Send, History, Filter, Search, Image as ImageIcon, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
+import { Editor } from "@tinymce/tinymce-react";
 import Button from "@/components/ui/Button";
 import PageHeader from "@/modules/dashboard/PageHeader";
 import SectionCard from "@/modules/dashboard/SectionCard";
 import { fetchAllUsers } from "@/services/adminService";
 import { sendMarketingEmail, sendMarketingSMS } from "@/services/marketingService";
 import { isMockMode } from "@/mocks/mockManager";
+import { uploadImage } from "@/services/propertyService";
 
 export default function SA_MarketingCampaigns() {
   const [users, setUsers] = useState([]);
@@ -34,6 +36,8 @@ export default function SA_MarketingCampaigns() {
   const [targetType, setTargetType] = useState("selected"); // 'selected', 'role', 'all'
   const [roleFilter, setRoleFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const editorRef = useRef(null);
 
   useEffect(() => {
     loadUsers();
@@ -184,16 +188,82 @@ export default function SA_MarketingCampaigns() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Message *
             </label>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder={campaignType === "email" ? "Email message" : "SMS message"}
-              rows={8}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            />
+            {campaignType === "email" ? (
+              <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                <Editor
+                  apiKey={import.meta.env.VITE_TINYMCE_API_KEY || "no-api-key"}
+                  onInit={(evt, editor) => (editorRef.current = editor)}
+                  value={message}
+                  onEditorChange={(content) => setMessage(content)}
+                  init={{
+                    height: 400,
+                    menubar: false,
+                    plugins: [
+                      "advlist",
+                      "autolink",
+                      "lists",
+                      "link",
+                      "image",
+                      "charmap",
+                      "preview",
+                      "anchor",
+                      "searchreplace",
+                      "visualblocks",
+                      "code",
+                      "fullscreen",
+                      "insertdatetime",
+                      "media",
+                      "table",
+                      "code",
+                      "help",
+                      "wordcount",
+                    ],
+                    toolbar:
+                      "undo redo | blocks | " +
+                      "bold italic forecolor | alignleft aligncenter " +
+                      "alignright alignjustify | bullist numlist outdent indent | " +
+                      "removeformat | link image | help",
+                    content_style: "body { font-family:Helvetica,Arial,sans-serif; font-size:14px }",
+                    images_upload_handler: async (blobInfo, progress) => {
+                      return new Promise(async (resolve, reject) => {
+                        try {
+                          setUploadingMedia(true);
+                          const file = blobInfo.blob();
+                          const result = await uploadImage(file);
+                          const uploadedUrl = typeof result === 'string' ? result : result?.url;
+                          if (!uploadedUrl) {
+                            throw new Error("Upload failed: No URL returned");
+                          }
+                          setUploadingMedia(false);
+                          resolve(uploadedUrl);
+                        } catch (error) {
+                          setUploadingMedia(false);
+                          reject(error.message || "Failed to upload image");
+                        }
+                      });
+                    },
+                  }}
+                />
+              </div>
+            ) : (
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="SMS message (plain text only)"
+                rows={6}
+                maxLength={160}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+            )}
             {campaignType === "sms" && (
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 {message.length}/160 characters (SMS limit)
+              </p>
+            )}
+            {campaignType === "email" && uploadingMedia && (
+              <p className="mt-1 text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Uploading media...
               </p>
             )}
           </div>

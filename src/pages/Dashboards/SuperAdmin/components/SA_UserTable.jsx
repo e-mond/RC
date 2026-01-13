@@ -10,17 +10,20 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiTrash2, FiDownload, FiSearch } from "react-icons/fi";
+import { Ban } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { CSVLink } from "react-csv";
 import { RoleBadge, StatusBadge, TableSkeleton, EmptyState } from "./SA_UserTableHelpers";
 import { v4 as uuidv4 } from "uuid";
 import { formatDateGH } from "@/utils/format";
+import { suspendUser } from "@/services/adminService";
 
-export default function SA_UserTable({ users = [], loading, onDelete }) {
+export default function SA_UserTable({ users = [], loading, onDelete, onRefresh }) {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [selected, setSelected] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
+  const [suspending, setSuspending] = useState(null);
 
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
@@ -46,6 +49,23 @@ export default function SA_UserTable({ users = [], loading, onDelete }) {
     setSelected([]);
     setSelectAll(false);
     toast.success(`Deleted ${selected.length} user${selected.length > 1 ? "s" : ""}`);
+  };
+
+  const handleSuspend = async (user) => {
+    const reason = window.prompt(`Reason for suspending ${user.fullName} (optional):`, "");
+    if (reason === null) return; // User cancelled
+
+    setSuspending(user.id);
+    try {
+      await suspendUser(user.id, reason);
+      toast.success("User suspended! Suspension email has been sent.");
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      console.error("Suspend error:", err);
+      toast.error(err.message || "Failed to suspend user");
+    } finally {
+      setSuspending(null);
+    }
   };
 
   const toggleSelect = (user) => {
@@ -176,13 +196,30 @@ export default function SA_UserTable({ users = [], loading, onDelete }) {
                       {formatDateGH(u.joined) || "—"}
                     </td>
                     <td className="p-3 text-right">
-                      <button
-                        onClick={() => onDelete(u)}
-                        className="text-red-600 hover:text-red-800 transition"
-                        aria-label={`Delete ${u.fullName}`}
-                      >
-                        <FiTrash2 size={18} />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        {u.status !== "suspended" && (
+                          <button
+                            onClick={() => handleSuspend(u)}
+                            disabled={suspending === u.id}
+                            className="text-orange-600 hover:text-orange-800 transition disabled:opacity-50"
+                            aria-label={`Suspend ${u.fullName}`}
+                            title="Suspend user"
+                          >
+                            {suspending === u.id ? (
+                              <div className="w-4 h-4 border-2 border-orange-600 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Ban size={18} />
+                            )}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => onDelete(u)}
+                          className="text-red-600 hover:text-red-800 transition"
+                          aria-label={`Delete ${u.fullName}`}
+                        >
+                          <FiTrash2 size={18} />
+                        </button>
+                      </div>
                     </td>
                   </motion.tr>
                 );

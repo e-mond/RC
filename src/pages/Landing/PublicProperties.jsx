@@ -248,7 +248,7 @@ export default function PublicProperties() {
             </h2>
             <p className="mx-auto mb-6 max-w-2xl text-lg text-green-50">
               Create an account to save favorites, book viewings, and get
-              personalized recommendations
+              personalised recommendations
             </p>
             <Link
               to="/signup?role=tenant"

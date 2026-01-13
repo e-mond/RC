@@ -2,7 +2,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-import { Search, Menu, X } from "lucide-react";
+import { Search, Menu, X, Building2 } from "lucide-react";
 
 export default function LandingNavbar({
   searchTerm = "",
@@ -117,10 +117,12 @@ export default function LandingNavbar({
           className="flex cursor-pointer items-center gap-2.5"
         >
           <motion.div
-            className="h-7 w-7 rounded-md bg-[#0b6e4f]"
+            className="h-7 w-7 rounded-md bg-[#0b6e4f] flex items-center justify-center"
             whileHover={{ rotate: 12 }}
             transition={{ type: "spring", stiffness: 200 }}
-          />
+          >
+            <Building2 size={18} className="text-white" />
+          </motion.div>
           <span className="text-lg font-semibold text-[#0f1724] sm:block">
             Rental Connects
           </span>

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { fetchPendingUsers, approveUser, rejectUser } from "@/services/adminService";
 import Button from "@/components/ui/Button";
-import { CheckCircle, XCircle, Filter, Download, CheckSquare, Square, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Filter, Download, CheckSquare, Square, Loader2, Eye, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
 
@@ -9,6 +10,7 @@ import { toast } from "react-hot-toast";
  * Enhanced User Approvals with bulk actions and filtering
  */
 export default function AD_UserApprovals() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
@@ -276,9 +278,24 @@ export default function AD_UserApprovals() {
                     <span className="text-xs text-gray-500">
                       Submitted: {new Date(u.submittedAt || u.createdAt).toLocaleDateString()}
                     </span>
+                    {u.documents && Object.keys(u.documents).length > 0 && (
+                      <span className="flex items-center gap-1 text-xs text-gray-500">
+                        <FileText size={12} />
+                        {Object.keys(u.documents).length} document(s)
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate(`/admin/approvals/user/${u.id}`)}
+                    className="flex items-center gap-2"
+                    title="View details and documents"
+                  >
+                    <Eye size={16} />
+                    View Details
+                  </Button>
                   <Button
                     variant="outline"
                     onClick={() => handleReject(u.id)}

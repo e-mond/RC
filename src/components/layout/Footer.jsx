@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion as Motion, AnimatePresence } from "framer-motion";
+import { Building2 } from "lucide-react";
 
 
 /**
@@ -32,11 +33,16 @@ export default function Footer() {
         {/* === LOGO + DESCRIPTION === */}
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 bg-[#0b6e4f] rounded-md"></div>
+            <div className="w-7 h-7 bg-[#0b6e4f] rounded-md flex items-center justify-center">
+              <Building2 size={18} className="text-white" />
+            </div>
             <span className="text-lg font-semibold">Rental Connects</span>
           </div>
-          <p className="text-gray-600 leading-relaxed">
-            A trusted rental platform for Ghana. © {new Date().getFullYear()}
+          <p className="text-gray-600 leading-relaxed text-sm">
+            A trusted rental platform for Ghana. Proactive fraud monitoring, reliable screening, and secure transactions.
+          </p>
+          <p className="text-gray-500 text-xs mt-2">
+            © {new Date().getFullYear()} Rental Connects. All rights reserved.
           </p>
         </div>
 
@@ -155,15 +161,15 @@ function LegalModal({ type, onClose }) {
 
   const modalContent = {
     privacy:
-      "We respect your privacy. This policy explains how we handle your data and protect your personal information.",
+      "We respect your privacy. This policy explains how we handle your data and protect your personal information. All user data is encrypted, securely stored, and never shared with third parties without explicit consent.",
     terms:
-      "By using Rental Connects, you agree to our terms outlining the platform’s usage, payments, and content policies.",
+      "By using Rental Connects, you agree to our terms outlining the platform's usage, payments, and content policies. Users must maintain accurate information and comply with platform rules.",
     trust:
-      "Your safety is our priority. We verify users, listings, and maintain secure communication to build trust.",
+      "Your safety is our priority. We use trusted verification partners to ensure safe and secure rentals. Advanced fraud monitoring and prevention systems protect your identity and transactions in real-time. Reliable screening processes verify all tenants and landlords before they can use the platform.",
     about:
-      "Rental Connects bridges the gap between tenants, landlords, and artisans in Ghana. We’re simplifying rental management through technology and trust.",
+      "Rental Connects bridges the gap between tenants, landlords, and artisans in Ghana. We're simplifying rental management through technology and trust. Our platform features proactive fraud monitoring, comprehensive background checks, and secure payment processing.",
     contact:
-      "Need help or have questions? Reach out at contact@rentalconnects.com or call +233-234-567890.",
+      "Need help or have questions? Reach out at contact@rentalconnects.com or call +233-234-567890. Our support team is available Monday to Friday, 9am to 5pm GMT.",
   };
 
   return (

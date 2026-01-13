@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react"; // Recommended icon library
+import { ArrowLeft, Building2 } from "lucide-react";
 
 export default function OnboardingHeader({ backTo = "/" }) {
   const navigate = useNavigate();
@@ -13,7 +13,7 @@ export default function OnboardingHeader({ backTo = "/" }) {
           className="flex items-center gap-2 transition-transform hover:scale-105 focus:outline-none"
           aria-label="Go to Home"
         >
-          <div className="w-8 h-8 bg-[#0b6e4f] rounded-md" />
+          <Building2 className="w-8 h-8 text-[#0b6e4f]" />
           <span className="font-semibold text-[#0f1724]  sm:inline">
             Rental Connects
           </span>

@@ -64,12 +64,49 @@ export default function TenantSignup() {
       setIsSubmitting(true);
       setMessage(null);
 
+      // Map frontend field names to backend expected field names
+      // Based on backend error, it expects camelCase: fullName, confirmPassword
       const formData = new FormData();
-      Object.entries(form).forEach(([key, value]) => {
-        // Backend serializer does not expect "agree" for tenants; avoid sending it
-        if (key === "agree") return;
-        if (value !== null) formData.append(key, value);
+      
+      // Required fields - backend expects camelCase based on error response
+      if (!form.email || !form.password || !form.fullName || !form.phone || !form.confirmPassword) {
+        setMessage({ type: "error", text: "Please fill in all required fields." });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Backend expects camelCase field names (based on error response)
+      formData.append("email", form.email.trim());
+      formData.append("password", form.password);
+      formData.append("fullName", form.fullName.trim()); // Backend expects camelCase: fullName
+      formData.append("phone", form.phone.trim());
+      formData.append("confirmPassword", form.confirmPassword); // Backend expects confirmPassword
+      
+      // Optional fields
+      if (form.idUpload) {
+        formData.append("idUpload", form.idUpload); // Keep camelCase: idUpload
+      }
+      
+      // Debug: Log what we're sending (remove in production)
+      console.log("Sending signup data:", {
+        email: form.email.trim(),
+        fullName: form.fullName.trim(), // camelCase
+        phone: form.phone.trim(),
+        has_password: !!form.password,
+        has_confirmPassword: !!form.confirmPassword,
+        has_idUpload: !!form.idUpload
       });
+      
+      // Verify FormData contents before sending
+      if (import.meta.env.DEV) {
+        console.log("FormData entries:");
+        for (const [key, value] of formData.entries()) {
+          console.log(`  ${key}:`, value instanceof File ? `File: ${value.name}` : value);
+        }
+      }
+      
+      // Note: location, rentRange are frontend-only and NOT sent to backend
+      // Backend expects: email, password, fullName (camelCase), phone, confirmPassword, idUpload (optional)
 
       const res = await registerTenant(formData);
       
@@ -122,6 +159,7 @@ export default function TenantSignup() {
             animate="visible"
             exit="exit"
             className="space-y-8"
+            noValidate
           >
             <header className="text-center space-y-2">
               <h2 className="text-3xl font-bold text-[#0f1724]">Tenant Signup</h2>

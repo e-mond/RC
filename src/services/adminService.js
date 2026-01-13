@@ -13,11 +13,12 @@
 
 import apiClient from "./apiClient";
 import { toast } from "react-hot-toast";
+import { isMockMode } from "@/mocks/mockManager";
 
 // ───────────────────────────────────────────────────────────────
 // CONFIGURATION
 // ───────────────────────────────────────────────────────────────
-const USE_MOCK = String(import.meta.env.VITE_USE_MOCK || "").toLowerCase() === "true";
+const USE_MOCK = isMockMode();
 
 let mockImports = {};
 
@@ -87,19 +88,40 @@ export const fetchInsights = async () => {
   }
 };
 
+/**
+ * Fetch Pending Users
+ * 
+ * Retrieves all users with pending_approval status for admin review.
+ * 
+ * @returns {Promise<Object>} { users: Array, count: number }
+ * @throws {Error} If fetch fails
+ */
 export const fetchPendingUsers = async () => {
   if (USE_MOCK && mockImports.fetchPendingUsersMock) {
     return withDelay(mockImports.fetchPendingUsersMock(), 600);
   }
 
   try {
-    const { data } = await apiClient.get("/admin/users/pending");
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    const { data } = await apiClient.get(API_ENDPOINTS.ADMIN.PENDING_USERS);
     return data;
   } catch (err) {
     throw extractError(err, "Failed to fetch pending users");
   }
 };
 
+/**
+ * Approve User
+ * 
+ * Approves a pending user account. Backend will:
+ * - Update user status to "approved"
+ * - Send approval email to user
+ * - Log action in audit log
+ * 
+ * @param {string|number} id - User ID to approve
+ * @returns {Promise<Object>} Updated user object
+ * @throws {Error} If approval fails
+ */
 export const approveUser = async (id) => {
   if (!id) throw new Error("approveUser: id is required");
 
@@ -108,13 +130,28 @@ export const approveUser = async (id) => {
   }
 
   try {
-    const { data } = await apiClient.patch(`/admin/users/${encodeURIComponent(id)}/approve`);
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    const { data } = await apiClient.patch(API_ENDPOINTS.ADMIN.APPROVE_USER(id));
     return data;
   } catch (err) {
     throw extractError(err, "Failed to approve user");
   }
 };
 
+/**
+ * Reject User
+ * 
+ * Rejects a pending user account. Backend will:
+ * - Update user status to "rejected"
+ * - Store rejection reason
+ * - Send rejection email to user with reason
+ * - Log action in audit log
+ * 
+ * @param {string|number} id - User ID to reject
+ * @param {string} reason - Reason for rejection (optional but recommended)
+ * @returns {Promise<Object>} Updated user object
+ * @throws {Error} If rejection fails
+ */
 export const rejectUser = async (id, reason = "") => {
   if (!id) throw new Error("rejectUser: id is required");
 
@@ -123,10 +160,67 @@ export const rejectUser = async (id, reason = "") => {
   }
 
   try {
-    const { data } = await apiClient.patch(`/admin/users/${encodeURIComponent(id)}/reject`, { reason });
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    const { data } = await apiClient.patch(API_ENDPOINTS.ADMIN.REJECT_USER(id), { reason });
     return data;
   } catch (err) {
     throw extractError(err, "Failed to reject user");
+  }
+};
+
+/**
+ * Suspend User
+ * 
+ * Suspends a user account (can be in any status). Backend will:
+ * - Update user status to "suspended"
+ * - Store suspension reason
+ * - Revoke active sessions (optional)
+ * - Send suspension email to user with reason
+ * - Log action in audit log
+ * 
+ * @param {string|number} id - User ID to suspend
+ * @param {string} reason - Reason for suspension (optional but recommended)
+ * @returns {Promise<Object>} Updated user object
+ * @throws {Error} If suspension fails
+ */
+export const suspendUser = async (id, reason = "") => {
+  if (!id) throw new Error("suspendUser: id is required");
+
+  if (USE_MOCK && mockImports.suspendUserMock) {
+    return withDelay(mockImports.suspendUserMock?.(id, reason) || { id, status: "suspended" }, 500);
+  }
+
+  try {
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    const { data } = await apiClient.patch(API_ENDPOINTS.ADMIN.SUSPEND_USER(id), { reason });
+    return data;
+  } catch (err) {
+    throw extractError(err, "Failed to suspend user");
+  }
+};
+
+/**
+ * Get User Details
+ * 
+ * Retrieves full user details including uploaded documents for admin review.
+ * 
+ * @param {string|number} id - User ID
+ * @returns {Promise<Object>} { user: Object with full details and documents }
+ * @throws {Error} If fetch fails
+ */
+export const getUserDetails = async (id) => {
+  if (!id) throw new Error("getUserDetails: id is required");
+
+  if (USE_MOCK && mockImports.getUserDetailsMock) {
+    return withDelay(mockImports.getUserDetailsMock?.(id) || {}, 500);
+  }
+
+  try {
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    const { data } = await apiClient.get(API_ENDPOINTS.ADMIN.USER_DETAILS(id));
+    return data;
+  } catch (err) {
+    throw extractError(err, "Failed to fetch user details");
   }
 };
 
@@ -232,6 +326,49 @@ export const fetchSystemStats = async () => {
     return data;
   } catch (err) {
     throw extractError(err, "Failed to load system stats");
+  }
+};
+
+/**
+ * Get public pricing (no authentication required)
+ * Used for landing page pricing display
+ * @returns {Promise<Object>} Pricing configuration
+ */
+export const getPublicPricing = async () => {
+  if (USE_MOCK) {
+    // Mock pricing data for landing page
+    return withDelay(
+      {
+        monthly: 49.0,
+        yearly: 490.0,
+        currency: "GHS",
+        enabled: true,
+        listingFee: 5.0,
+        adPromotionFee: 10.0,
+        featuredListingFee: 15.0,
+        upgradeFee: 0.0,
+      },
+      300
+    );
+  }
+
+  try {
+    // Public endpoint - no auth required
+    const { data } = await apiClient.get("/public/pricing/");
+    return data;
+  } catch (err) {
+    // Fallback to default pricing if API fails
+    console.warn("Failed to fetch public pricing, using defaults:", err);
+    return {
+      monthly: 49.0,
+      yearly: 490.0,
+      currency: "GHS",
+      enabled: true,
+      listingFee: 5.0,
+      adPromotionFee: 10.0,
+      featuredListingFee: 15.0,
+      upgradeFee: 0.0,
+    };
   }
 };
 
@@ -429,6 +566,8 @@ export default {
   fetchPendingUsers,
   approveUser,
   rejectUser,
+  suspendUser,
+  getUserDetails,
   fetchPendingProperties,
   approveProperty,
   rejectProperty,

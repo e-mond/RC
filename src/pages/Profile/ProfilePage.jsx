@@ -605,10 +605,16 @@ const ProfilePage = () => {
         {/* 3. Wallet Section - Prominently displayed for roles that need it */}
         {needsWallet && (
           <div className="bg-linear-to-br from-blue-50 to-white dark:from-gray-800 dark:to-gray-900 border border-blue-200 dark:border-blue-800/50 rounded-2xl p-6 shadow-sm">
-            <h2 className="text-lg font-semibold flex items-center gap-2 mb-5">
-              <Wallet className="w-5 h-5 text-blue-600" />
-              {t("paymentWallet", "Payment Wallet")}
-            </h2>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Wallet className="w-5 h-5 text-blue-600" />
+                {t("paymentWallet", "Payment Wallet")}
+              </h2>
+              <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                <Shield className="w-3 h-3" />
+                <span>Paystack</span>
+              </div>
+            </div>
             <WalletDisplay
               wallet={walletLoading ? null : wallet}
               showSetupButton={!walletLoading && wallet && wallet.is_setup !== true}
@@ -618,22 +624,40 @@ const ProfilePage = () => {
                 toast.info("Top-up feature coming soon");
               }}
             />
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs text-blue-700 dark:text-blue-300">
+              <p className="font-medium mb-1">Secure Payments with Paystack</p>
+              <p>All transactions are processed securely through Paystack. Your payment information is encrypted and protected.</p>
+            </div>
           </div>
         )}
 
-        {/* 4. Subscription (when applicable) */}
-        <div className="bg-linear-to-br from-emerald-50 to-white dark:from-gray-800 dark:to-gray-900 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl p-6 shadow-sm lg:col-span-1">
-          <h2 className="text-lg font-semibold flex items-center gap-2 mb-5">
-            <Crown className="w-5 h-5 text-amber-500" />
-            {isAdmin ? t("fullSystemAccess") : t("subscriptionPlan")}
-          </h2>
+        {/* 4. Subscription Plan - Enhanced UI */}
+        <div className="bg-gradient-to-br from-emerald-50 via-white to-emerald-50/30 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 border-2 border-emerald-200 dark:border-emerald-800/50 rounded-2xl p-6 shadow-lg lg:col-span-1">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Crown className="w-5 h-5 text-amber-500" />
+              {isAdmin ? t("fullSystemAccess") : t("subscriptionPlan")}
+            </h2>
+            {!isAdmin && (
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                isPremium 
+                  ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                  : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+              }`}>
+                {isPremium ? "Premium" : "Free"}
+              </span>
+            )}
+          </div>
 
           {isAdmin ? (
             <div className="text-center py-10">
-              <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+              <div className="w-16 h-16 mx-auto mb-4 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
+                <Shield className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 mb-2">
                 {t("administratorAccess")}
               </p>
-              <p className="text-sm mt-2 text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 {t("adminFullAccessDescription")}
               </p>
             </div>
@@ -641,57 +665,73 @@ const ProfilePage = () => {
             <>
               {isPremium ? (
                 <div className="space-y-6">
-                  <div className="flex items-center gap-3">
-                    <Star className="w-8 h-8 text-amber-500" />
-                    <span className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
-                      {t("premiumActive")}
-                    </span>
+                  <div className="text-center py-4">
+                    <div className="flex items-center justify-center gap-3 mb-3">
+                      <Star className="w-10 h-10 text-amber-500 fill-amber-500" />
+                      <span className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">
+                        {t("premiumActive")}
+                      </span>
+                    </div>
+                    <p className="text-lg font-medium text-gray-700 dark:text-gray-300">{premiumPrice.display}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Per month, billed monthly</p>
                   </div>
 
-                  <p className="text-lg font-medium">{premiumPrice.display}</p>
-
-                  <div className="space-y-2">
-                    {premiumFeatures.map((feature, i) => (
-                      <p key={i} className="flex items-center gap-2 text-green-700 dark:text-green-400">
-                        <CheckCircle size={16} />
-                        {feature}
-                      </p>
-                    ))}
+                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-emerald-200 dark:border-emerald-800">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Premium Features:</p>
+                    <div className="space-y-2">
+                      {premiumFeatures.map((feature, i) => (
+                        <p key={i} className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
+                          <CheckCircle size={16} className="shrink-0" />
+                          <span>{feature}</span>
+                        </p>
+                      ))}
+                    </div>
                   </div>
 
                   <Button
                     onClick={handleDowngrade}
                     disabled={loading}
                     variant="outline"
-                    className="w-full"
+                    className="w-full border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
                   >
-                    {loading ? t("processing") : t("downgradeToFree")}
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        {t("processing")}
+                      </>
+                    ) : (
+                      t("downgradeToFree")
+                    )}
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-6">
-                  <div>
-                    <p className="text-xl font-semibold">{t("freePlan")}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      {t("upgradeToUnlock")}
+                  <div className="text-center py-4">
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{t("freePlan")}</p>
+                    <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-2">₵0</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {t("upgradeToUnlock", "Upgrade to unlock premium features")}
                     </p>
                   </div>
 
-                  <ul className="space-y-2 text-sm">
-                    {premiumFeatures.map((feature, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <Star size={16} className="text-amber-500 mt-0.5 shrink-0" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Premium Features:</p>
+                    <ul className="space-y-2 text-sm">
+                      {premiumFeatures.map((feature, i) => (
+                        <li key={i} className="flex items-start gap-2 text-gray-600 dark:text-gray-400">
+                          <Star size={16} className="text-amber-500 mt-0.5 shrink-0" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
                   <Button
                     onClick={handleUpgrade}
                     disabled={loading || !paystackLoaded}
                     variant="primary"
                     size="lg"
-                    className="w-full"
+                    className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold shadow-lg"
                   >
                     {loading ? (
                       <>
@@ -705,9 +745,12 @@ const ProfilePage = () => {
                       </>
                     )}
                   </Button>
+                  
+                  <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+                    Cancel anytime • Secure payment via Paystack
+                  </p>
                 </div>
               )}
-
             </>
           )}
         </div>

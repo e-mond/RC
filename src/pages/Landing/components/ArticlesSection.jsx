@@ -57,7 +57,7 @@ export default function ArticlesSection() {
               className="text-lg font-semibold text-gray-900 mb-1"
               variants={item}
             >
-              Ghana Living, Modernized
+              Ghana Living, Modernised
             </motion.h3>
             <motion.p
               className="text-gray-600 text-sm mb-4"

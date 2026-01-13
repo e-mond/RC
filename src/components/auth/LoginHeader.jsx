@@ -1,5 +1,6 @@
 // src/components/auth/LoginHeader.jsx
 import { motion } from "framer-motion";
+import { Building2 } from "lucide-react";
 
 export default function LoginHeader() {
   return (
@@ -9,7 +10,7 @@ export default function LoginHeader() {
       transition={{ delay: 0.1 }}
     >
       <div className="flex items-center gap-2 mb-2">
-        <div className="w-6 h-6 bg-[#0b6e4f] rounded-md" />
+        <Building2 className="w-6 h-6 text-[#0b6e4f]" />
         <h1 className="text-2xl font-semibold text-[#0f1724]">
           Rental Connects
         </h1>

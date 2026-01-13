@@ -9,14 +9,18 @@ import SA_ActivityFeed from "./components/SA_ActivityFeed";
 import SA_CreateUserModal from "./components/SA_CreateUserModal";
 import SA_DeleteUserModal from "./components/SA_DeleteUserModal";
 import { fetchAllUsers, fetchSystemStats } from "@/services/adminService";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, FileText, Book } from "lucide-react";
 import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { Link } from "react-router-dom";
 import PageHeader from "@/modules/dashboard/PageHeader";
 import SectionCard from "@/modules/dashboard/SectionCard";
 import MockDataEditor from "./components/MockDataEditor";
+import { useFeatureAccess } from "@/context/FeatureAccessContext";
+import { isMockMode } from "@/mocks/mockManager";
 
 export default function SuperAdminDashboard() {
+  const { can } = useFeatureAccess();
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [activity, setActivity] = useState([]);
@@ -154,13 +158,61 @@ export default function SuperAdminDashboard() {
               <SA_ActivityFeed activity={activity} />
             </SectionCard>
 
-            <SectionCard
-              title="Mock Data Editor"
-              description="Safely curate demo data before going live"
-              className="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-2xl"
-            >
-              <MockDataEditor />
-            </SectionCard>
+            {/* Mock Data Editor - Only show in mock mode */}
+            {isMockMode() && (
+              <SectionCard
+                title="Mock Data Editor"
+                description="Safely curate demo data before going live"
+                className="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-2xl"
+              >
+                <MockDataEditor />
+              </SectionCard>
+            )}
+
+            {/* Documentation & Lease Management */}
+            <div className="grid md:grid-cols-2 gap-6">
+              {can("LEASE_MANAGEMENT") && (
+                <SectionCard
+                  title="Lease Management"
+                  description="Manage system lease templates and documents"
+                  className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm dark:shadow-none"
+                >
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Create, edit, and manage system-wide lease templates. Control admin access to lease management.
+                    </p>
+                    <Link
+                      to="/admin/leases"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-[#0b6e4f] text-white rounded-lg hover:bg-[#095c42] transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Manage Leases
+                    </Link>
+                  </div>
+                </SectionCard>
+              )}
+
+              {can("DOCUMENT_MANAGEMENT") && (
+                <SectionCard
+                  title="Documentation Management"
+                  description="Manage platform documentation and help content"
+                  className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm dark:shadow-none"
+                >
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Create and manage platform documentation, help articles, and user guides.
+                    </p>
+                    <Link
+                      to="/documentation"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-[#0b6e4f] text-white rounded-lg hover:bg-[#095c42] transition-colors"
+                    >
+                      <Book className="w-4 h-4" />
+                      Manage Documentation
+                    </Link>
+                  </div>
+                </SectionCard>
+              )}
+            </div>
           </>
         )}
 

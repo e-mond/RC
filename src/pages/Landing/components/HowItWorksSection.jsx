@@ -1,4 +1,4 @@
-import { FaSearch, FaComments, FaHome } from "react-icons/fa";
+import { Search, MessageSquare, Home } from "lucide-react";
 import { motion as Motion } from "framer-motion";
 import { Link } from "react-router-dom";
 
@@ -19,7 +19,7 @@ const steps = [
     description:
       "Browse verified listings with detailed information and transparent pricing.",
     image: placeholder1,
-    icon: <FaSearch className="text-white text-2xl" />,
+    icon: <Search size={24} className="text-white" />,
     linkText: "Explore",
   },
   {
@@ -28,7 +28,7 @@ const steps = [
     description:
       "Direct messaging and secure verification ensure safe interactions between tenants and landlords.",
     image: placeholder2,
-    icon: <FaComments className="text-white text-2xl" />,
+    icon: <MessageSquare size={24} className="text-white" />,
     linkText: "Connect",
   },
   {
@@ -37,7 +37,7 @@ const steps = [
     description:
       "Digital payments, maintenance tracking, and comprehensive support make renting effortless.",
     image: placeholder3,
-    icon: <FaHome className="text-white text-2xl" />,
+    icon: <Home size={24} className="text-white" />,
     linkText: "Rent now",
   },
 ];

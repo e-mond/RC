@@ -26,6 +26,12 @@ export const FEATURE_MATRIX = {
   ADMIN_INSIGHTS: { minPlan: "system", roles: ["admin", "super-admin"] },
   ADMIN_APPROVALS: { minPlan: "system", roles: ["admin", "super-admin"] },
   SUPERADMIN_MOCK_EDITOR: { minPlan: "system", roles: ["super-admin"] },
+  
+  // Lease and Document Management
+  LEASE_MANAGEMENT: { minPlan: "system", roles: ["admin", "super-admin"] },
+  DOCUMENT_MANAGEMENT: { minPlan: "system", roles: ["admin", "super-admin"] },
+  LEASE_EDIT: { minPlan: "system", roles: ["super-admin"] }, // Super admin can control admin access
+  DOCUMENT_EDIT: { minPlan: "system", roles: ["super-admin"] }, // Super admin can control admin access
 };
 
 const planRank = (plan) => {
