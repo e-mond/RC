@@ -122,29 +122,124 @@ export const fetchProperties = async (ownerId) => {
   try {
     // Use unified API endpoint configuration
     const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
-    const endpoint = API_ENDPOINTS.PROPERTIES.LANDLORD_PROPERTIES(ownerId);
     
-    const { data } = await apiClient.get(endpoint);
+    // Strategy 1: Try role-based endpoint (like dashboard uses /analytics/dashboard/)
+    // Backend should automatically filter by authenticated landlord's role
+    // This is the most consistent with how dashboard works
+    let data;
+    let endpoint;
+    let usedEndpoint = "unknown";
+    
+    try {
+      // First, try the standard properties endpoint without explicit ownerId
+      // Backend should automatically filter by authenticated user's role (landlord)
+      // This matches the pattern: dashboard uses /analytics/dashboard/ which is role-based
+      endpoint = API_ENDPOINTS.PROPERTIES.BASE;
+      const response = await apiClient.get(endpoint, {
+        params: {
+          // Don't filter by status - show all properties (pending, approved, rejected)
+          // This ensures consistency with dashboard count which includes all properties
+          // Backend should automatically filter by authenticated landlord
+        }
+      });
+      data = response.data;
+      usedEndpoint = "role-based /properties/";
+      
+      // Extract properties from response
+      const extracted = Array.isArray(data) ? data : 
+                       Array.isArray(data?.results) ? data.results :
+                       Array.isArray(data?.data) ? data.data :
+                       Array.isArray(data?.properties) ? data.properties : [];
+      
+      // If we got results, use them
+      if (extracted.length > 0 || (data && (Array.isArray(data) || data?.results || data?.data || data?.properties))) {
+        console.log(`[fetchProperties] Successfully fetched ${extracted.length} properties using role-based endpoint`);
+        data = { results: extracted, data: extracted, properties: extracted };
+      } else {
+        // If no results, try with explicit ownerId query param
+        throw new Error("No results from role-based endpoint, trying with ownerId query param");
+      }
+    } catch (roleBasedErr) {
+      try {
+        // Strategy 2: Try with explicit ownerId query parameter
+        console.log(`[fetchProperties] Role-based endpoint returned no results, trying with ownerId query param:`, roleBasedErr.message);
+        endpoint = API_ENDPOINTS.PROPERTIES.BASE;
+        const response = await apiClient.get(endpoint, {
+          params: {
+            landlord: ownerId,
+            owner: ownerId,
+            owner_id: ownerId,
+          }
+        });
+        data = response.data;
+        usedEndpoint = "/properties/ with ownerId query param";
+        console.log(`[fetchProperties] Successfully fetched properties using query param approach`);
+      } catch (queryParamErr) {
+        // Strategy 3: Fallback to landlord-specific endpoint
+        console.log(`[fetchProperties] Query param approach failed, trying landlord-specific endpoint:`, queryParamErr.message);
+        endpoint = API_ENDPOINTS.PROPERTIES.LANDLORD_PROPERTIES(ownerId);
+        const response = await apiClient.get(endpoint);
+        data = response.data;
+        usedEndpoint = `/properties/landlord/${ownerId}/`;
+        console.log(`[fetchProperties] Successfully fetched properties using landlord-specific endpoint`);
+      }
+    }
     
     // Handle different response formats from backend
     // Backend might return: { data: [...] }, { properties: [...] }, { results: [...] }, or direct array
+    let propertiesList = [];
     if (Array.isArray(data)) {
-      return { data };
+      propertiesList = data;
     } else if (Array.isArray(data?.data)) {
-      return data;
+      propertiesList = data.data;
     } else if (Array.isArray(data?.properties)) {
-      return { data: data.properties };
+      propertiesList = data.properties;
     } else if (Array.isArray(data?.results)) {
-      return { data: data.results };
-    } else {
-      // Return empty array if no properties found
-      return { data: [] };
+      propertiesList = data.results;
     }
+    
+    console.log(`[fetchProperties] Extracted ${propertiesList.length} properties for ownerId: ${ownerId} using endpoint: ${usedEndpoint}`);
+    
+    // Filter properties to ensure they belong to this landlord (safety check)
+    // This prevents showing properties from other landlords if backend filtering fails
+    const filteredProperties = propertiesList.filter(p => {
+      const propertyOwnerId = p.landlord?.id || p.owner?.id || p.owner_id || p.landlord_id;
+      return !propertyOwnerId || propertyOwnerId.toString() === ownerId.toString();
+    });
+    
+    if (filteredProperties.length !== propertiesList.length) {
+      console.warn(`[fetchProperties] Filtered out ${propertiesList.length - filteredProperties.length} properties that didn't belong to ownerId: ${ownerId}`);
+    }
+    
+    return { data: filteredProperties };
   } catch (err) {
+    // Enhanced error logging for debugging
+    console.error(`[fetchProperties] Error fetching properties for ownerId ${ownerId}:`, {
+      message: err.message,
+      status: err.response?.status,
+      statusText: err.response?.statusText,
+      data: err.response?.data,
+      endpoint: err.config?.url,
+    });
+    
     // Handle 404 gracefully - landlord might not have properties yet
     if (err.response?.status === 404) {
+      console.log(`[fetchProperties] 404 response - landlord ${ownerId} has no properties yet`);
       return { data: [] };
     }
+    
+    // Handle 403 - might be authorization issue
+    if (err.response?.status === 403) {
+      console.error(`[fetchProperties] 403 Forbidden - authorization issue for ownerId: ${ownerId}`);
+      throw new Error("You do not have permission to view these properties");
+    }
+    
+    // Handle 401 - authentication issue
+    if (err.response?.status === 401) {
+      console.error(`[fetchProperties] 401 Unauthorized - authentication issue`);
+      throw new Error("Authentication required. Please log in again.");
+    }
+    
     throw extractError(err, "Failed to fetch properties");
   }
 };

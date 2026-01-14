@@ -38,8 +38,12 @@ export default function CustomizeLeaseModal({ isOpen, onClose, lease, propertyId
       loadProperties();
       if (propertyId) {
         // Load property details if propertyId is provided
-        fetchProperties(user.id).then((data) => {
-          const props = data?.properties || data || [];
+        fetchProperties(user.id).then((res) => {
+          // Handle different response formats: { data: [...] }, { properties: [...] }, { results: [...] }, or direct array
+          const props = Array.isArray(res) ? res :
+                       Array.isArray(res?.data) ? res.data :
+                       Array.isArray(res?.properties) ? res.properties :
+                       Array.isArray(res?.results) ? res.results : [];
           const prop = props.find((p) => p.id === propertyId);
           if (prop) setSelectedProperty(prop);
         });
@@ -49,8 +53,13 @@ export default function CustomizeLeaseModal({ isOpen, onClose, lease, propertyId
 
   const loadProperties = async () => {
     try {
-      const data = await fetchProperties(user.id);
-      setProperties(data?.properties || data || []);
+      const res = await fetchProperties(user.id);
+      // Handle different response formats: { data: [...] }, { properties: [...] }, { results: [...] }, or direct array
+      const propertiesList = Array.isArray(res) ? res :
+                            Array.isArray(res?.data) ? res.data :
+                            Array.isArray(res?.properties) ? res.properties :
+                            Array.isArray(res?.results) ? res.results : [];
+      setProperties(propertiesList);
     } catch (err) {
       console.error("Failed to load properties:", err);
       toast.error("Failed to load properties");

@@ -38,7 +38,8 @@ export default function PropertiesPage() {
    */
   const loadProperties = async () => {
     if (!user?.id) {
-      setError("User not found");
+      console.warn("[PropertiesPage] User ID not available, cannot load properties");
+      setError("User not found. Please log in again.");
       setLoading(false);
       return;
     }
@@ -46,6 +47,8 @@ export default function PropertiesPage() {
     try {
       setLoading(true);
       setError("");
+      
+      console.log(`[PropertiesPage] Loading properties for landlord user.id: ${user.id}, role: ${user.role}`);
       
       // Fetch properties for this specific landlord
       const res = await fetchProperties(user.id);
@@ -62,9 +65,29 @@ export default function PropertiesPage() {
         propertiesList = res.results;
       }
       
+      console.log(`[PropertiesPage] Loaded ${propertiesList.length} properties for landlord ${user.id}`);
+      
+      // Log property details for debugging
+      if (propertiesList.length > 0) {
+        console.log(`[PropertiesPage] Property IDs:`, propertiesList.map(p => p.id));
+        console.log(`[PropertiesPage] Property statuses:`, propertiesList.map(p => p.status));
+      } else {
+        console.warn(`[PropertiesPage] No properties found for landlord ${user.id}. This might indicate:`);
+        console.warn(`  - Backend endpoint issue`);
+        console.warn(`  - Properties not yet created`);
+        console.warn(`  - Authorization/filtering issue`);
+      }
+      
       setProperties(propertiesList);
     } catch (err) {
-      console.error("Failed to load properties:", err);
+      console.error("[PropertiesPage] Failed to load properties:", {
+        error: err,
+        message: err.message,
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        userId: user?.id,
+        userRole: user?.role,
+      });
       setError(err.message || "Failed to load properties");
       setProperties([]);
     } finally {
