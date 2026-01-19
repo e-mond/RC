@@ -34,6 +34,9 @@ import { getUserDetails, approveUser, rejectUser, suspendUser } from "@/services
 import DocumentViewer from "@/components/admin/DocumentViewer";
 import PageHeader from "@/modules/dashboard/PageHeader";
 import { validateId } from "@/utils/validateParams";
+import SA_ApproveUserModal from "@/pages/Dashboards/SuperAdmin/components/SA_ApproveUserModal";
+import SA_RejectUserModal from "@/pages/Dashboards/SuperAdmin/components/SA_RejectUserModal";
+import SA_SuspendUserModal from "@/pages/Dashboards/SuperAdmin/components/SA_SuspendUserModal";
 
 export default function UserApprovalDetailPage() {
   const { id: rawId } = useParams();
@@ -42,6 +45,9 @@ export default function UserApprovalDetailPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
   const [viewingDocument, setViewingDocument] = useState(null);
+  const [approveModalOpen, setApproveModalOpen] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [suspendModalOpen, setSuspendModalOpen] = useState(false);
   const [error, setError] = useState("");
 
   // Validate and sanitize ID parameter
@@ -71,53 +77,65 @@ export default function UserApprovalDetailPage() {
     }
   };
 
-  const handleApprove = async () => {
-    if (!window.confirm(`Approve ${user?.fullName || user?.name}? This will send an approval email.`)) {
-      return;
-    }
+  const handleApprove = () => {
+    setApproveModalOpen(true);
+  };
 
+  const handleReject = () => {
+    setRejectModalOpen(true);
+  };
+
+  const confirmApprove = async (notes = "") => {
     setActionLoading("approve");
     try {
-      await approveUser(id);
+      await approveUser(id, notes ? { notes } : undefined);
       toast.success("User approved! Approval email has been sent.");
+      setApproveModalOpen(false);
       navigate("/admin/approvals");
     } catch (err) {
       console.error("Approve error:", err);
       toast.error(err.message || "Failed to approve user");
+      throw err; // Let modal handle error display
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleReject = async () => {
-    const reason = window.prompt("Reason for rejection (optional):", "");
-    if (reason === null) return; // User cancelled
-
+  const confirmReject = async (reason) => {
     setActionLoading("reject");
     try {
       await rejectUser(id, reason);
       toast.success("User rejected! Rejection email has been sent.");
+      setRejectModalOpen(false);
       navigate("/admin/approvals");
     } catch (err) {
       console.error("Reject error:", err);
       toast.error(err.message || "Failed to reject user");
+      throw err; // Let modal handle error display
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleSuspend = async () => {
-    const reason = window.prompt("Reason for suspension (optional):", "");
-    if (reason === null) return; // User cancelled
+  const handleSuspend = () => {
+    setSuspendModalOpen(true);
+  };
 
+  const confirmSuspend = async (suspensionData) => {
     setActionLoading("suspend");
     try {
-      await suspendUser(id, reason);
-      toast.success("User suspended! Suspension email has been sent.");
+      await suspendUser(id, suspensionData);
+      toast.success(
+        suspensionData.duration_days
+          ? `User suspended for ${suspensionData.duration_days} days. Suspension email has been sent.`
+          : "User suspended permanently. Suspension email has been sent."
+      );
+      setSuspendModalOpen(false);
       navigate("/admin/approvals");
     } catch (err) {
       console.error("Suspend error:", err);
       toast.error(err.message || "Failed to suspend user");
+      throw err; // Let modal handle error display
     } finally {
       setActionLoading(null);
     }
@@ -375,7 +393,7 @@ export default function UserApprovalDetailPage() {
                 )}
               </Button>
               <Button
-                onClick={handleSuspend}
+                onClick={() => handleSuspend()}
                 disabled={actionLoading !== null}
                 variant="outline"
                 className="w-full flex items-center justify-center gap-2 text-orange-600 border-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
@@ -410,6 +428,33 @@ export default function UserApprovalDetailPage() {
           documentUrl={viewingDocument.url}
           documentName={viewingDocument.name}
           documentType={getDocumentType(viewingDocument.url)}
+        />
+      )}
+
+      {/* Approve User Modal */}
+      {approveModalOpen && (
+        <SA_ApproveUserModal
+          user={user}
+          onClose={() => setApproveModalOpen(false)}
+          onConfirm={confirmApprove}
+        />
+      )}
+
+      {/* Reject User Modal */}
+      {rejectModalOpen && (
+        <SA_RejectUserModal
+          user={user}
+          onClose={() => setRejectModalOpen(false)}
+          onConfirm={confirmReject}
+        />
+      )}
+
+      {/* Suspend User Modal */}
+      {suspendModalOpen && (
+        <SA_SuspendUserModal
+          user={user}
+          onClose={() => setSuspendModalOpen(false)}
+          onConfirm={confirmSuspend}
         />
       )}
     </div>

@@ -179,8 +179,21 @@ export const getFavorites = async () => {
  */
 export const addToFavorites = async (propertyId) => {
   try {
-    const { data } = await apiClient.post("/tenant/favorites", { propertyId });
-    return data;
+    // Try multiple endpoint formats for backend compatibility
+    try {
+      const { data } = await apiClient.post("/tenant/favorites/", { property_id: propertyId });
+      return data;
+    } catch (err1) {
+      // Fallback: try with propertyId field name
+      try {
+        const { data } = await apiClient.post("/tenant/favorites/", { propertyId });
+        return data;
+      } catch (err2) {
+        // Fallback: try without trailing slash
+        const { data } = await apiClient.post("/tenant/favorites", { property_id: propertyId });
+        return data;
+      }
+    }
   } catch (err) {
     throw new Error(getErrorMessage(err, "Could not add property to favorites"));
   }
@@ -244,8 +257,40 @@ export const isFavorited = async (propertyId) => {
  */
 export const createViewingRequest = async (payload) => {
   try {
-    const { data } = await apiClient.post("/tenant/viewing-requests", payload);
-    return data;
+    // Normalize payload format for backend compatibility
+    const propertyId = payload.propertyId || payload.property_id || payload.property;
+    const preferredDate = payload.preferredDate || payload.preferred_date || payload.preferredDate;
+    
+    const normalizedPayload = {
+      property_id: propertyId,
+      preferred_date: preferredDate,
+      message: payload.message || "",
+      contact_phone: payload.contact_phone || payload.contactPhone || null,
+    };
+
+    // Try property-scoped endpoint first (more RESTful)
+    try {
+      const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+      const { data } = await apiClient.post(
+        API_ENDPOINTS.PROPERTIES.CREATE_VIEWING_REQUEST(propertyId),
+        {
+          preferred_date: normalizedPayload.preferred_date,
+          message: normalizedPayload.message,
+          contact_phone: normalizedPayload.contact_phone,
+        }
+      );
+      return data;
+    } catch (err1) {
+      // Fallback: try tenant-scoped endpoint
+      try {
+        const { data } = await apiClient.post("/tenant/viewing-requests/", normalizedPayload);
+        return data;
+      } catch (err2) {
+        // Fallback: try without trailing slash
+        const { data } = await apiClient.post("/tenant/viewing-requests", normalizedPayload);
+        return data;
+      }
+    }
   } catch (err) {
     throw new Error(
       getErrorMessage(err, "Failed to submit property viewing request")

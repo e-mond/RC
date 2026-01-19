@@ -416,11 +416,43 @@ npm test -- --watch
 
 ## Documentation
 
-- **`FRONTEND_OVERVIEW.md`** - Architecture, folder structure, state management
-- **`FRONTEND_API_CONTRACTS.md`** - API endpoints and contracts
-- **`FRONTEND_CHANGELOG.md`** - Complete change history
+### 📚 Master Index
+**Start here:** **`DOCUMENTATION_MASTER_INDEX.md`** - Complete navigation guide to all documentation ⭐ NEW
+
+### Core Documentation (New - January 2026)
+- **`FRONTEND_ARCHITECTURE.md`** - Complete architecture and design patterns
+- **`STATE_MANAGEMENT.md`** - State management guide (Zustand, Context, local state)
+- **`ROUTING_GUIDE.md`** - Complete routing and navigation guide
+- **`ROUTING_AND_ACCESS_CONTROL.md`** - Routing and access control guide ⭐ NEW
+- **`THEMING_ACCESSIBILITY.md`** - Theming system and WCAG 2.1 AA compliance
+- **`FRONTEND_API_MAP.md`** - Complete API endpoint reference
+- **`API_CONSUMPTION_GUIDE.md`** - API consumption guide ⭐ NEW
+- **`ERROR_HANDLING_AND_TOASTS.md`** - Error handling and toast notifications ⭐ NEW
+- **`ENVIRONMENT_VARIABLES.md`** - Environment variable reference
+- **`MVP_PRODUCTION_READINESS_SUMMARY.md`** - Production readiness checklist
+
+### Testing & Security Documentation (New - January 2026)
+- **`FRONTEND_TESTING_GUIDE.md`** - Comprehensive testing guide ⭐ NEW
+- **`SECURITY_AND_ABUSE_TEST_NOTES.md`** - Security testing results ⭐ NEW
+- **`MOBILE_ACCESSIBILITY_COMPLIANCE.md`** - Mobile & accessibility compliance ⭐ NEW
+- **`MAP_FEATURES_DOCUMENTATION.md`** - Map features and 3D limitation ⭐ NEW
+- **`CONSOLE_LOGGING_PRODUCTION.md`** - Console logging guidelines ⭐ NEW
+
+### Deployment & Production (New - January 2026)
+- **`HANDOFF_TO_PRODUCTION.md`** - Production handoff guide ⭐ NEW
+- **`FINAL_PRODUCTION_READINESS_CHECKLIST.md`** - Production readiness checklist ⭐ NEW
+- **`FINAL_STABILIZATION_SUMMARY.md`** - Complete stabilization summary ⭐ NEW
+
+### Backend Coordination (New - January 2026)
+- **`BACKEND_DEPENDENCY_CHANGES.md`** - Backend coordination log ⭐ NEW
+
+### Existing Documentation
+- **`FRONTEND_DOCUMENTATION.md`** - General frontend documentation
 - **`MOCK_MODE_GUIDE.md`** - Mock mode usage guide
-- **`RESPONSIVE_DESIGN_VERIFICATION.md`** - Responsive design report
+- **`docs/SECURITY.md`** - Security documentation
+- **`docs/PRODUCTION_READINESS.md`** - Production readiness details
+
+**For complete documentation navigation, see `DOCUMENTATION_MASTER_INDEX.md`**
 
 ---
 

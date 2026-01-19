@@ -86,14 +86,36 @@ export default function PropertyDetailsPage() {
   }
 
   if (error || !property) {
+    const isNotFound = error?.includes("not found") || error?.includes("404");
+    
     return (
-      <div className="p-6">
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
-          {error || "Property not found"}
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 text-center">
+          <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            {isNotFound ? "Property Not Found" : "Error Loading Property"}
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            {isNotFound 
+              ? `The property with ID "${id}" could not be found. It may have been deleted or doesn't exist.`
+              : error || "An error occurred while loading the property."
+            }
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Button 
+              onClick={() => navigate("/landlord/properties")} 
+              variant="outline"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Properties
+            </Button>
+            {!isNotFound && (
+              <Button onClick={() => window.location.reload()}>
+                Retry
+              </Button>
+            )}
+          </div>
         </div>
-        <Button onClick={() => navigate("/landlord/properties")} className="mt-4">
-          Back to Properties
-        </Button>
       </div>
     );
   }
@@ -217,6 +239,10 @@ export default function PropertyDetailsPage() {
                       src={url}
                       alt={`${property.title} - Image ${idx + 1}`}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        console.error(`Failed to load image: ${url}`);
+                        e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect fill='%23e5e7eb' width='400' height='400'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='18' x='50%25' y='50%25' text-anchor='middle' dy='.3em'%3EImage not found%3C/text%3E%3C/svg%3E";
+                      }}
                     />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
                     {idx === 0 && (

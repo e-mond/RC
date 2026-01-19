@@ -23,6 +23,7 @@ export default function SignupSuccess() {
   
   const [emailVerified, setEmailVerified] = useState(false);
   const [accountApproved, setAccountApproved] = useState(role === "tenant"); // Tenants don't need approval
+  const [accountStatus, setAccountStatus] = useState(role === "tenant" ? "approved" : "pending_approval"); // 'pending_approval' | 'approved' | 'rejected'
   const [emailStatus, setEmailStatus] = useState("sent"); // 'sent' | 'delivered' | 'failed' | 'pending'
   const [checkingStatus, setCheckingStatus] = useState(false);
 
@@ -68,7 +69,7 @@ export default function SignupSuccess() {
     }, 1500);
   };
 
-  const canLogin = emailVerified && accountApproved;
+  const canLogin = emailVerified && (role === "tenant" || accountStatus === "approved");
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -142,26 +143,37 @@ export default function SignupSuccess() {
           {role !== "tenant" && (
             <div
               className={`p-4 rounded-lg border-2 ${
-                accountApproved
+                accountStatus === "approved"
                   ? "border-green-200 bg-green-50"
-                  : "border-blue-200 bg-blue-50"
+                  : accountStatus === "rejected"
+                  ? "border-red-200 bg-red-50"
+                  : "border-amber-200 bg-amber-50"
               }`}
             >
               <div className="flex items-start gap-3">
-                {accountApproved ? (
+                {accountStatus === "approved" ? (
                   <Shield className="w-5 h-5 text-green-600 mt-0.5" />
+                ) : accountStatus === "rejected" ? (
+                  <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
                 ) : (
-                  <Clock className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <Clock className="w-5 h-5 text-amber-600 mt-0.5" />
                 )}
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900 mb-1">
-                    Account Approval
+                    Account Approval Status
                   </h3>
                   <p className="text-sm text-gray-600">
-                    {accountApproved
-                      ? "Your account has been approved. You can now create listings."
-                      : `Your account is pending admin approval. You'll receive an email once it's approved. This usually takes 24-48 hours.`}
+                    {accountStatus === "approved"
+                      ? "Your account has been approved! You can now log in and access all features."
+                      : accountStatus === "rejected"
+                      ? "Your account application was rejected. Please contact support for more information."
+                      : `Your account is under review. You'll receive an email notification once your account is approved. This usually takes 24-48 hours.`}
                   </p>
+                  {accountStatus === "pending_approval" && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      <strong>Note:</strong> You cannot log in until your account is approved by an administrator.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -183,7 +195,7 @@ export default function SignupSuccess() {
             {role !== "tenant" && (
               <li className="flex items-start gap-2">
                 <span className="text-[#0b6e4f] font-bold">3.</span>
-                <span>Wait for admin approval (you'll receive an email notification)</span>
+                <span>Wait for admin approval — you'll receive an email notification when your account is reviewed</span>
               </li>
             )}
             <li className="flex items-start gap-2">

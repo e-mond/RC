@@ -3,13 +3,17 @@ import { FileText } from "lucide-react";
 
 export function LevelBadge({ level }) {
   const styles = {
-    info: "bg-blue-100 text-blue-700",
-    warn: "bg-yellow-100 text-yellow-700",
-    error: "bg-red-100 text-red-700",
+    info: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+    warn: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
+    error: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+    warning: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300", // Alias for warn
   };
+  // Normalize level: convert to lowercase, handle aliases
+  const normalizedLevel = level ? level.toLowerCase() : "info";
+  const safeLevel = normalizedLevel === "warning" ? "warn" : normalizedLevel;
   return (
-    <span className={`px-2 py-1 text-xs rounded-full font-medium ${styles[level] || styles.info}`}>
-      {level.toUpperCase()}
+    <span className={`px-2 py-1 text-xs rounded-full font-medium ${styles[safeLevel] || styles.info}`}>
+      {safeLevel.toUpperCase()}
     </span>
   );
 }

@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { signupArtisan } from "@/services/authService";
 import ProgressIndicator from "@/components/onboarding/ProgressIndicator";
 import { PrimaryButton, SecondaryButton } from "@/components/ui/Button";
 import artisan_onboarding from "@/assets/images/artisan_onboarding.jpeg";
+import TermsPrivacyModal from "@/components/legal/TermsPrivacyModal";
 
 export default function ArtisanForm() {
   const navigate = useNavigate();
@@ -29,6 +30,9 @@ export default function ArtisanForm() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [termsAgreed, setTermsAgreed] = useState(false);
+  const [privacyAgreed, setPrivacyAgreed] = useState(false);
+  const [modalOpen, setModalOpen] = useState(null);
 
   /** Handle field changes */
   const handleChange = (e) => {
@@ -71,9 +75,24 @@ export default function ArtisanForm() {
     setStep(1);
   };
 
+  const handleModalAgree = (type) => {
+    if (type === "terms") {
+      setTermsAgreed(true);
+    } else if (type === "privacy") {
+      setPrivacyAgreed(true);
+    }
+    if ((type === "terms" && privacyAgreed) || (type === "privacy" && termsAgreed)) {
+      setForm((prev) => ({ ...prev, agree: true }));
+    }
+  };
+
   /** Submit to API */
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!termsAgreed || !privacyAgreed) {
+      setError("Please read and agree to both Terms & Conditions and Privacy Policy.");
+      return;
+    }
     setError("");
     setLoading(true);
 
@@ -124,9 +143,9 @@ export default function ArtisanForm() {
       // Redirect to success page with role and email
       navigate(`/signup-success?role=artisan&email=${encodeURIComponent(form.email)}`);
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Signup failed. Please try again."
-      );
+      // Extract user-friendly error message (handles field-specific errors like password validation)
+      const errorMessage = err?.message || err?.response?.data?.message || "Signup failed. Please check your information and try again.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -185,7 +204,7 @@ export default function ArtisanForm() {
                   placeholder="Full Name (e.g., John Doe)"
                   value={form.fullName}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none focus:bg-white"
                   required
                 />
                 <input
@@ -193,7 +212,7 @@ export default function ArtisanForm() {
                   name="email"
                   placeholder="Email Address"
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none focus:bg-white"
                   required
                 />
                 <input
@@ -202,7 +221,7 @@ export default function ArtisanForm() {
                   placeholder="Phone Number (e.g., +233241234567)"
                   value={form.phone}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none focus:bg-white"
                   required
                 />
                 <input
@@ -211,7 +230,7 @@ export default function ArtisanForm() {
                   placeholder="Password (min. 8 characters)"
                   value={form.password}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none focus:bg-white"
                   required
                   minLength="8"
                 />
@@ -221,7 +240,7 @@ export default function ArtisanForm() {
                   placeholder="Confirm Password"
                   value={form.confirmPassword}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none focus:bg-white"
                   required
                   minLength="8"
                 />
@@ -241,7 +260,7 @@ export default function ArtisanForm() {
                   name="profession"
                   onChange={handleChange}
                   value={form.profession}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-900 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none focus:bg-white"
                   required
                 >
                   <option value="">Select Profession</option>
@@ -261,7 +280,7 @@ export default function ArtisanForm() {
                     placeholder="Please specify your profession"
                     value={form.otherProfession}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none focus:bg-white"
                     required
                     initial={{ opacity: 0, y: -5 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -277,7 +296,7 @@ export default function ArtisanForm() {
                   onChange={handleChange}
                   min="0"
                   max="50"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none focus:bg-white"
                   required
                 />
                 <input
@@ -286,7 +305,7 @@ export default function ArtisanForm() {
                   placeholder="Service Region / City (e.g., Accra, Kumasi)"
                   value={form.region}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none focus:bg-white"
                 />
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-gray-700">Upload ID Document (Optional)</label>
@@ -304,15 +323,51 @@ export default function ArtisanForm() {
                   )}
                 </div>
 
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    name="agree"
-                    onChange={handleChange}
-                    required
-                  />{" "}
-                  I agree to the Terms & Conditions
-                </label>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      name="agree"
+                      checked={form.agree && termsAgreed && privacyAgreed}
+                      onChange={(e) => {
+                        if (!termsAgreed || !privacyAgreed) {
+                          setError("Please read both Terms & Conditions and Privacy Policy first.");
+                          return;
+                        }
+                        handleChange(e);
+                      }}
+                      className="w-5 h-5 text-[#0b6e4f] border-gray-300 rounded focus:ring-[#0b6e4f]"
+                      required
+                    />{" "}
+                    <span>
+                      I have read and agree to the{" "}
+                      <button
+                        type="button"
+                        onClick={() => setModalOpen("terms")}
+                        className="text-[#0b6e4f] underline hover:text-[#0a5d3f] font-medium"
+                      >
+                        Terms & Conditions
+                      </button>
+                      {" "}and{" "}
+                      <button
+                        type="button"
+                        onClick={() => setModalOpen("privacy")}
+                        className="text-[#0b6e4f] underline hover:text-[#0a5d3f] font-medium"
+                      >
+                        Privacy Policy
+                      </button>
+                    </span>
+                  </label>
+                  {(!termsAgreed || !privacyAgreed) && (
+                    <p className="text-xs text-amber-600">
+                      {!termsAgreed && !privacyAgreed 
+                        ? "Please read both Terms & Conditions and Privacy Policy" 
+                        : !termsAgreed 
+                        ? "Please read Terms & Conditions" 
+                        : "Please read Privacy Policy"}
+                    </p>
+                  )}
+                </div>
 
                 <div className="flex gap-3">
                   <SecondaryButton onClick={handleBack} className="w-1/2">
@@ -320,7 +375,7 @@ export default function ArtisanForm() {
                   </SecondaryButton>
                   <PrimaryButton
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !form.agree || !termsAgreed || !privacyAgreed}
                     className="w-1/2 bg-[#0b6e4f] hover:bg-[#095c42] text-white text-base py-2.5 text-nowrap rounded-lg font-medium transition-colors"
                   >
                     {loading ? "Creating..." : "Create Account"}
@@ -380,6 +435,20 @@ export default function ArtisanForm() {
             )}
           </motion.form>
         </AnimatePresence>
+
+        {/* Terms & Privacy Modals */}
+        <TermsPrivacyModal
+          type="terms"
+          isOpen={modalOpen === "terms"}
+          onClose={() => setModalOpen(null)}
+          onAgree={handleModalAgree}
+        />
+        <TermsPrivacyModal
+          type="privacy"
+          isOpen={modalOpen === "privacy"}
+          onClose={() => setModalOpen(null)}
+          onAgree={handleModalAgree}
+        />
       </div>
     </div>
   );

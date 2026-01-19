@@ -22,6 +22,7 @@ const TenantRentalHistory = lazy(() => import("@/pages/Dashboards/Tenant/TenantR
 const TenantProperties = lazy(() => import("@/pages/Dashboards/Tenant/TenantProperties"));
 const TenantLeasesPage = lazy(() => import("@/pages/Dashboards/Tenant/Leases/TenantLeasesPage"));
 const PropertyDetail = lazy(() => import("@/pages/PropertyDetail"));
+const LandlordPropertiesViewPage = lazy(() => import("@/pages/Dashboards/Landlord/Properties/LandlordPropertiesViewPage"));
 
 const LandlordDashboard = lazy(() => import("@/pages/Dashboards/Landlord/LandlordDashboard"));
 const PropertiesPage = lazy(() => import("@/pages/Dashboards/Landlord/Properties/PropertiesPage"));
@@ -47,17 +48,24 @@ const LeaseAgreementsPage = lazy(() => import("@/pages/Documentation/LeaseAgreem
 const AdminDashboard = lazy(() => import("@/pages/Dashboards/Admin/AdminDashboard"));
 const AdminApprovals = lazy(() => import("@/pages/Dashboards/Admin/components/AdminApprovals"));
 const UserApprovalDetailPage = lazy(() => import("@/pages/Dashboards/Admin/UserApprovalDetailPage"));
+const AdminPropertyApprovalsPage = lazy(() => import("@/pages/Dashboards/Admin/properties/AdminPropertyApprovalsPage"));
 const AdminReports = lazy(() => import("@/pages/Dashboards/Admin/components/AD_ReportsPanel"));
 const AdminAssignedRoles = lazy(() => import("@/pages/Dashboards/Admin/AdminAssignedRoles"));
 const AdminLeasesPage = lazy(() => import("@/pages/Dashboards/Admin/Leases/AdminLeasesPage"));
+const AdminPropertyDetailPage = lazy(() => import("@/pages/Dashboards/Admin/properties/AdminPropertyDetailPage"));
 const SA_MarketingCampaigns = lazy(() => import("@/pages/Dashboards/SuperAdmin/marketing/SA_MarketingCampaigns"));
 
 const SuperAdminDashboard = lazy(() => import("@/pages/Dashboards/SuperAdmin/SuperAdminDashboard"));
 const SA_UsersPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/users/SA_UsersPage"));
+const SA_UserDetailPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/users/SA_UserDetailPage"));
 const SA_RolesPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/roles/SA_RolesPage"));
 const SA_AuditPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/audit/SA_AuditPage"));
 const SA_AnnouncementsPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/announcements/SA_AnnouncementsPage"));
 const SA_PremiumPricing = lazy(() => import("@/pages/Dashboards/SuperAdmin/pricing/SA_PremiumPricing"));
+const SA_PendingUserApprovals = lazy(() => import("@/pages/Dashboards/SuperAdmin/approvals/SA_PendingUserApprovals"));
+const SA_UserApprovalDetailPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/approvals/SA_UserApprovalDetailPage"));
+const SA_PendingPropertyApprovals = lazy(() => import("@/pages/Dashboards/SuperAdmin/approvals/SA_PendingPropertyApprovals"));
+const SA_LeasesPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/leases/SA_LeasesPage"));
 
 // ---------------------------
 // Components
@@ -110,6 +118,7 @@ const dashboardRoutes = [
       { path: "overview", element: <LandlordDashboard /> },
       { path: "properties", element: <PropertiesPage /> },
       { path: "properties/new", element: <PropertyForm /> },
+      { path: "properties/view/:landlordId", element: <LandlordPropertiesViewPage /> },
       { path: "properties/:id", element: <PropertyDetailsPage /> },
       { path: "properties/:id/edit", element: <PropertyForm /> },
       { path: "bookings", element: <LandingBookingPage /> },
@@ -178,11 +187,18 @@ const dashboardRoutes = [
       { index: true, element: <SuperAdminDashboard /> },
       { path: "overview", element: <SuperAdminDashboard /> },
       { path: "users", element: <SA_UsersPage /> },
+      { path: "users/:id", element: <PageLoader><SA_UserDetailPage /></PageLoader> },
+      { path: "users/:id/profile", element: <PageLoader><PublicProfilePage /></PageLoader> },
+      { path: "users/pending", element: <PageLoader><SA_PendingUserApprovals /></PageLoader> },
+      { path: "users/pending/:id", element: <PageLoader><SA_UserApprovalDetailPage /></PageLoader> },
+      { path: "properties/pending", element: <PageLoader><SA_PendingPropertyApprovals /></PageLoader> },
+      { path: "properties/:id", element: <PageLoader><AdminPropertyDetailPage /></PageLoader> },
       { path: "roles", element: <SA_RolesPage /> },
       { path: "audit", element: <SA_AuditPage /> },
       { path: "announcements", element: <SA_AnnouncementsPage /> },
       { path: "pricing", element: <SA_PremiumPricing /> },
       { path: "marketing", element: <SA_MarketingCampaigns /> },
+      { path: "leases", element: <PageLoader><SA_LeasesPage /></PageLoader> },
       { path: "messages", element: <MessagesInbox /> },
     ],
   },
@@ -198,6 +214,8 @@ const dashboardRoutes = [
       { path: "dashboard", element: <Navigate to="overview" replace /> },
           { path: "approvals", element: <AdminApprovals /> },
           { path: "approvals/user/:id", element: <PageLoader><UserApprovalDetailPage /></PageLoader> },
+          { path: "approvals/properties", element: <PageLoader><AdminPropertyApprovalsPage /></PageLoader> },
+          { path: "properties/:id", element: <PageLoader><AdminPropertyDetailPage /></PageLoader> },
           { path: "assigned-roles", element: <AdminAssignedRoles /> },
           { path: "marketing", element: <SA_MarketingCampaigns /> },
           { path: "reports", element: <AdminReports /> },
@@ -286,11 +304,24 @@ export default function SecureRoutes() {
         <Route index element={<PageLoader><PublicProfilePage /></PageLoader>} />
       </Route>
 
-      {/* Documentation Pages */}
+      {/* Documentation Pages - Public route (accessible to all authenticated users) */}
       <Route
         path="documentation"
         element={
           <RoleProtectedRoute allowedRoles={allRoles}>
+            <DashboardLayout />
+          </RoleProtectedRoute>
+        }
+      >
+        <Route index element={<PageLoader><DocumentationPage /></PageLoader>} />
+        <Route path="lease-agreements" element={<PageLoader><LeaseAgreementsPage /></PageLoader>} />
+      </Route>
+
+      {/* Super Admin Documentation (dedicated route) */}
+      <Route
+        path="super-admin/documentation"
+        element={
+          <RoleProtectedRoute allowedRoles={["super-admin"]}>
             <DashboardLayout />
           </RoleProtectedRoute>
         }

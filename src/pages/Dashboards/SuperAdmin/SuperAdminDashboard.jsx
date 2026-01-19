@@ -182,7 +182,7 @@ export default function SuperAdminDashboard() {
                       Create, edit, and manage system-wide lease templates. Control admin access to lease management.
                     </p>
                     <Link
-                      to="/admin/leases"
+                      to="/super-admin/leases"
                       className="inline-flex items-center gap-2 px-4 py-2 bg-[#0b6e4f] text-white rounded-lg hover:bg-[#095c42] transition-colors"
                     >
                       <FileText className="w-4 h-4" />
@@ -203,7 +203,7 @@ export default function SuperAdminDashboard() {
                       Create and manage platform documentation, help articles, and user guides.
                     </p>
                     <Link
-                      to="/documentation"
+                      to="/super-admin/documentation"
                       className="inline-flex items-center gap-2 px-4 py-2 bg-[#0b6e4f] text-white rounded-lg hover:bg-[#095c42] transition-colors"
                     >
                       <Book className="w-4 h-4" />

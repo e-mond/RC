@@ -62,15 +62,22 @@ export default function SA_PremiumPricing() {
           upgradeFee: 0.0,
         });
       } else {
-        // Real API call
-        const response = await fetch("/api/super-admin/premium/pricing/", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
+        // Real API call - use apiClient for proper error handling
+        const { default: apiClient } = await import("@/services/apiClient");
+        const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+        const { data } = await apiClient.get(API_ENDPOINTS.SUPER_ADMIN.PREMIUM_PRICING);
+        // Merge with defaults to ensure all fields exist
+        setPricing({
+          monthly: 49.0,
+          yearly: 490.0,
+          currency: "GHS",
+          enabled: true,
+          listingFee: 5.0,
+          adPromotionFee: 10.0,
+          featuredListingFee: 15.0,
+          upgradeFee: 0.0,
+          ...data, // Override with API data if present
         });
-        if (!response.ok) throw new Error("Failed to load pricing");
-        const data = await response.json();
-        setPricing(data);
       }
     } catch (err) {
       console.error("Load pricing error:", err);
@@ -91,16 +98,11 @@ export default function SA_PremiumPricing() {
         await new Promise((resolve) => setTimeout(resolve, 500));
         toast.success("Pricing updated successfully (mock mode)");
       } else {
-        // Real API call
-        const response = await fetch("/api/super-admin/premium/pricing/", {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify(pricing),
-        });
-        if (!response.ok) throw new Error("Failed to update pricing");
+        // Real API call - use apiClient for proper error handling
+        const { default: apiClient } = await import("@/services/apiClient");
+        const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+        const { data } = await apiClient.patch(API_ENDPOINTS.SUPER_ADMIN.PREMIUM_PRICING, pricing);
+        setPricing(data);
         toast.success("Pricing updated successfully");
       }
     } catch (err) {
@@ -217,7 +219,7 @@ export default function SA_PremiumPricing() {
                 />
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Per year • {pricing.yearly / 12 < pricing.monthly ? `₵${(pricing.monthly - pricing.yearly / 12).toFixed(2)} savings/month` : ""}
+                Per year • {pricing.yearly && pricing.monthly && pricing.yearly / 12 < pricing.monthly ? `₵${(pricing.monthly - pricing.yearly / 12).toFixed(2)} savings/month` : ""}
               </p>
             </div>
           </motion.div>
@@ -348,25 +350,25 @@ export default function SA_PremiumPricing() {
           <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <p className="text-sm text-gray-600 dark:text-gray-400">Monthly Price</p>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">
-              {pricing.currency} {pricing.monthly.toFixed(2)}
+              {pricing.currency} {(pricing.monthly ?? 0).toFixed(2)}
             </p>
           </div>
           <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <p className="text-sm text-gray-600 dark:text-gray-400">Yearly Price</p>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">
-              {pricing.currency} {pricing.yearly.toFixed(2)}
+              {pricing.currency} {(pricing.yearly ?? 0).toFixed(2)}
             </p>
           </div>
           <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <p className="text-sm text-gray-600 dark:text-gray-400">Listing Fee</p>
             <p className="text-xl font-bold text-gray-900 dark:text-white">
-              {pricing.currency} {pricing.listingFee.toFixed(2)}
+              {pricing.currency} {(pricing.listingFee ?? 0).toFixed(2)}
             </p>
           </div>
           <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <p className="text-sm text-gray-600 dark:text-gray-400">Ad Fee</p>
             <p className="text-xl font-bold text-gray-900 dark:text-white">
-              {pricing.currency} {pricing.adPromotionFee.toFixed(2)}
+              {pricing.currency} {(pricing.adPromotionFee ?? 0).toFixed(2)}
             </p>
           </div>
           <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">

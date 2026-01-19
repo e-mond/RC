@@ -49,9 +49,10 @@ export const validateNumericId = (id, min = 1, max = Number.MAX_SAFE_INTEGER) =>
 /**
  * Validate UUID parameter
  * @param {string|undefined} id - UUID parameter from URL
+ * @param {boolean} silent - If true, don't log warnings (used internally)
  * @returns {string|null} Validated UUID or null if invalid
  */
-export const validateUUID = (id) => {
+export const validateUUID = (id, silent = false) => {
   if (!id) return null;
   
   const cleanId = String(id).trim();
@@ -60,7 +61,9 @@ export const validateUUID = (id) => {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   
   if (!uuidRegex.test(cleanId)) {
-    console.warn('[validateParams] Invalid UUID format:', id);
+    if (!silent) {
+      console.warn('[validateParams] Invalid UUID format:', id);
+    }
     return null;
   }
   
@@ -75,8 +78,8 @@ export const validateUUID = (id) => {
 export const validateId = (id) => {
   if (!id) return null;
   
-  // Try UUID first (more specific)
-  const uuid = validateUUID(id);
+  // Try UUID first (more specific) - silent mode to avoid false warnings
+  const uuid = validateUUID(id, true);
   if (uuid) return uuid;
   
   // Try numeric

@@ -17,7 +17,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   User,
@@ -40,7 +40,7 @@ import { getUserProfile } from "@/services/userService";
 import { getUserReviews } from "@/services/reviewService";
 import { canUserMessage, getMessagingRulesDescription } from "@/utils/messagingRules";
 import { createConversation } from "@/services/messagesService";
-import { ReviewsList, BackgroundStatusPanel } from "@/components/reviews";
+import { ReviewsList, BackgroundStatusPanel, VerificationBadge } from "@/components/reviews";
 import Button from "@/components/ui/Button";
 import { toast } from "react-hot-toast";
 
@@ -76,19 +76,23 @@ export default function PublicProfilePage() {
         setLoading(true);
         const data = await getUserProfile(id);
         if (mounted) {
-          setProfileUser(data);
+          // Handle different response shapes
+          const userData = data.user || data.profile || data;
+          setProfileUser(userData);
           
           // Load reviews
-          loadReviews(data.id);
+          loadReviews(userData.id || id);
           
-          // Load activity summary (would come from API)
-          // For now, using mock data structure
+          // Load activity summary from API response
           setActivitySummary({
-            properties: data.properties_count || 0,
-            services: data.services_count || 0,
-            jobs: data.jobs_completed || 0,
-            bookings: data.bookings_count || 0,
+            properties: userData.properties_count || userData.properties?.length || 0,
+            services: userData.services_count || userData.services?.length || 0,
+            jobs: userData.jobs_completed || userData.jobs?.length || 0,
+            bookings: userData.bookings_count || userData.bookings?.length || 0,
           });
+          
+          // Verification status should come from API response
+          // It's already in userData.verification_status, which we use below
         }
       } catch (err) {
         console.error("Failed to load profile:", err);
@@ -131,9 +135,16 @@ export default function PublicProfilePage() {
     };
   }, [id]);
 
-  // Handle message user
+  // Handle message user - Navigate with pre-filled message
   const handleMessageUser = async () => {
-    if (!currentUser || !profileUser) return;
+    // Check authentication first
+    if (!currentUser) {
+      toast.error("Please log in to send messages");
+      navigate("/login", { state: { from: location.pathname } });
+      return;
+    }
+
+    if (!profileUser) return;
 
     // Check if user can message this profile user
     const canMessage = canUserMessage(currentUser, profileUser, {
@@ -148,16 +159,35 @@ export default function PublicProfilePage() {
 
     setStartingConversation(true);
     try {
+      // Ensure profileUser.id is a valid integer
+      const recipientId = typeof profileUser.id === 'string' 
+        ? parseInt(profileUser.id, 10) 
+        : profileUser.id;
+      
+      if (isNaN(recipientId) || recipientId <= 0) {
+        throw new Error("Invalid user ID");
+      }
+
+      // Create conversation with initial message
+      const initialMessage = `Hello ${displayName}! I came across your profile and would like to connect.`;
+      
       const conversation = await createConversation({
-        recipient_id: profileUser.id,
+        recipient_id: recipientId,
+        initial_message: initialMessage,
       });
       
-      // Navigate to messages with the new conversation
-      navigate(`/messages?conversation=${conversation.id}`);
+      // Navigate to messages with the conversation and pre-filled message
+      navigate(`/messages?conversation=${conversation.id}&message=${encodeURIComponent(initialMessage)}`);
       toast.success("Conversation started!");
     } catch (err) {
       console.error("Failed to start conversation:", err);
-      toast.error(err.message || "Failed to start conversation");
+      // Don't show success toast if there was an error
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        toast.error("Please log in to send messages");
+        navigate("/login", { state: { from: location.pathname } });
+      } else {
+        toast.error(err.message || "Failed to start conversation");
+      }
     } finally {
       setStartingConversation(false);
     }
@@ -187,9 +217,14 @@ export default function PublicProfilePage() {
 
   const isOwnProfile = currentUser?.id === profileUser.id;
   const role = profileUser.role?.toLowerCase() || "tenant";
-  const displayName = profileUser.full_name || profileUser.name || "User";
+  // Try multiple possible field names for the user's name
+  const displayName = profileUser.full_name || profileUser.fullName || profileUser.name || profileUser.username || profileUser.email?.split('@')[0] || "User";
   const trustScore = profileUser.trust_score || 0;
-  const isVerified = profileUser.is_verified || profileUser.verification_status === "verified";
+  
+  // Get actual verification status from API response
+  const verificationStatus = profileUser.verification_status || {};
+  const isVerified = verificationStatus.overall_status === "verified" || 
+                     (verificationStatus.identity_verified && verificationStatus.background_check_status === "verified");
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -235,7 +270,14 @@ export default function PublicProfilePage() {
               <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                 <div className="flex items-center gap-2">
                   <User className="w-4 h-4" />
-                  <span className="capitalize">{role.replace("-", " ")}</span>
+                  <span className="capitalize font-medium">
+                    {role === "landlord" ? "Property Owner" :
+                     role === "artisan" ? "Service Provider" :
+                     role === "tenant" ? "Renter" :
+                     role === "admin" ? "Administrator" :
+                     role === "super-admin" ? "Super Administrator" :
+                     role.replace("-", " ")}
+                  </span>
                 </div>
                 {profileUser.email && (
                   <div className="flex items-center gap-2">
@@ -381,11 +423,11 @@ export default function PublicProfilePage() {
             userId={profileUser.id}
             userRole={role}
             verificationStatus={{
-              identity_verified: isVerified,
-              background_check_status: profileUser.background_check_status || "unverified",
-              payment_verified: profileUser.payment_verified || false,
-              document_verified: profileUser.document_verified || false,
-              overall_status: isVerified ? "verified" : "unverified",
+              identity_verified: verificationStatus.identity_verified || false,
+              background_check_status: verificationStatus.background_check_status || "unverified",
+              payment_verified: verificationStatus.payment_verified || false,
+              document_verified: verificationStatus.document_verified || false,
+              overall_status: verificationStatus.overall_status || (isVerified ? "verified" : "unverified"),
             }}
           />
         </motion.div>

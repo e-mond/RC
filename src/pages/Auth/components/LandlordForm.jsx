@@ -6,6 +6,7 @@ import PhoneInput from "react-phone-number-input/input";
 import ProgressIndicator from "@/components/onboarding/ProgressIndicator";
 import { signupUser } from "@/services/signupService";
 import landlord_onboarding from "@/assets/images/landlord_onboarding.jpeg";
+import TermsPrivacyModal from "@/components/legal/TermsPrivacyModal";
 
 /**
  * Multi-step landlord signup form.
@@ -26,6 +27,9 @@ export default function LandlordForm() {
   const [passwordMatch, setPasswordMatch] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState(null);
+  const [termsAgreed, setTermsAgreed] = useState(false);
+  const [privacyAgreed, setPrivacyAgreed] = useState(false);
+  const [modalOpen, setModalOpen] = useState(null);
 
   // === Form Handlers ===
   const handleChange = (e) => {
@@ -61,8 +65,24 @@ export default function LandlordForm() {
 
   const handlePrev = () => setStep(1);
 
+  const handleModalAgree = (type) => {
+    if (type === "terms") {
+      setTermsAgreed(true);
+    } else if (type === "privacy") {
+      setPrivacyAgreed(true);
+    }
+    if ((type === "terms" && privacyAgreed) || (type === "privacy" && termsAgreed)) {
+      setForm((prev) => ({ ...prev, agree: true }));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!termsAgreed || !privacyAgreed) {
+      setMessage({ type: "error", text: "Please read and agree to both Terms & Conditions and Privacy Policy." });
+      setIsSubmitting(false);
+      return;
+    }
     setIsSubmitting(true);
     setMessage(null);
 
@@ -111,8 +131,9 @@ export default function LandlordForm() {
       // Redirect to success page with role and email
       window.location.href = `/signup-success?role=landlord&email=${encodeURIComponent(form.email)}`;
     } catch (error) {
-      console.error("Signup error:", error);
-      setMessage({ type: "error", text: error.message || "Signup failed" });
+      // Extract user-friendly error message (handles field-specific errors)
+      const errorMessage = error?.message || error?.response?.data?.message || "Signup failed. Please check your information and try again.";
+      setMessage({ type: "error", text: errorMessage });
     } finally {
       setIsSubmitting(false);
     }
@@ -241,20 +262,51 @@ export default function LandlordForm() {
                   required
                 />
 
-                <label className="flex items-center gap-3 text-sm text-gray-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    name="agree"
-                    checked={form.agree}
-                    onChange={handleChange}
-                    className="w-5 h-5 text-[#0b6e4f] border-gray-300 rounded focus:ring-[#0b6e4f]"
-                    required
-                  />
-                  I agree to the{" "}
-                  <a href="/terms" className="text-[#0b6e4f] underline hover:text-[#0a5d3f]">
-                    Terms & Conditions
-                  </a>
-                </label>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 text-sm text-gray-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="agree"
+                      checked={form.agree && termsAgreed && privacyAgreed}
+                      onChange={(e) => {
+                        if (!termsAgreed || !privacyAgreed) {
+                          setMessage({ type: "error", text: "Please read both Terms & Conditions and Privacy Policy first." });
+                          return;
+                        }
+                        handleChange(e);
+                      }}
+                      className="w-5 h-5 text-[#0b6e4f] border-gray-300 rounded focus:ring-[#0b6e4f]"
+                      required
+                    />
+                    <span>
+                      I have read and agree to the{" "}
+                      <button
+                        type="button"
+                        onClick={() => setModalOpen("terms")}
+                        className="text-[#0b6e4f] underline hover:text-[#0a5d3f] font-medium"
+                      >
+                        Terms & Conditions
+                      </button>
+                      {" "}and{" "}
+                      <button
+                        type="button"
+                        onClick={() => setModalOpen("privacy")}
+                        className="text-[#0b6e4f] underline hover:text-[#0a5d3f] font-medium"
+                      >
+                        Privacy Policy
+                      </button>
+                    </span>
+                  </label>
+                  {(!termsAgreed || !privacyAgreed) && (
+                    <p className="text-xs text-amber-600">
+                      {!termsAgreed && !privacyAgreed 
+                        ? "Please read both Terms & Conditions and Privacy Policy" 
+                        : !termsAgreed 
+                        ? "Please read Terms & Conditions" 
+                        : "Please read Privacy Policy"}
+                    </p>
+                  )}
+                </div>
 
                 {message && (
                   <p className={`text-sm text-center ${message.type === "error" ? "text-red-600" : "text-green-600"}`}>
@@ -266,7 +318,7 @@ export default function LandlordForm() {
                   <Button onClick={handlePrev} type="button" variant="outline" className="w-1/2 border text-base py-2.5 rounded-lg font-medium transition-colors">
                     Back
                   </Button>
-                  <Button type="submit" className="w-1/2 px-4 py-2.5 bg-[#0b6e4f] text-white text-nowrap font-medium rounded-lg hover:bg-[#095c42] transition" disabled={isSubmitting || !form.agree}>
+                  <Button type="submit" className="w-1/2 px-4 py-2.5 bg-[#0b6e4f] text-white text-nowrap font-medium rounded-lg hover:bg-[#095c42] transition" disabled={isSubmitting || !form.agree || !termsAgreed || !privacyAgreed}>
                     {isSubmitting ? "Creating..." : "Create Account"}
                   </Button>
                 </div>
@@ -318,6 +370,20 @@ export default function LandlordForm() {
             )}
           </motion.form>
         </AnimatePresence>
+
+        {/* Terms & Privacy Modals */}
+        <TermsPrivacyModal
+          type="terms"
+          isOpen={modalOpen === "terms"}
+          onClose={() => setModalOpen(null)}
+          onAgree={handleModalAgree}
+        />
+        <TermsPrivacyModal
+          type="privacy"
+          isOpen={modalOpen === "privacy"}
+          onClose={() => setModalOpen(null)}
+          onAgree={handleModalAgree}
+        />
       </div>
     </div>
   );
@@ -330,7 +396,7 @@ function Input({ label, error, ...props }) {
       <label className="text-sm font-medium text-gray-800">{label}</label>
       <input
         {...props}
-        className={`border border-gray-300 rounded-lg p-2 focus:border-[#0b6e4f] focus:ring-[#0b6e4f] focus:ring-1 ${
+        className={`border border-gray-300 rounded-lg p-2 bg-gray-100 text-gray-900 placeholder:text-gray-500 focus:border-[#0b6e4f] focus:ring-[#0b6e4f] focus:ring-1 focus:bg-white ${
           error ? "border-red-500" : ""
         }`}
       />
@@ -345,7 +411,7 @@ function Select({ label, options, ...props }) {
       <label className="text-sm font-medium text-gray-800">{label}</label>
       <select
         {...props}
-        className="border border-gray-300 rounded-lg p-2 focus:ring-[#0b6e4f] focus:border-[#0b6e4f]"
+        className="border border-gray-300 rounded-lg p-2 bg-gray-100 text-gray-900 focus:ring-[#0b6e4f] focus:border-[#0b6e4f] focus:bg-white"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>

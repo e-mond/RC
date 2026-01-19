@@ -61,13 +61,14 @@ const roleMenus = {
   "super-admin": [
     { to: "/super-admin/overview",       labelKey: "Overview",           icon: <Home size={18} /> },
     { to: "/super-admin/users",          labelKey: "Manage Users",        icon: <Users size={18} /> },
+    { to: "/super-admin/users/pending",  labelKey: "Pending User Approvals", icon: <AlertCircle size={18} /> },
+    { to: "/super-admin/properties/pending", labelKey: "Pending Property Approvals", icon: <Building2 size={18} /> },
     { to: "/super-admin/roles",          labelKey: "Role Delegation",     icon: <Settings size={18} /> },
     { to: "/super-admin/pricing",        labelKey: "Premium Pricing",     icon: <Crown size={18} /> },
     { to: "/super-admin/marketing",     labelKey: "Marketing",           icon: <Megaphone size={18} /> },
     { to: "/super-admin/audit",          labelKey: "Audit Logs",          icon: <FileText size={18} /> },
+    { to: "/super-admin/leases",         labelKey: "Lease Management",     icon: <FileText size={18} /> },
     { to: "/super-admin/announcements",  labelKey: "Announcements",      icon: <Megaphone size={18} /> },
-    { to: "/admin/leases",               labelKey: "Lease Management",    icon: <FileText size={18} /> },
-    { to: "/documentation",              labelKey: "Documentation",      icon: <Book size={18} /> },
     { to: "/super-admin/messages",       labelKey: "Messages",           icon: <MessageSquare size={18} />, hasMessages: true },
     { to: "/profile",                   labelKey: "Profile",           icon: <Users size={18} /> },
   ],
@@ -91,7 +92,7 @@ const roleMenus = {
         { to: "/tenant/history",             labelKey: "RentalHistory",      icon: <History size={18} /> },
         { to: "/tenant/leases",             labelKey: "Lease Agreements",    icon: <FileText size={18} /> },
         { to: "/tenant/messages",            labelKey: "Messages",           icon: <MessageSquare size={18} />, hasMessages: true },
-        { to: "/documentation",              labelKey: "Documentation",      icon: <Book size={18} /> },
+        // { to: "/documentation",              labelKey: "Documentation",      icon: <Book size={18} /> },
         { to: "/profile",                   labelKey: "Profile",           icon: <Users size={18} /> },
       ],
       landlord: [
@@ -121,7 +122,7 @@ const roleMenus = {
           requiredFeature: "advertisement_manager",
           premium: true,
         },
-        { to: "/documentation",              labelKey: "Documentation",      icon: <Book size={18} /> },
+        // { to: "/documentation",              labelKey: "Documentation",      icon: <Book size={18} /> },
         { to: "/profile",                   labelKey: "Profile",           icon: <Users size={18} /> },
       ],
       artisan: [
@@ -137,7 +138,7 @@ const roleMenus = {
           requiredFeature: "advertisement_manager",
           premium: true,
         },
-        { to: "/documentation",              labelKey: "Documentation",      icon: <Book size={18} /> },
+        // { to: "/documentation",              labelKey: "Documentation",      icon: <Book size={18} /> },
         { to: "/profile",                   labelKey: "Profile",           icon: <Users size={18} /> },
       ],
 };
@@ -180,9 +181,10 @@ export default function Sidebar() {
 
   // Helper to check if current route matches menu item
   const isActive = useCallback(
-    (path) => {
+    (path, allMenuItems = []) => {
       const current = location.pathname;
 
+      // Exact match
       if (current === path) return true;
 
       // Special case for overview pages
@@ -191,7 +193,37 @@ export default function Sidebar() {
         return current === base || current === `${base}/`;
       }
 
-      return current.startsWith(path);
+      // Check if current path starts with this menu path
+      if (current.startsWith(path)) {
+        // If path ends with /, it's a directory match
+        if (path.endsWith("/")) {
+          return true;
+        }
+        
+        // Check if there's a more specific menu item that also matches
+        // If there is, this less specific path should not be active
+        const hasMoreSpecificMatch = allMenuItems.some((item) => {
+          const itemPath = item.to;
+          // Skip self
+          if (itemPath === path) return false;
+          // Check if item path is more specific (longer) and also matches current path
+          if (itemPath.length > path.length && current.startsWith(itemPath)) {
+            return true;
+          }
+          return false;
+        });
+        
+        // Only activate if there's no more specific match
+        if (hasMoreSpecificMatch) {
+          return false;
+        }
+        
+        // Check if current path is exactly the menu path (no additional segments)
+        const nextChar = current[path.length];
+        return nextChar === undefined;
+      }
+
+      return false;
     },
     [location.pathname]
   );
@@ -283,7 +315,7 @@ export default function Sidebar() {
         <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
           <nav className="px-3 py-6 space-y-1">
             {visibleMenuItems.map((item) => {
-              const active = isActive(item.to);
+              const active = isActive(item.to, visibleMenuItems);
               const showBadge = item.hasMessages && unreadMessages > 0;
               const isLocked = item.requiredFeature && !canAccessFeature(item.requiredFeature);
 

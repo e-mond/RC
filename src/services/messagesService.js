@@ -90,11 +90,47 @@ export const sendMessage = async (conversationId, text, attachments = []) => {
 export const createConversation = async (data) => {
   // Production: Always use real API - no mock data
   try {
-    const { data: response } = await apiClient.post("/messages/conversations/", data);
+    // Validate recipient_id format before sending
+    const recipientId = data.recipient_id;
+    if (!recipientId) {
+      throw new Error("recipient_id is required");
+    }
+
+    // Ensure recipient_id is a valid integer (convert string to number if needed)
+    const normalizedRecipientId = typeof recipientId === 'string' 
+      ? parseInt(recipientId, 10) 
+      : recipientId;
+
+    if (isNaN(normalizedRecipientId) || normalizedRecipientId <= 0) {
+      throw new Error("recipient_id must be a valid positive integer (user ID)");
+    }
+
+    const { data: response } = await apiClient.post("/messages/conversations/", {
+      ...data,
+      recipient_id: normalizedRecipientId, // Send normalized integer
+    });
     return response.data || response;
   } catch (err) {
     console.error("Create conversation error:", err);
-    throw err.response?.data || { message: "Failed to create conversation" };
+    
+    // Provide user-friendly error messages
+    if (err.response?.status === 400) {
+      const errorData = err.response?.data;
+      if (errorData?.recipient_id) {
+        throw new Error(`Invalid recipient: ${errorData.recipient_id[0] || "recipient_id must be a valid user ID"}`);
+      }
+      throw new Error(errorData?.message || errorData?.detail || "Invalid conversation data");
+    }
+    
+    if (err.response?.status === 404) {
+      throw new Error("Recipient user not found");
+    }
+    
+    if (err.response?.status === 403) {
+      throw new Error("You do not have permission to message this user");
+    }
+
+    throw err.response?.data || { message: err.message || "Failed to create conversation" };
   }
 };
 

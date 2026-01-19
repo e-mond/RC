@@ -48,7 +48,7 @@ export default function EnhancedPropertyMapSearch({ properties = [], onPropertyS
   const { isDark } = useTheme();
   const navigate = useNavigate();
   const [selectedProperty, setSelectedProperty] = useState(null);
-  const [mapView, setMapView] = useState("2d"); // "2d", "satellite", or "street"
+  const [mapView, setMapView] = useState("2d"); // "2d", "satellite", "street", or "3d"
   const [locating, setLocating] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
 
@@ -112,7 +112,7 @@ export default function EnhancedPropertyMapSearch({ properties = [], onPropertyS
       if (property.latitude && property.longitude) {
         const marker = new Feature({
           geometry: new Point(
-            fromLonLat([Number(lng), Number(lat)])
+            fromLonLat([Number(property.longitude), Number(property.latitude)])
           ),
           property: property,
         });

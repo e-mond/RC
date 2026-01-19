@@ -75,7 +75,7 @@ export default function AdminDashboard() {
       value: loading ? null : stats.pendingProperties,
       icon: Home,
       accent: "blue",
-      href: "/admin/approvals",
+      href: "/admin/approvals/properties",
       isLoading: loading,
     },
     {

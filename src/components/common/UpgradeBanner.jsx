@@ -26,7 +26,7 @@ export default function UpgradeBanner({
   dismissible = false,
   className = "",
 }) {
-  const { isPremium, can, plan, role } = useFeatureAccess();
+  const { isPremium, can, role } = useFeatureAccess();
   const { user } = useAuthStore();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -57,7 +57,7 @@ export default function UpgradeBanner({
           exit={{ opacity: 0, y: position === "top" ? -20 : 20 }}
           className={`w-full ${className}`}
         >
-          <div className="bg-gradient-to-r from-[#0b6e4f] to-emerald-600 text-white rounded-lg p-4 shadow-lg relative overflow-hidden">
+          <div className="bg-linear-to-r from-[#0b6e4f] to-emerald-600 text-white rounded-lg p-4 shadow-lg relative overflow-hidden">
             {/* Background pattern */}
             <div className="absolute inset-0 opacity-10">
               <div className="absolute inset-0" style={{
@@ -68,11 +68,11 @@ export default function UpgradeBanner({
 
             <div className="relative flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 flex-1">
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                   <Crown className="w-6 h-6 text-amber-300" />
                 </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-sm sm:text-base mb-1">
+                <div className="flex-1 ">
+                  <p className="font-semibold  text-sm sm:text-base mb-1">
                     Upgrade to Premium
                   </p>
                   <p className="text-xs sm:text-sm text-white/90">
@@ -85,7 +85,7 @@ export default function UpgradeBanner({
                 <Button
                   onClick={() => setShowUpgradeModal(true)}
                   size="sm"
-                  className="bg-white text-[#0b6e4f] hover:bg-gray-100 font-semibold flex items-center gap-2 whitespace-nowrap"
+                  className="bg-orange-500 text-[#0b6e4f] hover:bg-amber-300 font-semibold flex items-center gap-2 whitespace-nowrap"
                 >
                   <Sparkles className="w-4 h-4" />
                   Upgrade Now

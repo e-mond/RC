@@ -36,10 +36,48 @@ import { session } from "@/utils/session";
  * 
  * @param {Error} err - Error object from API call
  * @param {string} fallback - Default error message if extraction fails
- * @returns {string} Error message
+ * @returns {string|Object} Error message string or error object with field errors
  */
-const extractError = (err, fallback = "Request failed") =>
-  err?.response?.data?.message || err?.response?.data?.error || err?.message || fallback;
+const extractError = (err, fallback = "Request failed") => {
+  // Check for field-specific errors (Django validation format)
+  if (err?.response?.data) {
+    const data = err.response.data;
+    
+    // Handle field errors (e.g., { password: ['This password is too common.'] })
+    if (typeof data === 'object' && !data.message && !data.error && !data.detail) {
+      // Check if it's a field error object
+      const fieldErrors = Object.entries(data)
+        .filter(([key, value]) => Array.isArray(value) && value.length > 0)
+        .map(([key, value]) => {
+          const fieldName = key.charAt(0).toUpperCase() + key.slice(1);
+          return `${fieldName}: ${value[0]}`;
+        });
+      
+      if (fieldErrors.length > 0) {
+        return fieldErrors.join('. ');
+      }
+    }
+    
+    // Standard error formats
+    if (data.message) return data.message;
+    if (data.error) return data.error;
+    if (data.detail) return data.detail;
+    
+    // If it's an object with field errors, return formatted message
+    if (typeof data === 'object') {
+      const errors = Object.entries(data)
+        .map(([field, messages]) => {
+          const fieldName = field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1');
+          const msg = Array.isArray(messages) ? messages[0] : messages;
+          return `${fieldName}: ${msg}`;
+        })
+        .join('. ');
+      if (errors) return errors;
+    }
+  }
+  
+  return err?.message || fallback;
+};
 
 /**
  * Login User
@@ -120,6 +158,24 @@ export const loginUser = async (credentials) => {
       user: data.user || data,
     };
   } catch (err) {
+    // Handle AccountPendingError (403) - Account pending approval
+    if (err?.response?.status === 403 && err?.response?.data?.error === 'AccountPendingError') {
+      const error = new Error(err.response.data.message || "Your account is pending admin approval. You will receive an email notification once approved.");
+      error.name = 'AccountPendingError';
+      error.status = 'pending_approval';
+      error.response = err.response;
+      throw error;
+    }
+    
+    // Handle AccountRejectedError (403) - Account rejected
+    if (err?.response?.status === 403 && err?.response?.data?.error === 'AccountRejectedError') {
+      const error = new Error(err.response.data.message || "Your account has been rejected. Please contact support for more information.");
+      error.name = 'AccountRejectedError';
+      error.status = 'rejected';
+      error.response = err.response;
+      throw error;
+    }
+    
     throw new Error(extractError(err, "Login failed"));
   }
 };
@@ -127,6 +183,42 @@ export const loginUser = async (credentials) => {
 /* ------------------------------------------------------------
    SIGNUP (Tenant / Landlord / Artisan)
 ------------------------------------------------------------ */
+/**
+ * Extract signup error with field-specific handling
+ */
+const extractSignupError = (err) => {
+  if (!err?.response?.data) {
+    return err?.message || "Signup failed. Please try again.";
+  }
+  
+  const data = err.response.data;
+  
+  // Handle field-specific errors (Django validation format)
+  // Format: { password: ['This password is too common.'], email: ['Invalid email'] }
+  if (typeof data === 'object' && !data.message && !data.error && !data.detail) {
+    const fieldErrors = Object.entries(data)
+      .filter(([key, value]) => Array.isArray(value) && value.length > 0)
+      .map(([key, value]) => {
+        // Format field name (password -> Password, fullName -> Full Name)
+        const fieldName = key
+          .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+          .replace(/^./, str => str.toUpperCase()); // Capitalize first letter
+        return `${fieldName}: ${value[0]}`;
+      });
+    
+    if (fieldErrors.length > 0) {
+      return fieldErrors.join('. ');
+    }
+  }
+  
+  // Standard error formats
+  if (data.message) return data.message;
+  if (data.error) return data.error;
+  if (data.detail) return data.detail;
+  
+  return "Signup failed. Please check your information and try again.";
+};
+
 const signup = async (endpoint, formData) => {
   try {
     const { data } = await apiClient.post(endpoint, formData, {
@@ -134,7 +226,9 @@ const signup = async (endpoint, formData) => {
     });
     return data;
   } catch (err) {
-    throw new Error(extractError(err, "Signup failed"));
+    // Extract and format error message for user display
+    const errorMessage = extractSignupError(err);
+    throw new Error(errorMessage);
   }
 };
 

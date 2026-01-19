@@ -46,7 +46,9 @@ export const API_ENDPOINTS = {
     BASE: '/users/',
     BY_ID: (id) => `/users/${id}/`,
     PROFILE: '/users/profile/',
-    PUBLIC_PROFILE: (id) => `/users/${id}/`,
+    PUBLIC_PROFILE: (id) => `/users/${id}/profile/`, // New endpoint for public profiles
+    SEARCH: '/users/search/',
+    BY_EMAIL: (email) => `/users/by-email/${encodeURIComponent(email)}/`,
   },
 
   // ───────────────────────────────────────────────────────────────
@@ -62,7 +64,7 @@ export const API_ENDPOINTS = {
     VIEWING_REQUESTS: '/properties/viewing-requests/',
     CREATE_VIEWING_REQUEST: (propertyId) => `/properties/${propertyId}/viewing-request/`,
     AMENITIES: '/properties/amenities/',
-    UPLOAD_IMAGE: '/properties/uploads/images/',
+    UPLOAD_IMAGE: '/properties/upload-image/',
   },
 
   // ───────────────────────────────────────────────────────────────
@@ -96,6 +98,16 @@ export const API_ENDPOINTS = {
     AUDIT_LOGS: '/super-admin/audit-logs/',
     ASSIGN_ROLE: (userId) => `/super-admin/roles/${userId}/`,
     ASSIGN_ROLE_WITH_PERMISSIONS: (userId) => `/super-admin/users/${userId}/roles/`,
+    ASSIGN_ROLE_STANDARD: '/super-admin/roles/assign/',
+    PREMIUM_PRICING: '/super-admin/premium/pricing/',
+    PENDING_USERS: '/super-admin/users/pending/',
+    USER_DETAILS: (id) => `/super-admin/users/${id}/`,
+    APPROVE_USER: (id) => `/super-admin/users/${id}/approve/`,
+    REJECT_USER: (id) => `/super-admin/users/${id}/reject/`,
+    SUSPEND_USER: (id) => `/super-admin/users/${id}/suspend/`,
+    PENDING_PROPERTIES: '/super-admin/properties/pending/',
+    APPROVE_PROPERTY: (id) => `/super-admin/properties/${id}/approve/`,
+    REJECT_PROPERTY: (id) => `/super-admin/properties/${id}/reject/`,
   },
 
   // ───────────────────────────────────────────────────────────────
@@ -125,6 +137,12 @@ export const API_ENDPOINTS = {
   // ───────────────────────────────────────────────────────────────
   // Lease Endpoints
   // ───────────────────────────────────────────────────────────────
+  // Note: All endpoints are relative to baseURL configured in apiClient.js
+  // Base URL includes /api (e.g., http://localhost:8000/api)
+  // Endpoints should NOT include /api prefix to avoid duplication
+  // Example: DOWNLOAD_SYSTEM_LEASE("standard-residential") 
+  //   -> /leases/system/standard-residential/download/
+  //   -> Full URL: {baseURL}/leases/system/standard-residential/download/
   LEASES: {
     BASE: '/leases/',
     SYSTEM_LEASES: '/leases/system/',
@@ -183,6 +201,11 @@ export const API_ENDPOINTS = {
     TOP_UP: '/wallet/top-up/',
     INITIATE_PAYMENT: '/wallet/initiate-payment/',
     VERIFY_PAYMENT: '/wallet/verify-payment/',
+  },
+  PAYMENTS: {
+    BASE: '/payments/',
+    VERIFY_PAYSTACK: '/payments/verify-paystack/',
+    PREMIUM_UPGRADE: '/payments/premium/upgrade/',
   },
 
   // ───────────────────────────────────────────────────────────────

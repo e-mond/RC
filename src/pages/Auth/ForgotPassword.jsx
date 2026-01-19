@@ -48,14 +48,9 @@ export default function ForgotPassword() {
               <Mail className="w-12 h-12 text-green-600" />
             </div>
           ) : (
-            <img
-              src="https://cdn.dribbble.com/users/1187836/screenshots/16128537/media/233df33218704d18b4b6f4c99e94972a.png?resize=400x300"
-              alt="Forgot password illustration"
-              className="w-40 h-40 object-contain rounded-xl shadow-sm"
-              onError={(e) => {
-                e.target.src = "https://via.placeholder.com/160?text=Reset"; // fallback
-              }}
-            />
+            <div className="w-40 h-40 rounded-full bg-gray-100 flex items-center justify-center">
+              <Mail className="w-12 h-12 text-gray-400" />
+            </div>
           )}
         </div>
 
@@ -82,7 +77,7 @@ export default function ForgotPassword() {
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all ${
+              className={`w-full px-4 py-3 border rounded-xl bg-gray-100 text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:bg-white transition-all ${
                 isError
                   ? "border-red-500 focus:ring-red-200"
                   : "border-gray-300 focus:ring-[#0b6e4f]/30 focus:border-[#0b6e4f]"

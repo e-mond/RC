@@ -69,11 +69,30 @@ export const getSystemLeases = async () => {
 
 /**
  * Download system lease template
- * @param {string} leaseId - Lease template ID
+ * 
+ * Endpoint: GET /api/leases/system/{lease_id}/download/?format={format}
+ * - Base URL: Configured in apiClient.js (VITE_API_BASE_URL or http://localhost:8000/api)
+ * - Full URL: {baseURL}/leases/system/{lease_id}/download/?format={format}
+ * - No /api duplication: apiClient baseURL already includes /api
+ * 
+ * @param {string} leaseId - Lease template ID (passed as-is, no transformation)
  * @param {string} format - Format: "pdf", "docx", or "doc"
+ * @param {Object} leaseData - Optional lease data object with file_url for fallback
  * @returns {Promise<Blob>} File blob
  */
-export const downloadSystemLease = async (leaseId, format = "pdf") => {
+export const downloadSystemLease = async (leaseId, format = "pdf", leaseData = null) => {
+  // Validate leaseId - ensure it's a string and not transformed
+  if (!leaseId || typeof leaseId !== "string") {
+    throw new Error("Invalid lease ID: must be a non-empty string");
+  }
+  
+  // Validate format
+  const validFormats = ["pdf", "docx", "doc"];
+  if (!validFormats.includes(format.toLowerCase())) {
+    throw new Error(`Invalid format: must be one of ${validFormats.join(", ")}`);
+  }
+  
+  const normalizedFormat = format.toLowerCase();
   if (USE_MOCK) {
     // In mock mode, create a proper file blob with correct MIME type
     // For PDF, we'll create a simple text-based content that can be opened
@@ -81,24 +100,20 @@ export const downloadSystemLease = async (leaseId, format = "pdf") => {
     
     let mockContent;
     let mimeType;
-    let fileExtension;
     
-    if (format === "docx") {
+    if (normalizedFormat === "docx") {
       // Create a minimal DOCX structure (ZIP-based format)
       // For mock, we'll create a simple text file that can be opened
       mockContent = `Lease Agreement: ${leaseId}\n\nThis is a mock lease agreement file.\n\nIn production, this would be a real DOCX file.\n\nGenerated: ${new Date().toISOString()}`;
       mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-      fileExtension = "docx";
-    } else if (format === "doc") {
+    } else if (normalizedFormat === "doc") {
       mockContent = `Lease Agreement: ${leaseId}\n\nThis is a mock lease agreement file.\n\nIn production, this would be a real DOC file.\n\nGenerated: ${new Date().toISOString()}`;
       mimeType = "application/msword";
-      fileExtension = "doc";
     } else {
       // PDF format - create a simple text representation
       // Note: Real PDFs are binary, but for mock we'll use text
       mockContent = `Lease Agreement: ${leaseId}\n\nThis is a mock lease agreement file.\n\nIn production, this would be a real PDF file.\n\nGenerated: ${new Date().toISOString()}`;
       mimeType = "application/pdf";
-      fileExtension = "pdf";
     }
     
     // Create blob with proper MIME type
@@ -112,19 +127,23 @@ export const downloadSystemLease = async (leaseId, format = "pdf") => {
     return blob;
   }
 
+  // Use unified API endpoint configuration - import before try block so it's available in catch block
+  const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+
   try {
-    // Use unified API endpoint configuration
-    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    // Endpoint: /leases/system/{leaseId}/download/
+    // Full URL: {baseURL}/leases/system/{leaseId}/download/?format={format}
+    // Note: leaseId is used as-is without any transformation (no numeric casting, no encoding)
     const endpoint = API_ENDPOINTS.LEASES.DOWNLOAD_SYSTEM_LEASE(leaseId);
     
     const response = await apiClient.get(endpoint, {
-      params: { format },
+      params: { format: normalizedFormat },
       responseType: "blob",
       // Ensure proper headers for file download
       headers: {
-        Accept: format === "pdf" 
+        Accept: normalizedFormat === "pdf" 
           ? "application/pdf" 
-          : format === "docx"
+          : normalizedFormat === "docx"
           ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           : "application/msword",
       },
@@ -143,14 +162,50 @@ export const downloadSystemLease = async (leaseId, format = "pdf") => {
       doc: "application/msword",
     };
     
-    if (expectedTypes[format] && !blobType.includes(format === "pdf" ? "pdf" : format === "docx" ? "wordprocessingml" : "msword")) {
-      console.warn(`Blob type mismatch: expected ${expectedTypes[format]}, got ${blobType}`);
+    if (expectedTypes[normalizedFormat] && !blobType.includes(normalizedFormat === "pdf" ? "pdf" : normalizedFormat === "docx" ? "wordprocessingml" : "msword")) {
+      console.warn(`Blob type mismatch: expected ${expectedTypes[normalizedFormat]}, got ${blobType}`);
     }
     
     return response.data;
   } catch (err) {
-    console.error("Download system lease error:", err);
-    const errorMessage = err.response?.data?.message || err.message || "Failed to download lease";
+    // If 404, try fallback to file_url if available (only for relative URLs)
+    if (err.response?.status === 404 && leaseData?.file_url && !leaseData.file_url.startsWith('http')) {
+      console.warn("[downloadSystemLease] Download endpoint not found, trying file_url fallback:", {
+        endpoint: API_ENDPOINTS.LEASES.DOWNLOAD_SYSTEM_LEASE(leaseId),
+        file_url: leaseData.file_url,
+      });
+      
+      try {
+        // Try to fetch from file_url (relative URL)
+        const response = await apiClient.get(leaseData.file_url, {
+          responseType: "blob",
+        });
+        
+        if (response.data && response.data.size > 0) {
+          return response.data;
+        }
+      } catch (fallbackErr) {
+        console.error("[downloadSystemLease] Fallback to file_url also failed:", fallbackErr);
+      }
+    }
+    
+    console.error("Download system lease error:", {
+      leaseId,
+      format: normalizedFormat,
+      status: err.response?.status,
+      endpoint: API_ENDPOINTS.LEASES.DOWNLOAD_SYSTEM_LEASE(leaseId),
+    });
+    
+    // Provide a more helpful error message
+    let errorMessage = "Failed to download lease";
+    if (err.response?.status === 404) {
+      errorMessage = "The lease download endpoint is not available. Please ensure the backend endpoint GET /api/leases/system/{lease_id}/download/ is implemented.";
+    } else if (err.response?.data?.message) {
+      errorMessage = err.response.data.message;
+    } else if (err.message) {
+      errorMessage = err.message;
+    }
+    
     throw new Error(errorMessage);
   }
 };

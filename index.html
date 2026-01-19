@@ -19,9 +19,10 @@
       script-src-elem 'self' 'unsafe-inline' https://js.paystack.co https://*.paystack.com https://js.paystack.co/v1/ https://cdn.tiny.cloud;
       style-src 'self' 'unsafe-inline' https://paystack.com https://*.paystack.com;
       style-src-elem 'self' 'unsafe-inline' https://paystack.com https://*.paystack.com;
-      img-src 'self' data: https: blob:;
+      img-src 'self' data: https: blob: http://localhost:8000;
       font-src 'self' data:;
-      connect-src 'self' https://api.paystack.com https://*.paystack.com http://localhost:8000 https://api.rentalconnects.com wss://localhost:8000;
+      connect-src 'self' https://api.paystack.com https://*.paystack.com http://localhost:8000 https://api.rentalconnects.com wss://localhost:8000 https://nominatim.openstreetmap.org;
+      media-src 'self' https: http://localhost:8000;
       frame-src https://js.paystack.co https://*.paystack.com;
       worker-src 'self' blob:;
     ">

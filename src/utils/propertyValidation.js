@@ -28,14 +28,28 @@ export const propertySchema = z.object({
   property_type: z.enum(["apartment", "house", "studio", "room", "commercial", "land"]).default("apartment"),
   
   // Status
-  status: z.enum(["draft", "pending", "active", "suspended", "rented", "unavailable"]).default("draft"),
+  // Property status workflow: draft → pending_approval → approved/rejected
+  // Also supports: pending (alias for pending_approval), active, suspended, rented, unavailable
+  status: z.enum([
+    "draft", 
+    "pending", 
+    "pending_approval", 
+    "approved", 
+    "rejected", 
+    "active", 
+    "suspended", 
+    "rented", 
+    "unavailable"
+  ]).default("draft"),
   
   // Location
   lat: z.coerce.number().min(-90).max(90).optional().or(z.string().optional()),
   lng: z.coerce.number().min(-180).max(180).optional().or(z.string().optional()),
   
   // Arrays
-  amenities: z.array(z.union([z.string(), z.object({ id: z.string(), name: z.string() })])).default([]),
+  // Amenities: array of strings (amenity names)
+  // The form stores amenity names, which are then converted to IDs before sending to backend
+  amenities: z.array(z.string()).default([]),
   images: z.array(z.union([z.string(), z.instanceof(File)])).min(1, "At least one image is required").default([]),
 });
 

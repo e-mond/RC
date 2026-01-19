@@ -35,7 +35,7 @@ export default function LeaseViewerModal({ isOpen, onClose, lease, isSystem = tr
 
       // Download lease as blob
       const blob = isSystem
-        ? await downloadSystemLease(lease.id, "pdf")
+        ? await downloadSystemLease(lease.id, "pdf", lease)
         : await downloadCustomLease(lease.id);
 
       // Create object URL for preview
@@ -43,8 +43,9 @@ export default function LeaseViewerModal({ isOpen, onClose, lease, isSystem = tr
       setPreviewUrl(url);
     } catch (err) {
       console.error("Failed to load lease preview:", err);
-      setError("Failed to load lease preview");
-      toast.error("Failed to load lease preview");
+      const errorMessage = err.message || "Failed to load lease preview";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -55,7 +56,7 @@ export default function LeaseViewerModal({ isOpen, onClose, lease, isSystem = tr
 
     try {
       const blob = isSystem
-        ? await downloadSystemLease(lease.id, format)
+        ? await downloadSystemLease(lease.id, format, lease)
         : await downloadCustomLease(lease.id);
 
       const url = window.URL.createObjectURL(blob);
@@ -69,7 +70,8 @@ export default function LeaseViewerModal({ isOpen, onClose, lease, isSystem = tr
       toast.success(`Lease downloaded as ${format.toUpperCase()}`);
     } catch (err) {
       console.error("Download error:", err);
-      toast.error("Failed to download lease");
+      const errorMessage = err.message || "Failed to download lease";
+      toast.error(errorMessage);
     }
   };
 

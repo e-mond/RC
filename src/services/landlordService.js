@@ -130,58 +130,45 @@ export const fetchProperties = async (ownerId) => {
     let endpoint;
     let usedEndpoint = "unknown";
     
+    // CRITICAL FIX: Do NOT use /properties/ without explicit filters
+    // This endpoint is public/tenant-accessible and should NOT be used for landlord-specific queries
+    // Using it without filters would return ALL properties or filter incorrectly by role
+    // Strategy 1: Try landlord-specific endpoint first (most reliable)
     try {
-      // First, try the standard properties endpoint without explicit ownerId
-      // Backend should automatically filter by authenticated user's role (landlord)
-      // This matches the pattern: dashboard uses /analytics/dashboard/ which is role-based
-      endpoint = API_ENDPOINTS.PROPERTIES.BASE;
-      const response = await apiClient.get(endpoint, {
-        params: {
-          // Don't filter by status - show all properties (pending, approved, rejected)
-          // This ensures consistency with dashboard count which includes all properties
-          // Backend should automatically filter by authenticated landlord
-        }
-      });
+      endpoint = API_ENDPOINTS.PROPERTIES.LANDLORD_PROPERTIES(ownerId);
+      const response = await apiClient.get(endpoint);
       data = response.data;
-      usedEndpoint = "role-based /properties/";
-      
-      // Extract properties from response
-      const extracted = Array.isArray(data) ? data : 
-                       Array.isArray(data?.results) ? data.results :
-                       Array.isArray(data?.data) ? data.data :
-                       Array.isArray(data?.properties) ? data.properties : [];
-      
-      // If we got results, use them
-      if (extracted.length > 0 || (data && (Array.isArray(data) || data?.results || data?.data || data?.properties))) {
-        console.log(`[fetchProperties] Successfully fetched ${extracted.length} properties using role-based endpoint`);
-        data = { results: extracted, data: extracted, properties: extracted };
-      } else {
-        // If no results, try with explicit ownerId query param
-        throw new Error("No results from role-based endpoint, trying with ownerId query param");
-      }
-    } catch (roleBasedErr) {
+      usedEndpoint = `/properties/landlord/${ownerId}/`;
+      console.log(`[fetchProperties] Successfully fetched properties using landlord-specific endpoint`);
+    } catch (landlordEndpointErr) {
       try {
-        // Strategy 2: Try with explicit ownerId query parameter
-        console.log(`[fetchProperties] Role-based endpoint returned no results, trying with ownerId query param:`, roleBasedErr.message);
+        // Strategy 2: Fallback to /properties/ with explicit ownerId query parameters
+        console.log(`[fetchProperties] Landlord-specific endpoint failed, trying with ownerId query param:`, landlordEndpointErr.message);
         endpoint = API_ENDPOINTS.PROPERTIES.BASE;
         const response = await apiClient.get(endpoint, {
           params: {
             landlord: ownerId,
             owner: ownerId,
             owner_id: ownerId,
+            // Explicitly filter by owner to avoid role-based filtering issues
           }
         });
         data = response.data;
         usedEndpoint = "/properties/ with ownerId query param";
         console.log(`[fetchProperties] Successfully fetched properties using query param approach`);
       } catch (queryParamErr) {
-        // Strategy 3: Fallback to landlord-specific endpoint
-        console.log(`[fetchProperties] Query param approach failed, trying landlord-specific endpoint:`, queryParamErr.message);
-        endpoint = API_ENDPOINTS.PROPERTIES.LANDLORD_PROPERTIES(ownerId);
-        const response = await apiClient.get(endpoint);
+        // Strategy 3: Last resort - try without explicit filters (only if backend supports role-based filtering)
+        // This is risky and should only be used if the backend guarantees role-based filtering
+        console.warn(`[fetchProperties] Query param approach failed, trying role-based endpoint as last resort:`, queryParamErr.message);
+        endpoint = API_ENDPOINTS.PROPERTIES.BASE;
+        const response = await apiClient.get(endpoint, {
+          params: {
+            // No filters - relies on backend role-based filtering (risky)
+          }
+        });
         data = response.data;
-        usedEndpoint = `/properties/landlord/${ownerId}/`;
-        console.log(`[fetchProperties] Successfully fetched properties using landlord-specific endpoint`);
+        usedEndpoint = "role-based /properties/ (last resort)";
+        console.warn(`[fetchProperties] Using role-based endpoint - this may return incorrect results`);
       }
     }
     
@@ -294,14 +281,24 @@ export const createProperty = async (payload) => {
   // Always create real properties against the backend (no mocks).
   try {
     // Backend PropertyCreateSerializer expects:
-    // - multipart/form-data with `images` as files
+    // - multipart/form-data with `images` as files or URLs
     // - amenity_ids[] for amenities
     const fd = new FormData();
     Object.entries(payload || {}).forEach(([k, v]) => {
       if (v === undefined || v === null) return;
 
       if (k === "images" && v && v.length) {
-        Array.from(v).forEach((file) => fd.append("images", file));
+        // Handle both File objects and URL strings
+        Array.from(v).forEach((item) => {
+          if (item instanceof File) {
+            // If it's a File object, append directly
+            fd.append("images", item);
+          } else if (typeof item === 'string' && item.startsWith('http')) {
+            // If it's a URL string, append as URL
+            // Backend should accept image URLs that were already uploaded
+            fd.append("images", item);
+          }
+        });
       } else if (k === "amenity_ids" && Array.isArray(v)) {
         v.forEach((id) => fd.append("amenity_ids", id));
       } else if (k === "lat") {
@@ -316,11 +313,38 @@ export const createProperty = async (payload) => {
       }
     });
 
-    const { data } = await apiClient.post("/properties/", fd, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    // Don't set Content-Type header manually - let apiClient interceptor handle it
+    // The interceptor will automatically set the correct multipart/form-data with boundary
+    const { data } = await apiClient.post("/properties/", fd);
     return data;
   } catch (err) {
+    // Extract more detailed error message from backend
+    if (err.response?.data) {
+      const errorData = err.response.data;
+      let errorMessage = "Failed to create property";
+      
+      // Handle Django validation errors
+      if (typeof errorData === 'object') {
+        const fieldErrors = Object.entries(errorData)
+          .map(([field, messages]) => {
+            const msg = Array.isArray(messages) ? messages[0] : messages;
+            return `${field}: ${msg}`;
+          })
+          .join(', ');
+        
+        if (fieldErrors) {
+          errorMessage = `Validation error: ${fieldErrors}`;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      } else if (typeof errorData === 'string') {
+        errorMessage = errorData;
+      }
+      
+      throw new Error(errorMessage);
+    }
     throw extractError(err, "Failed to create property");
   }
 };
@@ -333,7 +357,14 @@ export const updateProperty = async (id, payload) => {
       if (v === undefined || v === null) return;
 
       if (k === "images" && v && v.length) {
-        Array.from(v).forEach((file) => fd.append("images", file));
+        // Handle both File objects and URL strings
+        Array.from(v).forEach((item) => {
+          if (item instanceof File) {
+            fd.append("images", item);
+          } else if (typeof item === 'string' && item.startsWith('http')) {
+            fd.append("images", item);
+          }
+        });
       } else if (k === "amenity_ids" && Array.isArray(v)) {
         v.forEach((aid) => fd.append("amenity_ids", aid));
       } else if (k === "lat") {

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ProgressIndicator from "@/components/onboarding/ProgressIndicator";
 import { registerTenant } from "@/services/tenantService";
 import tenant_onboarding from "@/assets/images/tenant_onboarding.jpg";
+import TermsPrivacyModal from "@/components/legal/TermsPrivacyModal";
 
 export default function TenantSignup() {
   const [step, setStep] = useState(1);
@@ -22,6 +23,9 @@ export default function TenantSignup() {
   const [passwordMatch, setPasswordMatch] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState(null);
+  const [termsAgreed, setTermsAgreed] = useState(false);
+  const [privacyAgreed, setPrivacyAgreed] = useState(false);
+  const [modalOpen, setModalOpen] = useState(null); // 'terms' | 'privacy' | null
 
   /** Handle all field changes */
   const handleChange = (e) => {
@@ -55,9 +59,24 @@ export default function TenantSignup() {
   };
   const handlePrev = () => setStep(1);
 
+  const handleModalAgree = (type) => {
+    if (type === "terms") {
+      setTermsAgreed(true);
+    } else if (type === "privacy") {
+      setPrivacyAgreed(true);
+    }
+    // Auto-check the main agree checkbox when both are agreed
+    if ((type === "terms" && privacyAgreed) || (type === "privacy" && termsAgreed)) {
+      setForm((prev) => ({ ...prev, agree: true }));
+    }
+  };
+
   /** Submit to API */
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!termsAgreed || !privacyAgreed) {
+      return setMessage({ type: "error", text: "Please read and agree to both Terms & Conditions and Privacy Policy." });
+    }
     if (!form.agree) return setMessage({ type: "error", text: "Please accept Terms & Conditions." });
 
     try {
@@ -113,7 +132,9 @@ export default function TenantSignup() {
       // Redirect to success page with role and email
       window.location.href = `/signup-success?role=tenant&email=${encodeURIComponent(form.email)}`;
     } catch (err) {
-      setMessage({ type: "error", text: err.message });
+      // Extract user-friendly error message
+      const errorMessage = err?.message || err?.response?.data?.message || "Signup failed. Please try again.";
+      setMessage({ type: "error", text: errorMessage });
     } finally {
       setIsSubmitting(false);
     }
@@ -207,7 +228,7 @@ export default function TenantSignup() {
                     name="rentRange"
                     value={form.rentRange}
                     onChange={handleChange}
-                    className="border border-gray-300 rounded-lg p-2 focus:ring-[#0b6e4f] focus:border-[#0b6e4f]"
+                    className="border border-gray-300 rounded-lg p-2 bg-gray-100 text-gray-900 focus:ring-[#0b6e4f] focus:border-[#0b6e4f] focus:bg-white"
                     required
                   >
                     <option value="">Select Range</option>
@@ -236,15 +257,51 @@ export default function TenantSignup() {
                   )}
                 </div>
 
-                <label className="flex items-center gap-3 text-sm text-gray-700 cursor-pointer">
-                  <input type="checkbox" name="agree" checked={form.agree} onChange={handleChange} className="w-5 h-5 text-[#0b6e4f] border-gray-300 rounded focus:ring-[#0b6e4f]" required />
-                  <span>
-                    I agree to the{" "}
-                    <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-[#0b6e4f] underline hover:text-[#0a5d3f]">
-                      Terms & Conditions
-                    </a>
-                  </span>
-                </label>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 text-sm text-gray-700 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      name="agree" 
+                      checked={form.agree && termsAgreed && privacyAgreed} 
+                      onChange={(e) => {
+                        if (!termsAgreed || !privacyAgreed) {
+                          setMessage({ type: "error", text: "Please read both Terms & Conditions and Privacy Policy first." });
+                          return;
+                        }
+                        handleChange(e);
+                      }} 
+                      className="w-5 h-5 text-[#0b6e4f] border-gray-300 rounded focus:ring-[#0b6e4f]" 
+                      required 
+                    />
+                    <span>
+                      I have read and agree to the{" "}
+                      <button
+                        type="button"
+                        onClick={() => setModalOpen("terms")}
+                        className="text-[#0b6e4f] underline hover:text-[#0a5d3f] font-medium"
+                      >
+                        Terms & Conditions
+                      </button>
+                      {" "}and{" "}
+                      <button
+                        type="button"
+                        onClick={() => setModalOpen("privacy")}
+                        className="text-[#0b6e4f] underline hover:text-[#0a5d3f] font-medium"
+                      >
+                        Privacy Policy
+                      </button>
+                    </span>
+                  </label>
+                  {(!termsAgreed || !privacyAgreed) && (
+                    <p className="text-xs text-amber-600">
+                      {!termsAgreed && !privacyAgreed 
+                        ? "Please read both Terms & Conditions and Privacy Policy" 
+                        : !termsAgreed 
+                        ? "Please read Terms & Conditions" 
+                        : "Please read Privacy Policy"}
+                    </p>
+                  )}
+                </div>
 
                 {message && (
                   <p className={`text-sm text-center ${message.type === "error" ? "text-red-600" : "text-green-600"}`}>{message.text}</p>
@@ -254,7 +311,7 @@ export default function TenantSignup() {
                   <PrimaryButton onClick={handlePrev} type="button"  variant="outline" className="w-1/2 border text-base py-2.5 rounded-lg font-medium transition-colors">
                     Back
                   </PrimaryButton>
-                  <PrimaryButton type="submit" className="w-1/2 bg-[#0b6e4f] hover:bg-[#095c42] text-white text-nowrap text-base py-2.5 rounded-lg font-medium transition-colors" disabled={isSubmitting || !form.agree}>
+                  <PrimaryButton type="submit" className="w-1/2 bg-[#0b6e4f] hover:bg-[#095c42] text-white text-nowrap text-base py-2.5 rounded-lg font-medium transition-colors" disabled={isSubmitting || !form.agree || !termsAgreed || !privacyAgreed}>
                     {isSubmitting ? "Creating..." : "Create Account"}
                   </PrimaryButton>
                 </div>
@@ -306,6 +363,20 @@ export default function TenantSignup() {
             )}
           </motion.form>
         </AnimatePresence>
+
+        {/* Terms & Privacy Modals */}
+        <TermsPrivacyModal
+          type="terms"
+          isOpen={modalOpen === "terms"}
+          onClose={() => setModalOpen(null)}
+          onAgree={handleModalAgree}
+        />
+        <TermsPrivacyModal
+          type="privacy"
+          isOpen={modalOpen === "privacy"}
+          onClose={() => setModalOpen(null)}
+          onAgree={handleModalAgree}
+        />
       </div>
     </div>
   );
@@ -325,7 +396,7 @@ function LabelInput({ label, name, type = "text", value, onChange, required, err
         value={value}
         onChange={onChange}
         required={required}
-        className={`border border-gray-300 rounded-lg p-2 focus:border-[#0b6e4f] focus:ring-[#0b6e4f] focus:ring-1 ${
+        className={`border border-gray-300 rounded-lg p-2 bg-gray-100 text-gray-900 placeholder:text-gray-500 focus:border-[#0b6e4f] focus:ring-[#0b6e4f] focus:ring-1 focus:bg-white ${
           error ? "border-red-500" : ""
         }`}
       />

@@ -27,6 +27,7 @@ import useLanguage from "@/hooks/useLanguage";
 import Button from "@/components/ui/Button";
 import WalletDisplay from "@/components/common/WalletDisplay";
 import WalletSetupModal from "@/components/common/WalletSetupModal";
+import WalletTopUpModal from "@/components/common/WalletTopUpModal";
 import { ReviewsList, ReviewForm, BackgroundStatusPanel } from "@/components/reviews";
 import { getUserReviews, createReview } from "@/services/reviewService";
 
@@ -74,6 +75,7 @@ const ProfilePage = () => {
   const [wallet, setWallet] = useState(null);
   const [walletLoading, setWalletLoading] = useState(false);
   const [showWalletSetup, setShowWalletSetup] = useState(false);
+  const [showWalletTopUp, setShowWalletTopUp] = useState(false);
 
   const [preferences, setPreferences] = useState(null);
   const [savingPrefs, setSavingPrefs] = useState(false);
@@ -239,26 +241,23 @@ const ProfilePage = () => {
     }
 
     try {
-      const res = await fetch("/api/billing/verify-paystack/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reference }),
-      });
+      // Use paystackService for proper error handling and API client integration
+      const { verifyPaystackPayment } = await import("@/services/paystackService");
+      const verification = await verifyPaystackPayment(reference);
 
-      const data = await res.json();
-
-      if (res.ok && data.success) {
+      if (verification.success) {
         setPlan("premium");
         toast.success(t("paymentSuccess", "Upgrade successful! Welcome to Premium 🎉"));
       } else {
         setMessage({
-          text: data.message || t("paymentVerificationFailed", "Payment verification failed"),
+          text: verification.message || t("paymentVerificationFailed", "Payment verification failed"),
           type: "error",
         });
       }
-    } catch {
+    } catch (err) {
+      console.error("Payment verification error:", err);
       setMessage({
-        text: t("networkError", "Network error. Please try again."),
+        text: err.message || t("networkError", "Network error. Please try again."),
         type: "error",
       });
     } finally {
@@ -358,6 +357,17 @@ const ProfilePage = () => {
     }
   };
 
+  // ─── Wallet Top-Up Success Handler ───────────────────────────
+  const handleWalletTopUpSuccess = async () => {
+    try {
+      const data = await getWallet();
+      setWallet(data);
+      toast.success(t("walletTopUpSuccess", "Wallet top-up completed successfully!"));
+    } catch {
+      toast.error(t("walletReloadFailed", "Top-up done, but couldn't reload wallet data"));
+    }
+  };
+
   const handleSubmitReview = async (reviewData) => {
     try {
       setSubmittingReview(true);
@@ -398,7 +408,8 @@ const ProfilePage = () => {
             {displayName}
           </h1>
           <p className="text-sm mt-2 text-gray-600 dark:text-gray-400">
-            {formattedRole} • {isPremium ? t("premiumPlan") : t("freePlan")}
+            {formattedRole}
+            {!isAdmin && ` • ${isPremium ? t("premiumPlan") : t("freePlan")}`}
           </p>
         </div>
 
@@ -619,10 +630,7 @@ const ProfilePage = () => {
               wallet={walletLoading ? null : wallet}
               showSetupButton={!walletLoading && wallet && wallet.is_setup !== true}
               onSetupClick={() => setShowWalletSetup(true)}
-              onTopUpClick={() => {
-                // Top-up functionality can be added here if needed
-                toast.info("Top-up feature coming soon");
-              }}
+              onTopUpClick={() => setShowWalletTopUp(true)}
             />
             <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs text-blue-700 dark:text-blue-300">
               <p className="font-medium mb-1">Secure Payments with Paystack</p>
@@ -631,39 +639,25 @@ const ProfilePage = () => {
           </div>
         )}
 
-        {/* 4. Subscription Plan - Enhanced UI */}
+        {/* 4. Subscription Plan - Enhanced UI (Hidden for Admin/Super Admin) */}
+        {!isAdmin && (
         <div className="bg-gradient-to-br from-emerald-50 via-white to-emerald-50/30 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 border-2 border-emerald-200 dark:border-emerald-800/50 rounded-2xl p-6 shadow-lg lg:col-span-1">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <Crown className="w-5 h-5 text-amber-500" />
-              {isAdmin ? t("fullSystemAccess") : t("subscriptionPlan")}
+              {t("subscriptionPlan")}
             </h2>
-            {!isAdmin && (
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                isPremium 
-                  ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
-                  : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-              }`}>
-                {isPremium ? "Premium" : "Free"}
-              </span>
-            )}
+            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+              isPremium 
+                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+            }`}>
+              {isPremium ? "Premium" : "Free"}
+            </span>
           </div>
 
-          {isAdmin ? (
-            <div className="text-center py-10">
-              <div className="w-16 h-16 mx-auto mb-4 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
-                <Shield className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 mb-2">
-                {t("administratorAccess")}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {t("adminFullAccessDescription")}
-              </p>
-            </div>
-          ) : (
-            <>
-              {isPremium ? (
+          <>
+            {isPremium ? (
                 <div className="space-y-6">
                   <div className="text-center py-4">
                     <div className="flex items-center justify-center gap-3 mb-3">
@@ -751,9 +745,10 @@ const ProfilePage = () => {
                   </p>
                 </div>
               )}
-            </>
-          )}
+          </>
         </div>
+        )}
+
       </div>
 
       {/* Verification Status Panel */}
@@ -816,11 +811,21 @@ const ProfilePage = () => {
 
       {/* Wallet Setup Modal */}
       {needsWallet && (
-        <WalletSetupModal
-          isOpen={showWalletSetup}
-          onClose={() => setShowWalletSetup(false)}
-          onSuccess={handleWalletSetupSuccess}
-        />
+        <>
+          <WalletSetupModal
+            isOpen={showWalletSetup}
+            onClose={() => setShowWalletSetup(false)}
+            onSuccess={handleWalletSetupSuccess}
+          />
+
+          <WalletTopUpModal
+            isOpen={showWalletTopUp}
+            onClose={() => setShowWalletTopUp(false)}
+            onSuccess={handleWalletTopUpSuccess}
+            user={user}
+            currentBalance={wallet?.balance || 0}
+          />
+        </>
       )}
     </div>
   );

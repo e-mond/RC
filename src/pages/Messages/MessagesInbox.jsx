@@ -27,6 +27,7 @@ import {
   markConversationAsRead,
   createConversation,
 } from "@/services/messagesService";
+import UserSearchAutocomplete from "@/components/messages/UserSearchAutocomplete";
 import {
   initWebSocket,
   disconnectWebSocket,
@@ -69,6 +70,7 @@ export default function MessagesInbox() {
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
   const [newConversationUserId, setNewConversationUserId] = useState("");
   const [newConversationMessage, setNewConversationMessage] = useState("");
+  const [selectedUser, setSelectedUser] = useState(null);
   const [creatingConversation, setCreatingConversation] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
 
@@ -240,19 +242,49 @@ export default function MessagesInbox() {
     loadConversations();
   }, [isPremiumGated]);
 
-  // Check for start conversation from URL
+  // Check for start conversation from URL with optional pre-filled message
   useEffect(() => {
     const startUserId = searchParams.get("start");
-    if (startUserId && !loading && conversations.length >= 0) {
-      const existing = conversations.find((c) => c.participantId === startUserId);
+    const preFilledMessage = searchParams.get("message");
+    const conversationId = searchParams.get("conversation");
+    
+    // If conversation ID is provided, select that conversation
+    if (conversationId && !loading) {
+      const existing = conversations.find((c) => c.id === conversationId || c.id?.toString() === conversationId);
       if (existing) {
         setSelectedConversation(existing);
+        // If message is provided, pre-fill it
+        if (preFilledMessage) {
+          setMessageText(decodeURIComponent(preFilledMessage));
+        }
+        const newSearchParams = new URLSearchParams(searchParams);
+        newSearchParams.delete("conversation");
+        newSearchParams.delete("message");
+        window.history.replaceState({}, "", `/messages${newSearchParams.toString() ? `?${newSearchParams.toString()}` : ""}`);
+        return;
+      }
+    }
+    
+    // If start user ID is provided, open new conversation modal
+    if (startUserId && !loading && conversations.length >= 0) {
+      const existing = conversations.find((c) => c.participantId === startUserId || c.participantId?.toString() === startUserId);
+      if (existing) {
+        setSelectedConversation(existing);
+        // If message is provided, pre-fill it
+        if (preFilledMessage) {
+          setMessageText(decodeURIComponent(preFilledMessage));
+        }
       } else {
         setNewConversationUserId(startUserId);
+        // Pre-fill message if provided
+        if (preFilledMessage) {
+          setNewConversationMessage(decodeURIComponent(preFilledMessage));
+        }
         setShowNewConversationModal(true);
       }
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete("start");
+      newSearchParams.delete("message");
       window.history.replaceState({}, "", `/messages${newSearchParams.toString() ? `?${newSearchParams.toString()}` : ""}`);
     }
   }, [searchParams, conversations, loading]);
@@ -275,6 +307,16 @@ export default function MessagesInbox() {
         })));
         await markConversationAsRead(selectedConversation.id);
         
+        // Check for pre-filled message from URL (only once when conversation is first loaded)
+        const preFilledMessage = searchParams.get("message");
+        if (preFilledMessage && rawMessages.length === 0) {
+          setMessageText(decodeURIComponent(preFilledMessage));
+          // Clear the message param after using it
+          const newSearchParams = new URLSearchParams(searchParams);
+          newSearchParams.delete("message");
+          window.history.replaceState({}, "", `/messages?conversation=${selectedConversation.id}${newSearchParams.toString() ? `&${newSearchParams.toString()}` : ""}`);
+        }
+        
         // Join WebSocket room for this conversation
         joinConversation(selectedConversation.id);
       } catch (err) {
@@ -290,6 +332,7 @@ export default function MessagesInbox() {
         leaveConversation(selectedConversation.id);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedConversation, isPremiumGated, user.id]);
 
   // ───────────────────────────────────────────────────────────────
@@ -392,12 +435,32 @@ export default function MessagesInbox() {
   // Handle New Conversation
   // ───────────────────────────────────────────────────────────────
   const handleStartConversation = async () => {
-    if (!newConversationUserId.trim()) {
-      toast.error("Please enter a user ID or email");
-      return;
+    // Use selected user if available, otherwise fall back to user ID input
+    let userId;
+    
+    if (selectedUser) {
+      userId = selectedUser.id || selectedUser._id;
+    } else {
+      const trimmedUserId = newConversationUserId.trim();
+      if (!trimmedUserId) {
+        toast.error("Please search and select a user");
+        return;
+      }
+
+      // Validate and convert to integer (backend only accepts user ID, not email)
+      if (!/^\d+$/.test(trimmedUserId)) {
+        toast.error("User ID must be a whole number (no decimals or letters)");
+        return;
+      }
+
+      userId = parseInt(trimmedUserId, 10);
+      if (isNaN(userId) || userId <= 0) {
+        toast.error("User ID must be a positive number");
+        return;
+      }
     }
 
-    const targetUser = { id: newConversationUserId, role: "unknown" };
+    const targetUser = selectedUser || { id: userId, role: "unknown" };
     const canMessage = canUserMessage(user, targetUser, {});
     
     if (!canMessage.canMessage) {
@@ -408,7 +471,7 @@ export default function MessagesInbox() {
     setCreatingConversation(true);
     try {
       const conversation = await createConversation({
-        recipient_id: newConversationUserId.trim(),
+        recipient_id: userId, // Send as integer
         initial_message: newConversationMessage.trim() || undefined,
       });
       
@@ -417,6 +480,7 @@ export default function MessagesInbox() {
       setShowNewConversationModal(false);
       setNewConversationUserId("");
       setNewConversationMessage("");
+      setSelectedUser(null);
       toast.success("Conversation started!");
       playNotificationSound("message", 0.2);
     } catch (err) {
@@ -728,18 +792,45 @@ export default function MessagesInbox() {
               </div>
 
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    User ID or Email
-                  </label>
-                  <input
-                    type="text"
-                    value={newConversationUserId}
-                    onChange={(e) => setNewConversationUserId(e.target.value)}
-                    placeholder="Enter user ID or email"
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  />
-                </div>
+                <UserSearchAutocomplete
+                  value={newConversationUserId}
+                  onChange={(value) => {
+                    setNewConversationUserId(value);
+                    if (!value) {
+                      setSelectedUser(null);
+                    }
+                  }}
+                  onSelect={(user) => {
+                    setSelectedUser(user);
+                    if (user?.id) {
+                      setNewConversationUserId(user.id.toString());
+                    }
+                  }}
+                  selectedUser={selectedUser}
+                  placeholder="Search by email or name..."
+                />
+                
+                {/* Fallback: Manual User ID Entry */}
+                {!selectedUser && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Or enter User ID manually
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={newConversationUserId}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^0-9]/g, '');
+                        setNewConversationUserId(value);
+                        setSelectedUser(null);
+                      }}
+                      placeholder="Enter user ID (e.g., 123)"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -750,7 +841,8 @@ export default function MessagesInbox() {
                     onChange={(e) => setNewConversationMessage(e.target.value)}
                     placeholder="Type your first message..."
                     rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                    autoFocus={!!newConversationMessage}
                   />
                 </div>
 
@@ -761,7 +853,7 @@ export default function MessagesInbox() {
 
                 <button
                   onClick={handleStartConversation}
-                  disabled={creatingConversation || !newConversationUserId.trim()}
+                  disabled={creatingConversation || (!selectedUser && (!newConversationUserId.trim() || !/^\d+$/.test(newConversationUserId.trim())))}
                   className="w-full px-4 py-2 bg-[#0b6e4f] hover:bg-[#095c42] text-white font-medium rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {creatingConversation ? (

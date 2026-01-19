@@ -46,6 +46,10 @@ import SignupSuccess from "@/pages/Auth/SignupSuccess";
 import ForgotPassword from "@/pages/Auth/ForgotPassword";
 import ResetPassword from "@/pages/Auth/ResetPassword";
 
+// Legal Pages
+import TermsOfService from "@/pages/Legal/TermsOfService";
+import PrivacyPolicy from "@/pages/Legal/PrivacyPolicy";
+
 // Secure Routes (all protected dashboard & app pages)
 import SecureRoutes from "@/routes/secureRoutes";
 
@@ -163,6 +167,9 @@ function AnimatedRoutes() {
             <Route path="/role-selection" element={<RoleSelection />} />
             <Route path="/documentation" element={<DocumentationPage />} />
             <Route path="/documentation/lease-agreements" element={<LeaseAgreementsPage />} />
+            {/* Legal Pages */}
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
             {/* Blog - public */}
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogPost />} />

@@ -21,13 +21,24 @@ export const getProfile = async () => {
 
 /**
  * Get public user profile by ID
+ * 
+ * Uses the public profile endpoint: GET /api/users/{id}/profile/
+ * 
+ * Access Rules:
+ * - Public: basic info + approved properties/services + reviews
+ * - Self: full profile + wallet
+ * - Admin / Super Admin: full profile for any user
+ * 
  * @param {string|number} userId - User ID
  * @returns {Promise} User profile
  */
 export const getUserProfile = async (userId) => {
   try {
-    const { data } = await apiClient.get(`/users/${userId}/`);
-    return data;
+    // Use the new public profile endpoint
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    const { data } = await apiClient.get(API_ENDPOINTS.USERS.PUBLIC_PROFILE(userId));
+    // Handle different response shapes
+    return data.user || data.profile || data;
   } catch (err) {
     console.error("Get user profile error:", err);
     throw err.response?.data || { message: "Failed to fetch user profile" };

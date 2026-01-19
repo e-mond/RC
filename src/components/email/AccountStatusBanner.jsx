@@ -75,7 +75,7 @@ export default function AccountStatusBanner({
       className={`${config.bg} ${config.border} border rounded-lg p-4 sm:p-6 ${className}`}
     >
       <div className="flex items-start gap-3">
-        <Icon className={`w-6 h-6 ${config.color} mt-0.5 flex-shrink-0`} />
+        <Icon className={`w-6 h-6 ${config.color} mt-0.5 shrink-0`} />
         <div className="flex-1 min-w-0">
           <h3 className={`font-semibold text-lg mb-2 ${config.color}`}>
             {config.title}

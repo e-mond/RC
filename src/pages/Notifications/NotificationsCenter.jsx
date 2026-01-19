@@ -14,6 +14,7 @@ import {
   markAllNotificationsAsRead,
 } from "@/services/notificationService";
 import { useAuthStore } from "@/stores/authStore";
+import { formatNotification, getNotificationIcon } from "@/utils/notificationHelpers";
 
 export default function NotificationsCenter() {
   const { user } = useAuthStore();
@@ -129,44 +130,53 @@ export default function NotificationsCenter() {
           </div>
         ) : (
           <div className="divide-y divide-gray-200 dark:divide-gray-800">
-            {notifications.map((notif) => (
-              <div
-                key={notif.id}
-                className={`p-6 hover:bg-gray-50 dark:hover:bg-gray-800 transition ${
-                  !notif.is_read ? "bg-blue-50/50 dark:bg-blue-900/20" : ""
-                }`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                        {notif.title}
-                      </h3>
-                      {!notif.is_read && (
-                        <span className="px-3 py-1 text-xs bg-[#0b6e4f] text-white rounded-full font-medium">
-                          New
-                        </span>
+            {notifications.map((notif) => {
+              const formatted = formatNotification(notif);
+              const Icon = formatted.Icon || BellRing;
+              return (
+                <div
+                  key={notif.id}
+                  className={`p-6 hover:bg-gray-50 dark:hover:bg-gray-800 transition ${
+                    !notif.is_read ? formatted.colors.bg : ""
+                  } ${formatted.colors.border} border-l-4`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <div className={`shrink-0 ${formatted.colors.icon}`}>
+                        <Icon size={22} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className={`font-semibold ${formatted.colors.text} truncate`}>
+                            {notif.title}
+                          </h3>
+                          {!notif.is_read && (
+                            <span className="px-3 py-1 text-xs bg-[#0b6e4f] text-white rounded-full font-medium">
+                              New
+                            </span>
+                          )}
+                        </div>
+                        <p className={`${formatted.colors.text} mb-3 leading-relaxed wrap-break-words`}>
+                          {notif.message}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-500">
+                          {formatDistanceToNow(new Date(notif.created_at), {
+                            addSuffix: true,
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="shrink-0">
+                      {notif.is_read ? (
+                        <CheckCircle size={22} className="text-emerald-500" />
+                      ) : (
+                        <Clock size={22} className="text-amber-500" />
                       )}
                     </div>
-                    <p className="text-gray-700 dark:text-gray-300 mb-3 leading-relaxed wrap-break-words">
-                      {notif.message}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-500">
-                      {formatDistanceToNow(new Date(notif.created_at), {
-                        addSuffix: true,
-                      })}
-                    </p>
-                  </div>
-                  <div className="shrink-0">
-                    {notif.is_read ? (
-                      <CheckCircle size={22} className="text-emerald-500" />
-                    ) : (
-                      <Clock size={22} className="text-amber-500" />
-                    )}
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

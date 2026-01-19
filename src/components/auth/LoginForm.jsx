@@ -96,12 +96,32 @@ export default function LoginForm() {
         {error && (
           <motion.div
             key="error"
-            className="bg-red-100 text-red-700 text-sm px-3 py-2 rounded-md border border-red-300"
+            className={`text-sm px-4 py-3 rounded-md border ${
+              error.includes("pending") || error.includes("approval")
+                ? "bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                : error.includes("rejected")
+                ? "bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800"
+                : "bg-red-100 text-red-700 border-red-300"
+            }`}
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
           >
-            {error}
+            <div className="flex items-start gap-2">
+              <span className="font-medium">
+                {error.includes("pending") || error.includes("approval")
+                  ? "Account Under Review"
+                  : error.includes("rejected")
+                  ? "Account Rejected"
+                  : "Login Error"}
+              </span>
+            </div>
+            <p className="mt-1 text-sm">{error}</p>
+            {(error.includes("pending") || error.includes("approval")) && (
+              <p className="mt-2 text-xs opacity-90">
+                You will receive an email notification once your account has been approved.
+              </p>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

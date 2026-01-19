@@ -228,7 +228,7 @@ export default function PublicProperties() {
                   key={property.id}
                   property={property}
                   index={index}
-                  onSignUpClick={() => navigate("/signup?role=tenant")}
+                  onSignUpClick={() => navigate("/role-selection")}
                 />
               ))}
             </AnimatePresence>

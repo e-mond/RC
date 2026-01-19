@@ -6,13 +6,17 @@
  * 
  * Features:
  * - Interactive map with property marker
+ * - Standard and satellite view toggle
  * - Click to open in Google Maps
  * - Responsive design
  * - Dark/light mode support
+ * 
+ * Note: 3D view not supported (OpenLayers limitation)
+ * For 3D support, consider migrating to Mapbox GL or Cesium
  */
 
-import { useEffect, useRef } from "react";
-import { MapPin, ExternalLink } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { MapPin, ExternalLink, Layers } from "lucide-react";
 import Map from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
@@ -26,9 +30,16 @@ import { fromLonLat } from "ol/proj";
 import { Style, Icon } from "ol/style";
 import { useTheme } from "@/context/ThemeContext";
 
+// Satellite tile source
+const satelliteTiles = new XYZ({
+  url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  attributions: "© Esri",
+});
+
 export default function PropertyMapView({ latitude, longitude, address, propertyTitle }) {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
+  const [mapView, setMapView] = useState("2d"); // "2d" or "satellite"
   const { isDark } = useTheme();
 
   useEffect(() => {
@@ -40,6 +51,14 @@ export default function PropertyMapView({ latitude, longitude, address, property
       url: "https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png",
       attributions: "© OpenStreetMap contributors",
     });
+
+    // Select tile source based on view mode
+    let baseLayer;
+    if (mapView === "satellite") {
+      baseLayer = new TileLayer({ source: satelliteTiles });
+    } else {
+      baseLayer = new TileLayer({ source: isDark ? darkTiles : lightTiles });
+    }
 
     // Create marker
     const markerSource = new VectorSource();
@@ -59,26 +78,32 @@ export default function PropertyMapView({ latitude, longitude, address, property
       }),
     });
 
-    // Create map
-    const map = new Map({
-      target: mapRef.current,
-      layers: [
-        new TileLayer({ source: isDark ? darkTiles : lightTiles }),
-        markerLayer,
-      ],
-      view: new View({
-        center: fromLonLat([Number(longitude), Number(latitude)]),
-        zoom: 15,
-      }),
-    });
-
-    mapInstance.current = map;
+    // Create or update map
+    if (mapInstance.current) {
+      // Update existing map layer
+      const layers = mapInstance.current.getLayers();
+      layers.clear();
+      layers.push(baseLayer, markerLayer);
+    } else {
+      // Create new map
+      const map = new Map({
+        target: mapRef.current,
+        layers: [baseLayer, markerLayer],
+        view: new View({
+          center: fromLonLat([Number(longitude), Number(latitude)]),
+          zoom: 15,
+        }),
+      });
+      mapInstance.current = map;
+    }
 
     return () => {
-      map.setTarget(undefined);
-      mapInstance.current = null;
+      if (mapInstance.current) {
+        mapInstance.current.setTarget(undefined);
+        mapInstance.current = null;
+      }
     };
-  }, [latitude, longitude, isDark]);
+  }, [latitude, longitude, isDark, mapView]);
 
   if (!latitude || !longitude) {
     return (
@@ -97,15 +122,25 @@ export default function PropertyMapView({ latitude, longitude, address, property
           <MapPin className="w-5 h-5 text-[#0b6e4f]" />
           <h3 className="font-semibold text-gray-900 dark:text-white">Property Location</h3>
         </div>
-        <a
-          href={googleMapsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 text-sm text-[#0b6e4f] hover:underline"
-        >
-          <ExternalLink className="w-4 h-4" />
-          Open in Google Maps
-        </a>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setMapView(mapView === "2d" ? "satellite" : "2d")}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            title={`Switch to ${mapView === "2d" ? "Satellite" : "2D"} view`}
+            aria-label={`Switch to ${mapView === "2d" ? "Satellite" : "2D"} view`}
+          >
+            <Layers className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+          </button>
+          <a
+            href={googleMapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-sm text-[#0b6e4f] hover:underline"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Open in Google Maps
+          </a>
+        </div>
       </div>
       <div className="h-64 sm:h-80 w-full">
         <div ref={mapRef} className="w-full h-full" />

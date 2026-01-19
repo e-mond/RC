@@ -28,12 +28,16 @@
  * - Handles various backend response shapes (data.properties, data.results, data.data, data)
  * - Always returns consistent array/object format
  * 
+ * Image Validation:
+ * - Uses shared imageValidation utility to filter invalid URLs
+ * - Prevents broken Cloudinary URLs from being sent to backend
+ * 
  * @module propertyService
  * @requires ./apiClient
  */
 
 // src/services/propertyService.js
-import apiClient from "./apiClient";
+import apiClient, { publicApiClient } from "./apiClient";
 import { isMockMode } from "@/mocks/mockManager";
 
 /**
@@ -201,9 +205,27 @@ export const fetchProperty = async (id) => {
   try {
     // Use unified API endpoint configuration
     const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
-    const { data } = await apiClient.get(API_ENDPOINTS.PROPERTIES.BY_ID(id));
-    return data;
+    
+    // Try authenticated client first (for landlord's own properties)
+    // Fallback to public client if 401/403 (for public properties)
+    try {
+      const { data } = await apiClient.get(API_ENDPOINTS.PROPERTIES.BY_ID(id));
+      return data;
+    } catch (authErr) {
+      // If 401/403, try public client (property might be public)
+      if (authErr.response?.status === 401 || authErr.response?.status === 403) {
+        console.log("[propertyService.fetchProperty] Auth failed, trying public endpoint");
+        const { data } = await publicApiClient.get(API_ENDPOINTS.PROPERTIES.BY_ID(id));
+        return data;
+      }
+      throw authErr;
+    }
   } catch (err) {
+    // Handle 404 - Property not found
+    if (err.response?.status === 404) {
+      throw new Error(`Property with ID "${id}" not found. It may have been deleted or does not exist.`);
+    }
+    
     throw extractError(err, "Failed to fetch property");
   }
 };
@@ -240,11 +262,89 @@ export const createProperty = async (payload) => {
   }
 
   try {
+    // Import image validation utility
+    const { isValidImageUrl } = await import("@/utils/imageValidation");
+    
+    // Backend expects multipart/form-data with images as files or URLs
+    // Convert payload to FormData (same logic as landlordService)
+    const fd = new FormData();
+    Object.entries(payload || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null) return;
+
+      if (k === "images" && v && v.length) {
+        // Handle both File objects and URL strings
+        // Use shared validation utility for URL strings, keep File objects
+        const validImages = Array.from(v).filter(item => {
+          // Keep File objects (they'll be uploaded)
+          if (item instanceof File) return true;
+          // Validate URL strings using shared utility
+          if (typeof item === 'string') {
+            return isValidImageUrl(item);
+          }
+          return false;
+        });
+        
+        validImages.forEach((item) => {
+          if (item instanceof File) {
+            fd.append("images", item);
+          } else if (typeof item === 'string') {
+            // Append validated URL string (backend should handle URL strings)
+            fd.append("images", item);
+          }
+        });
+      } else if (k === "amenity_ids" && Array.isArray(v)) {
+        v.forEach((id) => fd.append("amenity_ids", id));
+      } else if (k === "lat" || k === "latitude") {
+        // Round to 6 decimal places (backend requirement)
+        const lat = typeof v === 'number' ? parseFloat(v.toFixed(6)) : v;
+        fd.append("latitude", lat);
+      } else if (k === "lng" || k === "longitude") {
+        // Round to 6 decimal places (backend requirement)
+        const lng = typeof v === 'number' ? parseFloat(v.toFixed(6)) : v;
+        fd.append("longitude", lng);
+      } else if (k === "area" || k === "area_sqm") {
+        fd.append("area_sqm", v);
+      } else {
+        fd.append(k, v);
+      }
+    });
+
     // Use unified API endpoint configuration
     const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
-    const { data } = await apiClient.post(API_ENDPOINTS.PROPERTIES.BASE, payload);
+    
+    // Don't set Content-Type header manually - let apiClient interceptor handle it
+    const { data } = await apiClient.post(API_ENDPOINTS.PROPERTIES.BASE, fd);
     return data;
   } catch (err) {
+    // Extract more detailed error message from backend
+    if (err.response?.data) {
+      const errorData = err.response.data;
+      let errorMessage = "Failed to create property";
+      
+      // Handle Django validation errors
+      if (typeof errorData === 'object') {
+        const fieldErrors = Object.entries(errorData)
+          .map(([field, messages]) => {
+            const msg = Array.isArray(messages) ? messages[0] : messages;
+            return `${field}: ${msg}`;
+          })
+          .join(', ');
+        
+        if (fieldErrors) {
+          errorMessage = `Validation error: ${fieldErrors}`;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        }
+      } else if (typeof errorData === 'string') {
+        errorMessage = errorData;
+      }
+      
+      throw new Error(errorMessage);
+    }
     throw extractError(err, "Failed to create property");
   }
 };
@@ -287,11 +387,87 @@ export const updateProperty = async (id, payload) => {
   }
 
   try {
+    // Import image validation utility
+    const { isValidImageUrl } = await import("@/utils/imageValidation");
+    
+    // Backend expects multipart/form-data for updates (same as creation)
+    const fd = new FormData();
+    Object.entries(payload || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null) return;
+
+      if (k === "images" && v && v.length) {
+        // Handle both File objects and URL strings
+        // Use shared validation utility for URL strings, keep File objects
+        
+        const validImages = Array.from(v).filter(item => {
+          // Keep File objects (they'll be uploaded)
+          if (item instanceof File) return true;
+          // Validate URL strings using shared utility
+          if (typeof item === 'string') {
+            return isValidImageUrl(item);
+          }
+          return false;
+        });
+        
+        validImages.forEach((item) => {
+          if (item instanceof File) {
+            fd.append("images", item);
+          } else if (typeof item === 'string') {
+            // Append validated URL string (backend should handle URL strings)
+            fd.append("images", item);
+          }
+        });
+      } else if (k === "amenity_ids" && Array.isArray(v)) {
+        v.forEach((id) => fd.append("amenity_ids", id));
+      } else if (k === "lat" || k === "latitude") {
+        // Round to 6 decimal places (backend requirement)
+        const lat = typeof v === 'number' ? parseFloat(v.toFixed(6)) : v;
+        fd.append("latitude", lat);
+      } else if (k === "lng" || k === "longitude") {
+        // Round to 6 decimal places (backend requirement)
+        const lng = typeof v === 'number' ? parseFloat(v.toFixed(6)) : v;
+        fd.append("longitude", lng);
+      } else if (k === "area" || k === "area_sqm") {
+        fd.append("area_sqm", v);
+      } else {
+        fd.append(k, v);
+      }
+    });
+
     // Use unified API endpoint configuration
     const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
-    const { data } = await apiClient.put(API_ENDPOINTS.PROPERTIES.BY_ID(id), payload);
+    
+    // Don't set Content-Type header manually - let apiClient interceptor handle it
+    const { data } = await apiClient.put(API_ENDPOINTS.PROPERTIES.BY_ID(id), fd);
     return data;
   } catch (err) {
+    // Extract more detailed error message from backend
+    if (err.response?.data) {
+      const errorData = err.response.data;
+      let errorMessage = "Failed to update property";
+      
+      // Handle Django validation errors
+      if (typeof errorData === 'object') {
+        const fieldErrors = Object.entries(errorData)
+          .map(([field, messages]) => {
+            const msg = Array.isArray(messages) ? messages[0] : messages;
+            return `${field}: ${msg}`;
+          })
+          .join(', ');
+        
+        if (fieldErrors) {
+          errorMessage = `Validation error: ${fieldErrors}`;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      } else if (typeof errorData === 'string') {
+        errorMessage = errorData;
+      }
+      
+      throw new Error(errorMessage);
+    }
     throw extractError(err, "Failed to update property");
   }
 };
@@ -333,6 +509,41 @@ export const deleteProperty = async (id) => {
 export const uploadImage = async (file) => {
   if (!file) throw new Error("uploadImage: file required");
 
+  // Validate file type - check both MIME type and file extension
+  const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+  const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+  
+  // Get file extension safely
+  const fileName = file.name || '';
+  const lastDotIndex = fileName.lastIndexOf('.');
+  const fileExtension = lastDotIndex > 0 ? fileName.substring(lastDotIndex).toLowerCase() : '';
+  
+  // Normalize MIME type for comparison
+  const fileMimeType = (file.type || '').toLowerCase().trim();
+  
+  // Check MIME type (case-insensitive) or file extension
+  const mimeTypeValid = fileMimeType && allowedMimeTypes.some(
+    allowedType => fileMimeType === allowedType.toLowerCase()
+  );
+  const extensionValid = fileExtension && allowedExtensions.includes(fileExtension);
+  
+  // Also check if it starts with "image/" as a fallback (more lenient)
+  const isImageType = fileMimeType.startsWith('image/');
+  
+  // If it's an image type but not in our strict list, allow it anyway (browser compatibility)
+  if (!mimeTypeValid && !extensionValid && !isImageType) {
+    throw new Error(
+      `Invalid file type. Allowed types: ${allowedMimeTypes.join(', ')}. ` +
+      `Detected - MIME type: "${file.type || 'unknown'}", Extension: "${fileExtension || 'none'}", Filename: "${fileName}"`
+    );
+  }
+
+  // Validate file size (10MB max)
+  const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+  if (file.size > maxSize) {
+    throw new Error(`File size exceeds maximum of 10MB. Current size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+  }
+
   if (USE_MOCK) {
     const mockUrl = `https://placehold.co/800x600/orange/white?text=${encodeURIComponent(
       file.name.split(".")[0]
@@ -343,13 +554,59 @@ export const uploadImage = async (file) => {
   try {
     const fd = new FormData();
     fd.append("file", file);
+    
     // Use unified API endpoint configuration
     const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
-    const { data } = await apiClient.post(API_ENDPOINTS.PROPERTIES.UPLOAD_IMAGE, fd, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    
+    // Don't set Content-Type header manually - let apiClient interceptor handle it
+    // The interceptor will automatically set the correct multipart/form-data with boundary
+    const { data } = await apiClient.post(API_ENDPOINTS.PROPERTIES.UPLOAD_IMAGE, fd);
+    
+    // Validate response has URL
+    if (!data || !data.url) {
+      throw new Error("Invalid response from server: missing image URL");
+    }
+    
     return data;
   } catch (err) {
+    // Handle 404 errors (endpoint not found)
+    if (err.response?.status === 404) {
+      // Check if response is HTML (Django 404 page)
+      const responseData = err.response.data;
+      if (typeof responseData === 'string' && responseData.includes('<!DOCTYPE html>')) {
+        throw new Error(
+          "Image upload endpoint not found (404). The backend endpoint " +
+          "POST /api/properties/upload-image/ may not be implemented. " +
+          "Please check with the backend team."
+        );
+      }
+      throw new Error(
+        "Image upload endpoint not found (404). Please ensure the backend endpoint " +
+        "POST /api/properties/upload-image/ is implemented."
+      );
+    }
+    
+    // Extract more detailed error message
+    if (err.response?.data) {
+      const errorData = err.response.data;
+      // Handle different error response formats
+      if (errorData.message) {
+        throw new Error(errorData.message);
+      } else if (errorData.detail) {
+        throw new Error(errorData.detail);
+      } else if (errorData.error) {
+        throw new Error(errorData.error);
+      } else if (typeof errorData === 'string') {
+        // If it's HTML, extract a better message
+        if (errorData.includes('<!DOCTYPE html>')) {
+          throw new Error("Image upload endpoint not found (404). Please check backend implementation.");
+        }
+        throw new Error(errorData);
+      } else if (errorData.file) {
+        // Django form field error
+        throw new Error(Array.isArray(errorData.file) ? errorData.file[0] : errorData.file);
+      }
+    }
     throw extractError(err, "Image upload failed");
   }
 };

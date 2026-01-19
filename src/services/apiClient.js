@@ -43,6 +43,63 @@ const refreshAxios = axios.create({
 });
 
 /**
+ * Public axios instance for unauthenticated requests
+ * This instance does NOT have auth interceptors and will NOT trigger session expired redirects
+ * Use this for public endpoints that should work without authentication
+ */
+export const publicApiClient = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  withCredentials: true,
+  timeout: 12000
+});
+
+// Public client should NOT have request interceptor for auth tokens
+// Public client should NOT have response interceptor for 401 handling
+// This ensures public requests never trigger session expired redirects
+
+// Minimal request interceptor for public client (only URL formatting, NO auth)
+publicApiClient.interceptors.request.use(
+  (config) => {
+    // Add trailing slash for Django backend compatibility (no auth token injection)
+    const method = config.method?.toLowerCase();
+    if (['post', 'put', 'patch', 'delete'].includes(method)) {
+      if (config.url && !config.url.endsWith('/')) {
+        config.url += '/';
+      }
+    }
+
+    // For multipart/form-data, let axios set Content-Type automatically
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Minimal response interceptor for public client (only error logging, NO 401 handling)
+publicApiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Log errors but don't trigger session expired redirects
+    if (error.response?.status >= 500) {
+      console.error("[publicApiClient] Server error:", {
+        status: error.response.status,
+        url: error.config?.url,
+        method: error.config?.method?.toUpperCase(),
+      });
+    }
+    
+    // Always reject so .catch() handlers work, but don't trigger auth flows
+    return Promise.reject(error);
+  }
+);
+
+/**
  * Axios Instance Configuration
  * 
  * Creates a configured Axios instance with:

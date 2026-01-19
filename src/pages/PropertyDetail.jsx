@@ -1,5 +1,5 @@
 // src/pages/PropertyDetail.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { fetchProperty } from "@/services/propertyService";
 import {
@@ -34,6 +34,7 @@ import Footer from "@/components/layout/Footer";
 import { ReviewsList, ReviewForm } from "@/components/reviews";
 import { getPropertyReviews, createReview } from "@/services/reviewService";
 import PropertyMapView from "@/components/common/PropertyMapView";
+import { getFirstValidImage, getPlaceholderImage } from "@/utils/imageValidation";
 
 export default function PropertyDetail() {
   const { id } = useParams();
@@ -77,17 +78,45 @@ export default function PropertyDetail() {
   const isOwner = isLandlord && property?.landlord?.id === user?.id;
 
   // ─── Image Gallery Setup ────────────────────────────────────────────────
-  const images = property?.images || [];
+  // Normalize images: handle both string URLs and objects with image property
+  // Use image validation utility to ensure only valid URLs are used
+  // Use useMemo to recalculate when property changes
+  const images = useMemo(() => {
+    if (!property?.images || !Array.isArray(property.images)) return [];
+    
+    const normalizeImage = (img) => {
+      if (typeof img === "string") return img;
+      if (img?.image) return img.image;
+      if (img?.url) return img.url;
+      if (img?.image_url) return img.image_url;
+      return null;
+    };
+    
+    const rawImages = property.images.map(normalizeImage).filter(Boolean);
+    return rawImages.filter(img => img && typeof img === "string" && img.length > 0);
+  }, [property?.images]);
+  
   const hasImages = images.length > 0;
-  const currentImage = images[currentImageIndex]?.image || images[0]?.image || "";
+  const currentImage = images[currentImageIndex] || images[0] || getPlaceholderImage("No Image", 800, 600);
 
   const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+    if (images.length > 0) {
+      setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+    }
   };
 
   const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+    if (images.length > 0) {
+      setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+    }
   };
+  
+  // Reset image index when images change
+  useEffect(() => {
+    if (images.length > 0 && currentImageIndex >= images.length) {
+      setCurrentImageIndex(0);
+    }
+  }, [images.length, currentImageIndex]);
 
   useEffect(() => {
     let mounted = true;
@@ -98,6 +127,18 @@ export default function PropertyDetail() {
         const data = await fetchProperty(id);
         if (mounted) {
           const propertyData = data?.data || data?.property || data;
+          
+          // Normalize images if needed - handle both string URLs and objects
+          if (propertyData?.images && Array.isArray(propertyData.images)) {
+            propertyData.images = propertyData.images.map(img => {
+              if (typeof img === "string") return img;
+              if (img?.image) return img.image;
+              if (img?.url) return img.url;
+              if (img?.image_url) return img.image_url;
+              if (img?.amenity?.image) return img.amenity.image; // Handle nested amenity images
+              return null;
+            }).filter(img => img && typeof img === "string" && img.length > 0);
+          }
 
           if (propertyData && !propertyData.landlord && import.meta.env.VITE_USE_MOCK === "true") {
             propertyData.landlord = {
@@ -118,6 +159,7 @@ export default function PropertyDetail() {
           }
 
           setProperty(propertyData);
+          setCurrentImageIndex(0); // Reset image index when property loads
 
           if (isTenant) {
             try {
@@ -241,7 +283,9 @@ export default function PropertyDetail() {
     try {
       await createViewingRequest({
         propertyId: id,
+        property_id: id, // Also send snake_case for backend compatibility
         preferredDate: bookingDate,
+        preferred_date: bookingDate, // Also send snake_case for backend compatibility
         message: bookingMessage.trim() || "Interested in viewing this property",
       });
 
@@ -268,7 +312,7 @@ export default function PropertyDetail() {
     );
   }
 
-  if (error || !property) {
+  if (error || (!property && !loading)) {
     return (
       <div className={isInDashboard ? "" : "min-h-screen bg-gray-50 dark:bg-gray-950"}>
         {!isInDashboard && (isAuthenticated ? <Navbar /> : <LandingNavbar />)}
@@ -321,10 +365,12 @@ export default function PropertyDetail() {
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
               <div className="relative h-80 sm:h-96 bg-gray-200 dark:bg-gray-700">
                 <img
-                  src={currentImage}
-                  alt={property.title}
+                  src={currentImage || getPlaceholderImage("No Image", 800, 600)}
+                  alt={property?.title || "Property image"}
                   className="w-full h-full object-cover"
-                  onError={(e) => (e.target.src = "https://placehold.co/800x600?text=Image+Error")}
+                  onError={(e) => {
+                    e.target.src = getPlaceholderImage("Image not found", 800, 600);
+                  }}
                 />
 
                 {hasImages && images.length > 1 && (
@@ -373,10 +419,12 @@ export default function PropertyDetail() {
                       }`}
                     >
                       <img
-                        src={img.image}
+                        src={img || getPlaceholderImage("?", 96, 96)}
                         alt={`Thumbnail ${index + 1}`}
                         className="w-full h-full object-cover"
-                        onError={(e) => (e.target.src = "https://placehold.co/96x96?text=?")}
+                        onError={(e) => {
+                          e.target.src = getPlaceholderImage("?", 96, 96);
+                        }}
                       />
                     </button>
                   ))}
@@ -471,8 +519,8 @@ export default function PropertyDetail() {
                       )}
                     </div>
                   </div>
-                  {isTenant && property.landlord.id && (
-                    <Link to={`/messages?start=${property.landlord.id}`}>
+                  {isTenant && property.landlord?.id && (
+                    <Link to={`/tenant/messages?start=${property.landlord.id}`}>
                       <button className="px-4 py-2 bg-[#0b6e4f] text-white rounded-lg hover:bg-[#095c42] transition-colors flex items-center gap-2 text-sm font-medium">
                         <MessageSquare className="w-4 h-4" />
                         Message Landlord

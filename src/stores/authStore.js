@@ -152,18 +152,90 @@ export const useAuthStore = create(
             useFeatureStore.getState().setPlan(subscription);
           }
 
+          // Check for welcome notification on first login after approval
+          // This is handled by the backend sending a notification, but we can check here
+          // The backend should send a "welcome" or "account_approved" notification
+          if (data.user?.status === "approved" && data.user?.role !== "tenant") {
+            // Check if this is likely first login after approval
+            // Backend should handle creating the welcome notification
+            // Frontend will display it when notifications are fetched
+          }
+
+          // Create in-app login notification
+          // Note: Backend should typically create this automatically, but frontend can create it as fallback
+          try {
+            const { createLoginNotification } = await import("@/services/notificationService");
+            
+            // Extract login information from request (if available)
+            // In production, backend should provide this in the login response
+            const loginData = {
+              loginTime: new Date().toLocaleString(),
+              // IP address and device info should come from backend
+              // Frontend can't reliably get IP address, so backend should provide it
+              ipAddress: data.login_ip || null,
+              device: data.login_device || navigator.userAgent || "Unknown Device",
+              location: data.login_location || null,
+              isNewDevice: data.is_new_device || false,
+              isSuspicious: data.is_suspicious || false,
+            };
+
+            // Only create notification if backend didn't already create it
+            // Backend should create login notifications automatically
+            // This is a fallback for cases where backend doesn't create it
+            if (!data.login_notification_created) {
+              await createLoginNotification(userData, loginData);
+            }
+          } catch (notifErr) {
+            // Don't fail login if notification creation fails
+            // Log error but continue with login flow
+            console.warn("Failed to create login notification:", notifErr);
+          }
+
           // Debug logging
           if (import.meta.env.DEV) {
             console.log("Login successful:", {
               hasToken: !!token,
               tokenLength: token?.length,
               role: normalizedRole,
-              userId: data.user?.id
+              userId: data.user?.id,
+              status: data.user?.status
             });
           }
 
           return { success: true, role: normalizedRole };
         } catch (err) {
+          // Handle AccountPendingError - Account pending approval
+          if (err?.name === 'AccountPendingError' || err?.response?.data?.error === 'AccountPendingError') {
+            const errorMessage = err?.response?.data?.message || err?.message || "Your account is pending admin approval. You will receive an email notification once approved.";
+            set({
+              authLoading: false,
+              error: errorMessage,
+              pendingApproval: true,
+            });
+            return { 
+              success: false, 
+              error: errorMessage,
+              pendingApproval: true,
+              status: 'pending_approval'
+            };
+          }
+          
+          // Handle AccountRejectedError - Account rejected
+          if (err?.name === 'AccountRejectedError' || err?.response?.data?.error === 'AccountRejectedError') {
+            const errorMessage = err?.response?.data?.message || err?.message || "Your account has been rejected. Please contact support for more information.";
+            set({
+              authLoading: false,
+              error: errorMessage,
+              accountRejected: true,
+            });
+            return { 
+              success: false, 
+              error: errorMessage,
+              accountRejected: true,
+              status: 'rejected'
+            };
+          }
+          
           set({
             authLoading: false,
             error: err?.response?.data?.message || err?.message || "Login failed",

@@ -30,14 +30,21 @@ import {
 /**
  * Get notification type category
  * @param {string} type - Notification type (e.g., 'booking_accepted', 'payment_received')
- * @returns {string} Category (booking, payment, approval, maintenance, system)
+ * @returns {string} Category (booking, payment, approval, maintenance, system, info, rejection)
  */
 export const getNotificationCategory = (type) => {
   if (!type) return "system";
   if (type.startsWith("booking_") || type.startsWith("viewing_")) return "booking";
   if (type.startsWith("payment_") || type.startsWith("wallet_")) return "payment";
-  if (type.startsWith("approval_") || type.startsWith("property_")) return "approval";
+  if (type.startsWith("approval_") || type.startsWith("property_approved") || type.startsWith("account_approved")) return "approval";
+  if (type.startsWith("rejection_") || type.startsWith("property_rejected") || type.startsWith("account_rejected") || type.startsWith("booking_rejected")) return "rejection";
   if (type.startsWith("maintenance_")) return "maintenance";
+  // Handle login activity notifications
+  if (type.startsWith("login_")) return "system";
+  // Handle account_pending as a warning/info type
+  if (type === "account_pending") return "info";
+  if (type === "system" || type.startsWith("system_") || type.startsWith("welcome") || type.startsWith("account_")) return "system";
+  if (type === "info" || type.startsWith("info_")) return "info";
   return "system";
 };
 
@@ -72,15 +79,31 @@ export const getNotificationIcon = (type) => {
       if (type?.includes("approved") || type?.includes("accepted")) {
         return CheckCircle;
       }
-      if (type?.includes("rejected") || type?.includes("declined")) {
-        return XCircle;
-      }
       return Shield;
+
+    case "rejection":
+      return XCircle;
 
     case "maintenance":
       return Wrench;
 
+    case "info":
+      return Info;
+
     default:
+      if (type?.includes("welcome") || type?.includes("account_approved")) {
+        return CheckCircle;
+      }
+      if (type === "account_pending") {
+        return AlertCircle; // Pending approval icon
+      }
+      // Login activity notifications
+      if (type === "login_success") {
+        return CheckCircle; // Successful login
+      }
+      if (type === "login_new_device" || type === "login_suspicious") {
+        return AlertCircle; // Security alert
+      }
       return type?.includes("error") || type?.includes("warning") ? AlertCircle : Bell;
   }
 };
@@ -94,7 +117,7 @@ export const getNotificationColors = (type) => {
   const category = getNotificationCategory(type);
   const isPositive = type?.includes("accepted") || type?.includes("approved") || type?.includes("received") || type?.includes("success");
   const isNegative = type?.includes("declined") || type?.includes("rejected") || type?.includes("failed");
-  const isWarning = type?.includes("pending") || type?.includes("warning");
+  const isWarning = type?.includes("pending") || type === "account_pending" || type?.includes("warning");
 
   switch (category) {
     case "booking":
@@ -146,27 +169,19 @@ export const getNotificationColors = (type) => {
       };
 
     case "approval":
-      if (isPositive) {
-        return {
-          bg: "bg-green-50 dark:bg-green-900/20",
-          text: "text-green-800 dark:text-green-300",
-          border: "border-green-200 dark:border-green-800",
-          icon: "text-green-600 dark:text-green-400",
-        };
-      }
-      if (isNegative) {
-        return {
-          bg: "bg-red-50 dark:bg-red-900/20",
-          text: "text-red-800 dark:text-red-300",
-          border: "border-red-200 dark:border-red-800",
-          icon: "text-red-600 dark:text-red-400",
-        };
-      }
       return {
-        bg: "bg-purple-50 dark:bg-purple-900/20",
-        text: "text-purple-800 dark:text-purple-300",
-        border: "border-purple-200 dark:border-purple-800",
-        icon: "text-purple-600 dark:text-purple-400",
+        bg: "bg-green-50 dark:bg-green-900/20",
+        text: "text-green-800 dark:text-green-300",
+        border: "border-green-200 dark:border-green-800",
+        icon: "text-green-600 dark:text-green-400",
+      };
+
+    case "rejection":
+      return {
+        bg: "bg-red-50 dark:bg-red-900/20",
+        text: "text-red-800 dark:text-red-300",
+        border: "border-red-200 dark:border-red-800",
+        icon: "text-red-600 dark:text-red-400",
       };
 
     case "maintenance":
@@ -175,6 +190,14 @@ export const getNotificationColors = (type) => {
         text: "text-orange-800 dark:text-orange-300",
         border: "border-orange-200 dark:border-orange-800",
         icon: "text-orange-600 dark:text-orange-400",
+      };
+
+    case "info":
+      return {
+        bg: "bg-blue-50 dark:bg-blue-900/20",
+        text: "text-blue-800 dark:text-blue-300",
+        border: "border-blue-200 dark:border-blue-800",
+        icon: "text-blue-600 dark:text-blue-400",
       };
 
     default:
@@ -202,9 +225,12 @@ export const getNotificationColors = (type) => {
  */
 export const getNotificationPriority = (type) => {
   if (type?.includes("error") || type?.includes("failed")) return 5;
+  if (type === "login_suspicious") return 5; // High priority for security alerts
   if (type?.includes("payment") || type?.includes("wallet")) return 4;
+  if (type === "login_new_device") return 4; // High priority for new device
   if (type?.includes("approval")) return 3;
   if (type?.includes("booking") || type?.includes("viewing")) return 2;
+  if (type === "login_success") return 1; // Low priority for regular logins
   return 1;
 };
 

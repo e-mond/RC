@@ -14,17 +14,23 @@
  */
 
 import { useEffect, useState } from "react";
-import { fetchProperties } from "@/services/landlordService";
+import { fetchProperties, deleteProperty } from "@/services/landlordService";
 import { useAuthStore } from "@/stores/authStore";
 import { Button } from "@/components/ui/Button";
 import { Link } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2, AlertTriangle } from "lucide-react";
+import { toast } from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
+import { getFirstValidImage, getPlaceholderImage } from "@/utils/imageValidation";
 
 export default function PropertiesPage() {
   const { user } = useAuthStore();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [propertyToDelete, setPropertyToDelete] = useState(null);
 
   useEffect(() => {
     if (user?.id) {
@@ -95,6 +101,46 @@ export default function PropertiesPage() {
     }
   };
 
+  /**
+   * Get first valid image URL from property images
+   * Uses shared image validation utility
+   */
+  const getThumbnailUrl = (property) => {
+    return getFirstValidImage(property.images, getPlaceholderImage("No Image", 400, 300));
+  };
+
+  /**
+   * Handle delete property with confirmation
+   */
+  const handleDeleteClick = (property) => {
+    setPropertyToDelete(property);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!propertyToDelete) return;
+    
+    setDeletingId(propertyToDelete.id);
+    try {
+      await deleteProperty(propertyToDelete.id);
+      toast.success("Property deleted successfully");
+      // Remove from list
+      setProperties(prev => prev.filter(p => p.id !== propertyToDelete.id));
+      setShowDeleteModal(false);
+      setPropertyToDelete(null);
+    } catch (err) {
+      console.error("Failed to delete property:", err);
+      toast.error(err.message || "Failed to delete property");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false);
+    setPropertyToDelete(null);
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -148,6 +194,7 @@ export default function PropertiesPage() {
           <table className="w-full text-left">
             <thead className="bg-gray-50 dark:bg-gray-800/60">
               <tr className="border-b border-gray-200 dark:border-gray-700">
+                <th className="p-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Image</th>
                 <th className="p-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Name</th>
                 <th className="p-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Location</th>
                 <th className="p-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Rent</th>
@@ -162,6 +209,16 @@ export default function PropertiesPage() {
                   key={p.id}
                   className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                 >
+                  <td className="p-3">
+                    <img
+                      src={getThumbnailUrl(p)}
+                      alt={p.title || p.name || 'Property'}
+                      className="h-12 w-16 object-cover rounded"
+                      onError={(e) => {
+                        e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23e5e7eb' width='400' height='300'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='16' x='50%25' y='50%25' text-anchor='middle' dy='.3em'%3ENo Image%3C/text%3E%3C/svg%3E";
+                      }}
+                    />
+                  </td>
                   <td className="p-3 text-gray-900 dark:text-gray-100 font-medium">
                     {p.title || p.name || 'Untitled Property'}
                   </td>
@@ -174,21 +231,36 @@ export default function PropertiesPage() {
                   </td>
                   <td className="p-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      p.status === 'approved' 
+                      p.status === 'approved' || p.status === 'approved'
                         ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                        : p.status === 'pending'
+                        : p.status === 'pending' || p.status === 'pending_approval'
                         ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
                         : p.status === 'rejected'
                         ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                         : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
                     }`}>
-                      {p.status || 'pending'}
+                      {p.status === 'pending_approval' ? 'pending' : (p.status || 'draft')}
                     </span>
                   </td>
                   <td className="p-3">
-                    <Link to={`/landlord/properties/${p.id}/edit`}>
-                      <Button variant="outline" size="sm">Edit</Button>
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link 
+                        to={`/landlord/properties/${p.id}/edit`}
+                        onClick={(e) => {
+                          console.log("[PropertiesPage] Navigating to edit property:", p.id, "Status:", p.status);
+                        }}
+                      >
+                        <Button variant="outline" size="sm">Edit</Button>
+                      </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteClick(p)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -196,6 +268,67 @@ export default function PropertiesPage() {
           </table>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteModal && propertyToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-md w-full p-6"
+            >
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
+                  <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Delete Property
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    This action cannot be undone
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-gray-700 dark:text-gray-300 mb-6">
+                Are you sure you want to delete <strong>"{propertyToDelete.title || propertyToDelete.name || 'this property'}"</strong>? 
+                This will permanently remove the property listing.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleDeleteCancel}
+                  disabled={deletingId === propertyToDelete.id}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDeleteConfirm}
+                  disabled={deletingId === propertyToDelete.id}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {deletingId === propertyToDelete.id ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin mr-2" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} className="mr-2" />
+                      Delete Property
+                    </>
+                  )}
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

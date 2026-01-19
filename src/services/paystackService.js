@@ -227,7 +227,8 @@ export const verifyPaystackPayment = async (reference) => {
       throw new Error("Payment reference is required");
     }
 
-    const { data } = await apiClient.post("/payments/verify-paystack/", {
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    const { data } = await apiClient.post(API_ENDPOINTS.PAYMENTS.VERIFY_PAYSTACK, {
       reference,
     });
 

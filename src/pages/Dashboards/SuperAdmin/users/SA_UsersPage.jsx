@@ -6,7 +6,7 @@ import SA_UserTable from "@/pages/Dashboards/SuperAdmin/components/SA_UserTable"
 import SA_CreateUserModal from "@/pages/Dashboards/SuperAdmin/components/SA_CreateUserModal";
 import SA_DeleteUserModal from "@/pages/Dashboards/SuperAdmin/components/SA_DeleteUserModal";
 import PageHeader from "@/modules/dashboard/PageHeader";
-import { Users, UserPlus, AlertCircle } from "lucide-react";
+import { Users, UserPlus } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 export default function SA_UsersPage() {
@@ -19,7 +19,12 @@ export default function SA_UsersPage() {
     try {
       setLoading(true);
       const data = await fetchAllUsers();
-      setUsers(Array.isArray(data.users) ? data.users : []);
+      const allUsers = Array.isArray(data.users) ? data.users : [];
+      // Filter out deleted/inactive users (hard deleted users won't be in response)
+      const activeUsers = allUsers.filter(
+        (u) => u.status !== "deleted" && u.status !== "inactive" && u.deleted !== true
+      );
+      setUsers(activeUsers);
       toast.success("Users refreshed successfully");
     } catch (err) {
       toast.error(err.message || "Failed to load users");

@@ -11,7 +11,9 @@ import { io } from "socket.io-client";
 import { encryptMessage, decryptMessage } from "@/utils/encryption";
 
 const USE_MOCK = String(import.meta.env.VITE_USE_MOCK || "").toLowerCase() === "true";
-const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8000";
+// Socket.IO uses HTTP/HTTPS URLs, not ws:// or wss://
+// Socket.IO automatically handles WebSocket protocol
+const WS_URL = import.meta.env.VITE_WS_URL || "http://localhost:8000";
 
 let socket = null;
 let reconnectAttempts = 0;

@@ -61,9 +61,25 @@ const formatGhanaTime = (timestamp) => {
 
 /**
  * Get a safe display name for the user
+ * Backend may send: actor, actorName, user, userName, userId, created_by
  */
 const getUserDisplay = (log) => {
-  return log.userName || log.user?.name || log.user?.email || log.userId || "Unknown User";
+  // Try multiple field names from backend (check normalized userName first)
+  return (
+    log.userName ||            // Normalized field from fetchAuditLogs
+    log.actorName ||           // Backend field: actorName
+    log.user?.name ||          // Nested: user.name
+    log.user?.fullName ||      // Nested: user.fullName
+    log.user?.username ||      // Nested: user.username
+    log.actor ||               // Backend field: actor (email)
+    log.user?.email ||         // Nested: user.email
+    log.userId ||              // Alternative: userId
+    log.user?.id ||            // Nested: user.id
+    log.created_by?.name ||    // Nested: created_by.name
+    log.created_by?.email ||   // Nested: created_by.email
+    log.created_by ||          // Direct: created_by
+    "Unknown User"
+  );
 };
 
 export default function SA_AuditTable({ logs = [], loading = false, onRefresh = () => {} }) {
@@ -137,7 +153,7 @@ export default function SA_AuditTable({ logs = [], loading = false, onRefresh = 
                     {/* Timestamp */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900 dark:text-gray-100">
-                        {formatGhanaTime(log.timestamp)}
+                        {formatGhanaTime(log.timestamp || log.createdAt || log.created_at)}
                       </div>
                     </td>
 
@@ -146,9 +162,11 @@ export default function SA_AuditTable({ logs = [], loading = false, onRefresh = 
                       <div className="text-sm text-gray-700 dark:text-gray-300">
                         {getUserDisplay(log)}
                       </div>
-                      {log.userEmail && log.userEmail !== getUserDisplay(log) && (
+                      {/* Show email if different from display name */}
+                      {(log.actor || log.userEmail || log.user?.email) && 
+                       (log.actor || log.userEmail || log.user?.email) !== getUserDisplay(log) && (
                         <div className="text-xs text-gray-500 dark:text-gray-500">
-                          {log.userEmail}
+                          {log.actor || log.userEmail || log.user?.email}
                         </div>
                       )}
                     </td>
@@ -162,7 +180,7 @@ export default function SA_AuditTable({ logs = [], loading = false, onRefresh = 
 
                     {/* Target */}
                     <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                      {log.target || log.resource || "—"}
+                      {log.target || log.resource || log.detail || log.originalTarget || log.originalResource || log.originalDetail || "—"}
                     </td>
 
                     {/* Level Badge */}

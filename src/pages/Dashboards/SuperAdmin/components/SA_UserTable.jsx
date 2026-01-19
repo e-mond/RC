@@ -9,24 +9,29 @@
 
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Link } from "react-router-dom";
 import { FiTrash2, FiDownload, FiSearch } from "react-icons/fi";
-import { Ban } from "lucide-react";
+import { Ban, Eye } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { CSVLink } from "react-csv";
 import { RoleBadge, StatusBadge, TableSkeleton, EmptyState } from "./SA_UserTableHelpers";
 import { v4 as uuidv4 } from "uuid";
 import { formatDateGH } from "@/utils/format";
-import { suspendUser } from "@/services/adminService";
+import SA_SuspendUserModal from "./SA_SuspendUserModal";
 
 export default function SA_UserTable({ users = [], loading, onDelete, onRefresh }) {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [selected, setSelected] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
-  const [suspending, setSuspending] = useState(null);
+  const [suspendTarget, setSuspendTarget] = useState(null);
 
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
+      // Filter out deleted/inactive users (hard deleted users won't appear in list)
+      if (u.status === "deleted" || u.status === "inactive" || u.deleted === true) {
+        return false;
+      }
       const matchesSearch =
         u.fullName?.toLowerCase().includes(search.toLowerCase()) ||
         u.email?.toLowerCase().includes(search.toLowerCase());
@@ -51,21 +56,8 @@ export default function SA_UserTable({ users = [], loading, onDelete, onRefresh 
     toast.success(`Deleted ${selected.length} user${selected.length > 1 ? "s" : ""}`);
   };
 
-  const handleSuspend = async (user) => {
-    const reason = window.prompt(`Reason for suspending ${user.fullName} (optional):`, "");
-    if (reason === null) return; // User cancelled
-
-    setSuspending(user.id);
-    try {
-      await suspendUser(user.id, reason);
-      toast.success("User suspended! Suspension email has been sent.");
-      if (onRefresh) onRefresh();
-    } catch (err) {
-      console.error("Suspend error:", err);
-      toast.error(err.message || "Failed to suspend user");
-    } finally {
-      setSuspending(null);
-    }
+  const handleSuspend = (user) => {
+    setSuspendTarget(user);
   };
 
   const toggleSelect = (user) => {
@@ -188,8 +180,22 @@ export default function SA_UserTable({ users = [], loading, onDelete, onRefresh 
                         className="rounded border-gray-300"
                       />
                     </td>
-                    <td className="p-3 font-medium">{u.fullName}</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">{u.email}</td>
+                    <td className="p-3 font-medium">
+                      <Link
+                        to={`/super-admin/users/${u.id || u._id}`}
+                        className="text-[#0b6e4f] hover:text-[#095c42] hover:underline transition"
+                      >
+                        {u.fullName}
+                      </Link>
+                    </td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">
+                      <Link
+                        to={`/super-admin/users/${u.id || u._id}`}
+                        className="hover:text-[#0b6e4f] hover:underline transition"
+                      >
+                        {u.email}
+                      </Link>
+                    </td>
                     <td className="p-3"><RoleBadge role={u.role} /></td>
                     <td className="p-3"><StatusBadge status={u.status} /></td>
                     <td className="p-3 text-sm text-gray-500">
@@ -197,19 +203,22 @@ export default function SA_UserTable({ users = [], loading, onDelete, onRefresh 
                     </td>
                     <td className="p-3 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <Link
+                          to={`/super-admin/users/${u.id || u._id}`}
+                          className="text-blue-600 hover:text-blue-800 transition"
+                          aria-label={`View details for ${u.fullName}`}
+                          title="View user details"
+                        >
+                          <Eye size={18} />
+                        </Link>
                         {u.status !== "suspended" && (
                           <button
                             onClick={() => handleSuspend(u)}
-                            disabled={suspending === u.id}
-                            className="text-orange-600 hover:text-orange-800 transition disabled:opacity-50"
+                            className="text-orange-600 hover:text-orange-800 transition"
                             aria-label={`Suspend ${u.fullName}`}
                             title="Suspend user"
                           >
-                            {suspending === u.id ? (
-                              <div className="w-4 h-4 border-2 border-orange-600 border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                              <Ban size={18} />
-                            )}
+                            <Ban size={18} />
                           </button>
                         )}
                         <button
@@ -228,6 +237,16 @@ export default function SA_UserTable({ users = [], loading, onDelete, onRefresh 
           </tbody>
         </table>
       </div>
+
+      {/* Suspend User Modal */}
+      <SA_SuspendUserModal
+        user={suspendTarget}
+        onClose={() => setSuspendTarget(null)}
+        onSuccess={() => {
+          if (onRefresh) onRefresh();
+          setSuspendTarget(null);
+        }}
+      />
     </motion.div>
   );
 }

@@ -5,6 +5,8 @@ import Button from "@/components/ui/Button";
 import { CheckCircle, XCircle, Filter, Download, CheckSquare, Square, Loader2, Eye, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
+import SA_ApproveUserModal from "@/pages/Dashboards/SuperAdmin/components/SA_ApproveUserModal";
+import SA_RejectUserModal from "@/pages/Dashboards/SuperAdmin/components/SA_RejectUserModal";
 
 /**
  * Enhanced User Approvals with bulk actions and filtering
@@ -18,6 +20,8 @@ export default function AD_UserApprovals() {
   const [selectedUsers, setSelectedUsers] = useState(new Set());
   const [filterRole, setFilterRole] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [approveTarget, setApproveTarget] = useState(null);
+  const [rejectTarget, setRejectTarget] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -40,30 +44,43 @@ export default function AD_UserApprovals() {
     };
   }, []);
 
-  const handleApprove = async (id) => {
+  const handleApprove = (user) => {
+    setApproveTarget(user);
+  };
+
+  const handleReject = (user) => {
+    setRejectTarget(user);
+  };
+
+  const confirmApprove = async (notes = "") => {
+    if (!approveTarget) return;
+    const id = approveTarget.id;
+    
     setActionLoading(id);
     try {
-      await approveUser(id);
+      await approveUser(id, notes ? { notes } : undefined);
       setUsers((s) => s.filter((u) => u.id !== id));
       setSelectedUsers((prev) => {
         const next = new Set(prev);
         next.delete(id);
         return next;
       });
+      setApproveTarget(null);
       // Email notification is sent by backend
       toast.success("User approved! Approval email has been sent to the user.");
     } catch (err) {
       console.error("approveUser:", err);
       setError(err.message || "Approve failed");
-      toast.error(err.message || "Failed to approve user");
+      throw err; // Let modal handle error display
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleReject = async (id) => {
-    const reason = window.prompt("Reason for rejection (optional):", "");
-    if (reason === null) return; // User cancelled
+  const confirmReject = async (reason) => {
+    if (!rejectTarget) return;
+    const id = rejectTarget.id;
+    
     setActionLoading(id);
     try {
       await rejectUser(id, reason);
@@ -73,12 +90,13 @@ export default function AD_UserApprovals() {
         next.delete(id);
         return next;
       });
+      setRejectTarget(null);
       // Email notification is sent by backend
       toast.success("User rejected! Rejection email has been sent to the user.");
     } catch (err) {
       console.error("rejectUser:", err);
       setError(err.message || "Reject failed");
-      toast.error(err.message || "Failed to reject user");
+      throw err; // Let modal handle error display
     } finally {
       setActionLoading(null);
     }
@@ -298,7 +316,7 @@ export default function AD_UserApprovals() {
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => handleReject(u.id)}
+                    onClick={() => handleReject(u)}
                     disabled={actionLoading === u.id}
                     className="flex items-center gap-2 text-red-600 hover:text-red-700"
                   >
@@ -310,7 +328,7 @@ export default function AD_UserApprovals() {
                     Reject
                   </Button>
                   <Button
-                    onClick={() => handleApprove(u.id)}
+                    onClick={() => handleApprove(u)}
                     disabled={actionLoading === u.id}
                     className="flex items-center gap-2"
                   >
@@ -327,6 +345,20 @@ export default function AD_UserApprovals() {
           ))}
         </div>
       )}
+
+      {/* Approve User Modal */}
+      <SA_ApproveUserModal
+        user={approveTarget}
+        onClose={() => setApproveTarget(null)}
+        onConfirm={confirmApprove}
+      />
+
+      {/* Reject User Modal */}
+      <SA_RejectUserModal
+        user={rejectTarget}
+        onClose={() => setRejectTarget(null)}
+        onConfirm={confirmReject}
+      />
     </section>
   );
 }
