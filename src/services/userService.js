@@ -22,7 +22,9 @@ export const getProfile = async () => {
 /**
  * Get public user profile by ID
  * 
- * Uses the public profile endpoint: GET /api/users/{id}/profile/
+ * Tries multiple endpoint patterns to handle different backend configurations:
+ * 1. GET /api/users/{id}/profile/ (primary)
+ * 2. GET /api/users/{id}/ (fallback)
  * 
  * Access Rules:
  * - Public: basic info + approved properties/services + reviews
@@ -33,16 +35,44 @@ export const getProfile = async () => {
  * @returns {Promise} User profile
  */
 export const getUserProfile = async (userId) => {
+  if (!userId) {
+    throw new Error("User ID is required");
+  }
+
+  const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+  let data;
+  let lastError;
+
+  // Try primary endpoint: /api/users/{id}/profile/
   try {
-    // Use the new public profile endpoint
-    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
-    const { data } = await apiClient.get(API_ENDPOINTS.USERS.PUBLIC_PROFILE(userId));
+    const response = await apiClient.get(API_ENDPOINTS.USERS.PUBLIC_PROFILE(userId));
+    data = response.data;
+  } catch (err1) {
+    // If 404, try fallback endpoint: /api/users/{id}/
+    if (err1.response?.status === 404) {
+      try {
+        const response = await apiClient.get(API_ENDPOINTS.USERS.BY_ID(userId));
+        data = response.data;
+      } catch (err2) {
+        lastError = err2;
+        console.error("Get user profile error (both endpoints failed):", {
+          primary: err1.response?.status,
+          fallback: err2.response?.status,
+        });
+      }
+    } else {
+      lastError = err1;
+      console.error("Get user profile error:", err1);
+    }
+  }
+
+  if (data) {
     // Handle different response shapes
     return data.user || data.profile || data;
-  } catch (err) {
-    console.error("Get user profile error:", err);
-    throw err.response?.data || { message: "Failed to fetch user profile" };
   }
+
+  // If all attempts failed, throw the last error
+  throw lastError?.response?.data || { message: "Failed to fetch user profile" };
 };
 
 /**

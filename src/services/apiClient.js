@@ -243,6 +243,26 @@ apiClient.interceptors.response.use(
       }
     }
 
+    // Handle 429 Rate Limit errors
+    if (status === 429) {
+      const message = "We're receiving too many requests right now. Please wait a moment and try again. This helps ensure everyone gets fast responses!";
+      toast.error(message, {
+        id: "rate-limit-error",
+        duration: 6000,
+        position: "top-center",
+        style: {
+          borderRadius: "12px",
+          background: "#f59e0b",
+          color: "#fff",
+          maxWidth: "420px",
+        },
+      });
+      console.warn("[429] Rate limit exceeded:", {
+        url: error.config?.url,
+        method: error.config?.method?.toUpperCase(),
+      });
+    }
+
     // Keep 403 toast
     if (status === 403) {
       let message =

@@ -4,6 +4,7 @@ import {
   getMaintenanceRequests,
   createMaintenanceRequest,
 } from "@/services/tenantService";
+import { getPublicPricing } from "@/services/adminService";
 import { useFeatureAccess } from "@/context/FeatureAccessContext";
 import {
   Wrench,
@@ -18,39 +19,39 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ImageUploader from "@/components/landlord/ImageUploader";
+import { useAuthStore } from "@/stores/authStore";
+import { initiatePremiumUpgrade } from "@/services/paystackService";
 
 export default function TenantMaintenance() {
   const { isPremium } = useFeatureAccess();
+  const { user } = useAuthStore();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [paystackLoaded, setPaystackLoaded] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
+  const [pricing, setPricing] = useState({ monthly: 49, currency: "GHS" });
+  const [pricingLoading, setPricingLoading] = useState(true);
 
-  // Replace with your real Paystack public key
-  const PAYSTACK_PUBLIC_KEY = "pk_test_your_actual_key_here"; // Use pk_live_... in production
-  const amountInKobo = 2900; // GHS 29.00
-
-  // Load Paystack script only once
+  // Load pricing from API
   useEffect(() => {
-    if (paystackLoaded) return;
-
-    const script = document.createElement("script");
-    script.src = "https://js.paystack.co/v1/inline.js";
-    script.async = true;
-    script.onload = () => setPaystackLoaded(true);
-    script.onerror = () => {
-      setMessage({ text: "Failed to load payment system", type: "error" });
-    };
-    document.body.appendChild(script);
-
-    return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
+    const loadPricing = async () => {
+      try {
+        setPricingLoading(true);
+        const data = await getPublicPricing();
+        setPricing({
+          monthly: data.monthly || 49,
+          currency: data.currency || "GHS",
+        });
+      } catch (err) {
+        console.error("Failed to load pricing:", err);
+        // Keep default pricing on error
+      } finally {
+        setPricingLoading(false);
       }
     };
-  }, [paystackLoaded]);
+    loadPricing();
+  }, []);
 
   // Load maintenance requests only for premium users
   useEffect(() => {
@@ -79,36 +80,33 @@ export default function TenantMaintenance() {
     return () => (mounted = false);
   }, [isPremium]);
 
-  // Handle Upgrade with Paystack
-  const handleUpgrade = () => {
-    if (!paystackLoaded) {
-      setMessage({ text: "Payment system loading... please wait", type: "error" });
+  // Handle Upgrade with Paystack (using universal upgrade service)
+  const handleUpgrade = async () => {
+    if (!user?.email) {
+      setMessage({ text: "Please log in to upgrade", type: "error" });
       return;
     }
 
     setPaymentLoading(true);
     setMessage({ text: "", type: "" });
 
-    const handler = window.PaystackPop.setup({
-      key: PAYSTACK_PUBLIC_KEY,
-      email: "user@example.com", // In real app, get from user profile
-      amount: amountInKobo,
-      currency: "GHS",
-      ref: `rc_maintenance_${Date.now()}`,
-      callback: (response) => {
-        // In real app: verify on backend
-        console.log("Payment successful:", response);
-        setMessage({ text: "Upgrade successful! 🎉 You now have Premium access.", type: "success" });
-        // Refresh page or update context/store to reflect premium status
-        window.location.reload(); // Simple way for demo
-      },
-      onClose: () => {
-        setPaymentLoading(false);
-        setMessage({ text: "Payment cancelled", type: "error" });
-      },
-    });
-
-    handler.openIframe();
+    try {
+      await initiatePremiumUpgrade({
+        email: user.email,
+        amount: pricing.monthly,
+        currency: pricing.currency,
+        plan: "monthly",
+      });
+      // The paystack service handles the payment flow
+      // Premium status will be updated via the subscription callback
+    } catch (err) {
+      console.error("Upgrade error:", err);
+      setMessage({ 
+        text: err.message || "Failed to initiate upgrade. Please try again.", 
+        type: "error" 
+      });
+      setPaymentLoading(false);
+    }
   };
 
   // Freemium → upgrade prompt with real payment
@@ -138,15 +136,15 @@ export default function TenantMaintenance() {
 
           <button
             onClick={handleUpgrade}
-            disabled={paymentLoading}
+            disabled={paymentLoading || pricingLoading}
             className="px-6 py-2 text-sm bg-[#0b6e4f] text-white rounded-xl flex items-center gap-2 mx-auto disabled:opacity-70"
           >
             {paymentLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-            Upgrade to Premium
+            {pricingLoading ? "Loading..." : `Upgrade to Premium — ${pricing.currency} ${pricing.monthly}/month`}
           </button>
 
           <p className="text-xs text-gray-400 mt-4">
-            GHS 29.00 one-time (demo)
+            {pricingLoading ? "Loading pricing..." : `Cancel anytime • Secure payment via Paystack`}
           </p>
         </div>
       </div>

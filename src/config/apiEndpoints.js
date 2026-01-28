@@ -121,6 +121,11 @@ export const API_ENDPOINTS = {
     PAYMENTS: '/tenant/payments/',
     MAINTENANCE: '/tenant/maintenance/',
     WISHLIST: '/tenant/wishlist/',
+    VIEWING_REQUESTS: '/tenant/viewing-requests/',
+    BOOKINGS: '/tenant/bookings/',
+    BOOKINGS_SCHEDULED: '/tenant/bookings/scheduled/',
+    RESCHEDULE_BOOKING: (id) => `/tenant/bookings/${id}/reschedule/`,
+    CANCEL_BOOKING: (id) => `/tenant/bookings/${id}/cancel/`,
   },
 
   // ───────────────────────────────────────────────────────────────
@@ -215,6 +220,23 @@ export const API_ENDPOINTS = {
     BASE: '/preferences/',
     GET: '/preferences/',
     UPDATE: '/preferences/',
+  },
+
+  // ───────────────────────────────────────────────────────────────
+  // AI Endpoints
+  // ───────────────────────────────────────────────────────────────
+  AI: {
+    BASE: '/ai/',
+    RECOMMENDATIONS: {
+      PROPERTIES: '/ai/recommendations/properties/',
+      ARTISANS: '/ai/recommendations/artisans/',
+    },
+    CHAT: {
+      MESSAGE: '/ai/chat/message/',
+      CONVERSATIONS: '/ai/chat/conversations/',
+    },
+    TRUST_SCORE: (userId) => `/ai/trust-score/${userId}/`,
+    TRUST_SCORE_BATCH: '/ai/trust-score/batch/',
   },
 };
 

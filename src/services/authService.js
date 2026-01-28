@@ -103,7 +103,8 @@ const extractError = (err, fallback = "Request failed") => {
  */
 export const loginUser = async (credentials) => {
   // ----- MOCK MODE -----
-  if (import.meta.env.DEV && isMockMode()) {
+  // Check if mock mode is enabled (works in both dev and production if enabled)
+  if (isMockMode()) {
     const roleMap = {
       "tenant@demo.com": "tenant",
       "landlord@demo.com": "landlord",
@@ -112,18 +113,31 @@ export const loginUser = async (credentials) => {
       "super@demo.com": "super-admin",
     };
 
-    const role = roleMap[credentials.email] || "tenant";
+    const role = roleMap[credentials.email?.toLowerCase()] || "tenant";
+    
+    // Only allow demo emails in mock mode
+    if (!roleMap[credentials.email?.toLowerCase()]) {
+      throw new Error("Invalid credentials. Use demo emails (tenant@demo.com, landlord@demo.com, etc.) when mock mode is enabled.");
+    }
+    
     const user = {
       id: `u${Date.now()}`,
       name: credentials.email.split("@")[0],
       email: credentials.email,
       role,
+      full_name: roleMap[credentials.email] ? credentials.email.split("@")[0].charAt(0).toUpperCase() + credentials.email.split("@")[0].slice(1) : "Demo User",
     };
 
-    session.setToken("dev-jwt-demo");
+    const mockToken = `mock-jwt-${Date.now()}`;
+    session.setToken(mockToken);
     session.setRole(role);
+    session.setRefreshToken(`mock-refresh-${Date.now()}`);
 
-    return { token: "dev-jwt-demo", user };
+    return { 
+      token: mockToken, 
+      refresh: `mock-refresh-${Date.now()}`,
+      user 
+    };
   }
 
   // ----- REAL API -----

@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { suspendUser } from "@/services/adminService";
+// import { suspendUser } from "@/services/adminService";
 import { X, Ban, AlertTriangle, Calendar, Clock } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Button from "@/components/ui/Button";
@@ -261,7 +261,6 @@ export default function SA_SuspendUserModal({ user, open, onClose, onSuccess, on
           </div>
         </motion.div>
       </motion.div>
-      )}
     </AnimatePresence>
   );
 }

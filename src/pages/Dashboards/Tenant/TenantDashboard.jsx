@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
-import { fetchTenantRentals, getFavorites, getMaintenanceRequests } from "@/services/tenantService";
+import { fetchTenantRentals, getFavorites, getMaintenanceRequests, getScheduledBookings } from "@/services/tenantService";
 import TN_MyRentals from "./components/TN_MyRentals";
-import { Heart, Wrench, History, DollarSign } from "lucide-react";
+import UpcomingBookingsList from "./components/UpcomingBookingsList";
+import RecentNotificationsWidget from "@/components/Notifications/RecentNotificationsWidget";
+import { Heart, Wrench, History, DollarSign, Calendar } from "lucide-react";
 import { useFeatureAccess } from "@/context/FeatureAccessContext";
 import PageHeader from "@/modules/dashboard/PageHeader";
 import MetricGrid from "@/modules/dashboard/MetricGrid";
 import ActionGrid from "@/modules/dashboard/ActionGrid";
 import SectionCard from "@/modules/dashboard/SectionCard";
 import UpgradeBanner from "@/components/common/UpgradeBanner";
+import RecommendationsSection from "@/components/ai/RecommendationsSection";
 
 export default function TenantDashboard() {
   const { isPremium } = useFeatureAccess();
@@ -16,7 +19,9 @@ export default function TenantDashboard() {
     dueCount: 0,
     favoritesCount: 0,
     maintenanceCount: 0,
+    scheduledBookingsCount: 0,
   });
+  const [scheduledBookings, setScheduledBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -28,10 +33,11 @@ export default function TenantDashboard() {
         setLoading(true);
         setError("");
 
-        const [rentals, favorites, maintenance] = await Promise.all([
+        const [rentals, favorites, maintenance, bookings] = await Promise.all([
           fetchTenantRentals(),
           getFavorites().catch(() => []),
           isPremium ? getMaintenanceRequests().catch(() => []) : Promise.resolve([]),
+          getScheduledBookings().catch(() => []),
         ]);
 
         if (!isMounted) return;
@@ -44,9 +50,14 @@ export default function TenantDashboard() {
           dueCount,
           favoritesCount: Array.isArray(favorites) ? favorites.length : 0,
           maintenanceCount: Array.isArray(maintenance) ? maintenance.length : 0,
+          scheduledBookingsCount: Array.isArray(bookings) ? bookings.length : 0,
         });
+        setScheduledBookings(Array.isArray(bookings) ? bookings : []);
       } catch (err) {
-        if (isMounted) setError(err.message || "Failed to load dashboard");
+        if (isMounted) {
+          const { getErrorMessage } = await import("@/utils/errorMessages");
+          setError(getErrorMessage(err, "Failed to load dashboard data. Please try again."));
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -74,6 +85,14 @@ export default function TenantDashboard() {
       isLoading: loading,
     },
     {
+      label: "Scheduled Bookings",
+      value: loading ? null : summary.scheduledBookingsCount,
+      icon: Calendar,
+      accent: "green",
+      href: "/tenant/bookings",
+      isLoading: loading,
+    },
+    {
       label: "Favorites",
       value: loading ? null : summary.favoritesCount,
       icon: Heart,
@@ -96,6 +115,13 @@ export default function TenantDashboard() {
   ];
 
   const actions = [
+    {
+      title: "My Bookings",
+      description: "View and manage your scheduled viewings",
+      icon: Calendar,
+      href: "/tenant/bookings",
+      tone: "green",
+    },
     {
       title: "My Wishlist",
       description: "View your saved properties",
@@ -148,6 +174,17 @@ export default function TenantDashboard() {
 
       <ActionGrid items={actions} />
 
+     
+
+      {/* Scheduled Bookings Overview */}
+      <SectionCard
+        title="Upcoming Bookings"
+        description="Your scheduled property viewings"
+        className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm dark:shadow-none"
+      >
+        <UpcomingBookingsList bookings={scheduledBookings} loading={loading} />
+      </SectionCard>
+
       <SectionCard
         title="My Rentals"
         description="Active leases and upcoming payments"
@@ -155,6 +192,15 @@ export default function TenantDashboard() {
       >
         <TN_MyRentals />
       </SectionCard>
+
+         {/* Recent Notifications */}
+      <RecentNotificationsWidget limit={5} />
+      {/* AI Recommendations */}
+      <RecommendationsSection
+        type="properties"
+        title="Recommended for you"
+        limit={6}
+      />
     </div>
   );
 }

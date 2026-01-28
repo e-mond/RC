@@ -7,6 +7,7 @@ import {
   removeFromFavorites,
   isFavorited,
   createViewingRequest,
+  hasViewedOrBookedProperty,
 } from "@/services/tenantService";
 import { useAuthStore } from "@/stores/authStore";
 import {
@@ -25,6 +26,8 @@ import {
   ChevronLeft,
   ChevronRight,
   MessageSquare,
+  Info,
+  Lock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
@@ -35,6 +38,9 @@ import { ReviewsList, ReviewForm } from "@/components/reviews";
 import { getPropertyReviews, createReview } from "@/services/reviewService";
 import PropertyMapView from "@/components/common/PropertyMapView";
 import { getFirstValidImage, getPlaceholderImage } from "@/utils/imageValidation";
+import RecommendationsSection from "@/components/ai/RecommendationsSection";
+import TrustScore from "@/components/ai/TrustScore";
+import { getAmenityName, getAmenityId } from "@/utils/amenityUtils";
 
 export default function PropertyDetail() {
   const { id } = useParams();
@@ -53,6 +59,8 @@ export default function PropertyDetail() {
   const [error, setError] = useState("");
   const [isFavorite, setIsFavorite] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [canMessageLandlord, setCanMessageLandlord] = useState(false);
+  const [checkingMessagePermission, setCheckingMessagePermission] = useState(false);
 
   // Booking modal states
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -168,6 +176,18 @@ export default function PropertyDetail() {
             } catch (err) {
               console.warn("Could not check favorite status:", err);
             }
+            
+            // Check if tenant can message landlord (must have viewed or booked)
+            try {
+              setCheckingMessagePermission(true);
+              const canMessage = await hasViewedOrBookedProperty(id);
+              if (mounted) setCanMessageLandlord(canMessage);
+            } catch (err) {
+              console.warn("Could not check message permission:", err);
+              if (mounted) setCanMessageLandlord(false); // Fail closed
+            } finally {
+              if (mounted) setCheckingMessagePermission(false);
+            }
           }
         }
       } catch (err) {
@@ -273,26 +293,41 @@ export default function PropertyDetail() {
   const handleSubmitBooking = async (e) => {
     e.preventDefault();
 
-    if (!bookingDate) {
-      toast.error("Please select a preferred viewing date");
-      return;
-    }
-
+    // All fields are now optional - allow submission even without date
     setBookingLoading(true);
 
     try {
-      await createViewingRequest({
+      // Build request payload - only include fields that have values
+      const requestPayload = {
         propertyId: id,
         property_id: id, // Also send snake_case for backend compatibility
-        preferredDate: bookingDate,
-        preferred_date: bookingDate, // Also send snake_case for backend compatibility
-        message: bookingMessage.trim() || "Interested in viewing this property",
-      });
+      };
+      
+      // Only include preferred_date if provided
+      if (bookingDate && bookingDate.trim() !== "") {
+        requestPayload.preferredDate = bookingDate;
+        requestPayload.preferred_date = bookingDate;
+      }
+      
+      // Only include message if provided
+      if (bookingMessage && bookingMessage.trim() !== "") {
+        requestPayload.message = bookingMessage.trim();
+      }
+      
+      await createViewingRequest(requestPayload);
 
       toast.success("Viewing request sent successfully! 🎉");
       setShowBookingModal(false);
       setBookingDate("");
       setBookingMessage("");
+      
+      // Update message permission after successful viewing request
+      try {
+        const canMessage = await hasViewedOrBookedProperty(id);
+        setCanMessageLandlord(canMessage);
+      } catch (err) {
+        console.warn("Could not update message permission:", err);
+      }
     } catch (err) {
       console.error("Viewing request failed:", err);
       toast.error(err.response?.data?.message || "Failed to send viewing request.");
@@ -449,15 +484,20 @@ export default function PropertyDetail() {
                   Amenities
                 </h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {amenities.map((item) => (
-                    <div
-                      key={item.id || item.name}
-                      className="flex items-center gap-2.5 text-gray-700 dark:text-gray-300"
-                    >
-                      <CheckCircle size={18} className="text-[#0b6e4f] dark:text-emerald-400 shrink-0" />
-                      <span>{item.amenity?.name || item.name}</span>
-                    </div>
-                  ))}
+                  {amenities.map((item, idx) => {
+                    const amenityName = getAmenityName(item, idx);
+                    const amenityId = getAmenityId(item);
+                    
+                    return (
+                      <div
+                        key={amenityId || idx}
+                        className="flex items-center gap-2.5 text-gray-700 dark:text-gray-300"
+                      >
+                        <CheckCircle size={18} className="text-[#0b6e4f] dark:text-emerald-400 shrink-0" />
+                        <span>{amenityName}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -517,15 +557,49 @@ export default function PropertyDetail() {
                           {property.landlord.business_type}
                         </p>
                       )}
+                      {property.landlord?.id && (
+                        <div className="mt-2">
+                          <TrustScore userId={property.landlord.id} size="sm" />
+                        </div>
+                      )}
                     </div>
                   </div>
                   {isTenant && property.landlord?.id && (
-                    <Link to={`/tenant/messages?start=${property.landlord.id}`}>
-                      <button className="px-4 py-2 bg-[#0b6e4f] text-white rounded-lg hover:bg-[#095c42] transition-colors flex items-center gap-2 text-sm font-medium">
-                        <MessageSquare className="w-4 h-4" />
-                        Message Landlord
-                      </button>
-                    </Link>
+                    <div className="relative">
+                      {canMessageLandlord ? (
+                        <Link to={`/tenant/messages?start=${property.landlord.id}`}>
+                          <button className="px-4 py-2 bg-[#0b6e4f] text-white rounded-lg hover:bg-[#095c42] transition-colors flex items-center gap-2 text-sm font-medium">
+                            <MessageSquare className="w-4 h-4" />
+                            Message Landlord
+                          </button>
+                        </Link>
+                      ) : (
+                        <div className="relative group">
+                          <button
+                            disabled
+                            className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 rounded-lg cursor-not-allowed flex items-center gap-2 text-sm font-medium"
+                            title="You must view or book a property to message the landlord"
+                          >
+                            <Lock className="w-4 h-4" />
+                            Message Landlord
+                          </button>
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
+                            <div className="bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg py-2 px-3 shadow-lg whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <Info className="w-3 h-3" />
+                                <span>You must view or book a property to message the landlord</span>
+                              </div>
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-800"></div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {checkingMessagePermission && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-gray-800/50 rounded-lg">
+                          <Loader2 className="w-4 h-4 animate-spin text-[#0b6e4f]" />
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -571,6 +645,27 @@ export default function PropertyDetail() {
                   ratingBreakdown={reviewsData.rating_breakdown}
                   showModerationStatus={isOwner || isAdmin}
                 />
+              )}
+
+              {/* Similar Properties Recommendations */}
+              {isTenant && (
+                <div className="mt-8">
+                  <RecommendationsSection
+                    type="properties"
+                    title="Similar properties you may like"
+                    context={{
+                      preferences: {
+                        property_type: property.property_type ? [property.property_type] : undefined,
+                        bedrooms: property.bedrooms,
+                        bathrooms: property.bathrooms,
+                      },
+                      past_activity: {
+                        viewed_properties: [id],
+                      },
+                    }}
+                    limit={3}
+                  />
+                </div>
               )}
             </div>
           </div>
@@ -709,7 +804,7 @@ export default function PropertyDetail() {
               <form onSubmit={handleSubmitBooking} className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Preferred Viewing Date <span className="text-red-500">*</span>
+                    Preferred Viewing Date <span className="text-gray-500 text-xs">(optional)</span>
                   </label>
                   <input
                     type="date"
@@ -717,20 +812,23 @@ export default function PropertyDetail() {
                     value={bookingDate}
                     onChange={(e) => setBookingDate(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0b6e4f] dark:focus:ring-emerald-500 focus:border-[#0b6e4f] dark:focus:border-emerald-500 outline-none"
-                    required
+                    placeholder="Select a preferred date (optional)"
                   />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    You can specify a preferred date or leave blank to let the landlord suggest available times
+                  </p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Message / Additional Notes (optional)
+                    Message / Additional Notes <span className="text-gray-500 text-xs">(optional)</span>
                   </label>
                   <textarea
                     value={bookingMessage}
                     onChange={(e) => setBookingMessage(e.target.value)}
                     rows={4}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0b6e4f] dark:focus:ring-emerald-500 focus:border-[#0b6e4f] dark:focus:border-emerald-500 outline-none resize-none"
-                    placeholder="Preferred time of day, number of people viewing, any questions..."
+                    placeholder="Preferred time of day, number of people viewing, any questions, or leave blank..."
                   />
                 </div>
 

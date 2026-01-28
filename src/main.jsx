@@ -32,6 +32,7 @@ import { FeatureAccessProvider } from "@/context/FeatureAccessContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { registerServiceWorker } from "@/utils/registerServiceWorker";
+import { enableAllMocks, isMockMode } from "@/mocks/mockManager";
 
 /**
  * Root DOM Element Validation
@@ -48,6 +49,15 @@ if (!container) {
  * authentication flicker and ensure user state is available immediately
  */
 await useAuthStore.getState().loadSession();
+
+/**
+ * Mock Mode Initialization
+ * Enable mock mode if it was previously enabled (stored in localStorage)
+ * This ensures mock mode persists across page refreshes
+ */
+if (isMockMode()) {
+  enableAllMocks();
+}
 
 /**
  * Application Render

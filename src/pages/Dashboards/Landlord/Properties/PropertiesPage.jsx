@@ -94,7 +94,8 @@ export default function PropertiesPage() {
         userId: user?.id,
         userRole: user?.role,
       });
-      setError(err.message || "Failed to load properties");
+      const { getErrorMessage } = await import("@/utils/errorMessages");
+      setError(getErrorMessage(err, "Failed to load properties. Please try again."));
       setProperties([]);
     } finally {
       setLoading(false);
@@ -130,7 +131,8 @@ export default function PropertiesPage() {
       setPropertyToDelete(null);
     } catch (err) {
       console.error("Failed to delete property:", err);
-      toast.error(err.message || "Failed to delete property");
+      const { getToastErrorMessage } = await import("@/utils/errorMessages");
+      toast.error(getToastErrorMessage(err, "Failed to delete property. Please try again."));
     } finally {
       setDeletingId(null);
     }

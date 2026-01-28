@@ -21,6 +21,7 @@ const TenantWishlist = lazy(() => import("@/pages/Dashboards/Tenant/TenantWishli
 const TenantRentalHistory = lazy(() => import("@/pages/Dashboards/Tenant/TenantRentalHistory"));
 const TenantProperties = lazy(() => import("@/pages/Dashboards/Tenant/TenantProperties"));
 const TenantLeasesPage = lazy(() => import("@/pages/Dashboards/Tenant/Leases/TenantLeasesPage"));
+const TenantBookingsPage = lazy(() => import("@/pages/Dashboards/Tenant/Bookings/TenantBookingsPage"));
 const PropertyDetail = lazy(() => import("@/pages/PropertyDetail"));
 const LandlordPropertiesViewPage = lazy(() => import("@/pages/Dashboards/Landlord/Properties/LandlordPropertiesViewPage"));
 
@@ -101,6 +102,7 @@ const dashboardRoutes = [
       { path: "rentals", element: <TenantRentals /> },
       { path: "payments", element: <TenantPayments /> },
       { path: "maintenance", element: <TenantMaintenance /> },
+          { path: "bookings", element: <TenantBookingsPage /> },
           { path: "wishlist", element: <TenantWishlist /> },
           { path: "history", element: <TenantRentalHistory /> },
           { path: "leases", element: <TenantLeasesPage /> },

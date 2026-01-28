@@ -44,6 +44,7 @@ import PageHeader from "@/modules/dashboard/PageHeader";
 import { ReviewsList } from "@/components/reviews";
 import { getFirstValidImage, getPlaceholderImage } from "@/utils/imageValidation";
 import { useAuthStore } from "@/stores/authStore";
+import { getAmenityName, getAmenityId } from "@/utils/amenityUtils";
 
 export default function AdminPropertyDetailPage() {
   const { id } = useParams();
@@ -296,14 +297,19 @@ export default function AdminPropertyDetailPage() {
                 <div className="mt-6">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Amenities</h3>
                   <div className="flex flex-wrap gap-2">
-                    {property.amenities.map((amenity, idx) => (
-                      <span
-                        key={idx}
-                        className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-sm"
-                      >
-                        {amenity.name || amenity}
-                      </span>
-                    ))}
+                    {property.amenities.map((amenity, idx) => {
+                      const amenityName = getAmenityName(amenity, idx);
+                      const amenityId = getAmenityId(amenity);
+                      
+                      return (
+                        <span
+                          key={amenityId || idx}
+                          className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-sm"
+                        >
+                          {amenityName}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               )}

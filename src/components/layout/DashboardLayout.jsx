@@ -5,6 +5,8 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 import AdBanner from "@/pages/Ads/AdBanner";
+import AIChatbot from "@/components/ai/AIChatbot";
+import { useAuthStore } from "@/stores/authStore";
 
 /**
  * Main dashboard wrapper for all authenticated roles
@@ -14,6 +16,7 @@ import AdBanner from "@/pages/Ads/AdBanner";
  */
 export default function DashboardLayout({ children, aside }) {
   const content = children ?? <Outlet />;
+  const { isAuthenticated } = useAuthStore();
 
   return (
     <div className="flex min-h-screen bg-gray-50/50 dark:bg-gray-950/50">
@@ -46,6 +49,17 @@ export default function DashboardLayout({ children, aside }) {
         >
           <div className="p-5 lg:p-6">{aside}</div>
         </aside>
+      )}
+
+      {/* AI Chatbot - Fixed to right side of viewport
+          To change position, edit the position prop:
+          - "top-right" (current) - Top right corner, below navbar
+          - "top-left" - Top left corner, below navbar  
+          - "bottom-right" - Bottom right corner
+          - "bottom-left" - Bottom left corner
+      */}
+      {isAuthenticated && (
+        <AIChatbot position="bottom-right" />
       )}
     </div>
   );

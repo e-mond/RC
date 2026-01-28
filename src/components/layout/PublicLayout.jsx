@@ -1,6 +1,5 @@
 import { Outlet } from "react-router-dom";
-import DebugToggle from "@/components/DebugToggle";
-import RoleSwitcher from "@/components/RoleSwitcher";
+import AIChatbot from "@/components/ai/AIChatbot";
 
 export default function PublicLayout() {
   return (
@@ -8,8 +7,9 @@ export default function PublicLayout() {
       <main className="">
         <Outlet />
       </main>
-        <DebugToggle />
-        <RoleSwitcher />
+      
+      {/* AI Chatbot - Visible to public users */}
+      <AIChatbot position="bottom-right" />
     </div>
   );
 }

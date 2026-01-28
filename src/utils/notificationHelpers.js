@@ -235,6 +235,31 @@ export const getNotificationPriority = (type) => {
 };
 
 /**
+ * Check if notification needs a "View Details" action
+ * Some notifications like login_success don't need details view
+ * @param {string} type - Notification type
+ * @returns {boolean} True if notification should show "View Details"
+ */
+export const shouldShowViewDetails = (type) => {
+  if (!type) return false;
+  
+  // Notifications that don't need details view
+  const noDetailsTypes = [
+    "login_success",
+    "welcome",
+    "system",
+    "account_pending",
+  ];
+  
+  // Check if type starts with any no-details prefix
+  if (noDetailsTypes.includes(type)) return false;
+  if (type.startsWith("system_") && !type.includes("error")) return false;
+  
+  // All booking, payment, approval, maintenance notifications need details
+  return true;
+};
+
+/**
  * Format notification for display
  * @param {Object} notification - Notification object
  * @returns {Object} Formatted notification with helper properties
@@ -245,6 +270,11 @@ export const formatNotification = (notification) => {
   const Icon = getNotificationIcon(type);
   const colors = getNotificationColors(type);
   const priority = getNotificationPriority(type);
+  const isPinned = notification.is_pinned ?? false;
+  const isArchived = notification.is_archived ?? false;
+  const isRead = notification.is_read ?? notification.read ?? false;
+  const actionUrl = notification.action_url || notification.actionUrl;
+  const showViewDetails = shouldShowViewDetails(type) && actionUrl;
 
   return {
     ...notification,
@@ -253,9 +283,12 @@ export const formatNotification = (notification) => {
     Icon,
     colors,
     priority,
-    isRead: notification.is_read ?? notification.read ?? false,
+    isRead,
+    isPinned,
+    isArchived,
     createdAt: notification.created_at || notification.createdAt,
-    actionUrl: notification.action_url || notification.actionUrl,
+    actionUrl,
+    showViewDetails,
   };
 };
 

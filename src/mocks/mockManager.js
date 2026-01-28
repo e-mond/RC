@@ -30,9 +30,11 @@ export const onDemoModeChange = (listener) => {
 };
 
 export const enableAllMocks = () => {
-  if (isAdapterActive()) return;
-
-  enableMock();
+  // Always enable mock adapter when enabling demo mode
+  if (!isAdapterActive()) {
+    enableMock();
+  }
+  
   enabled = true;
   persist(true);
   console.log("%cDemo Mode: ON", "color: #10b981; font-weight: bold;");
@@ -45,16 +47,38 @@ export const disableAllMocks = () => {
     return;
   }
 
-  if (!isAdapterActive()) return;
-
-  disableMock();
+  // Always disable mock adapter when disabling demo mode
+  if (isAdapterActive()) {
+    disableMock();
+  }
+  
   enabled = false;
   persist(false);
   console.log("%cDemo Mode: OFF", "color: #ef4444; font-weight: bold;");
   notify();
 };
 
-export const isMockMode = () => enabled || FORCE_ENV;
+export const isMockMode = () => {
+  // Check both localStorage state and adapter state
+  const localStorageEnabled = localStorage.getItem(KEY) === "true";
+  const adapterActive = isAdapterActive();
+  
+  // If localStorage says enabled but adapter is not, sync them
+  if (localStorageEnabled && !adapterActive && !FORCE_ENV) {
+    enableMock();
+    enabled = true;
+    return true;
+  }
+  
+  // If localStorage says disabled but adapter is active, sync them
+  if (!localStorageEnabled && adapterActive && !FORCE_ENV) {
+    disableMock();
+    enabled = false;
+    return false;
+  }
+  
+  return enabled || FORCE_ENV || adapterActive;
+};
 
 export const toggleMockMode = () => {
   if (isMockMode()) {

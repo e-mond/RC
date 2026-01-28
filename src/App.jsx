@@ -34,6 +34,7 @@ import LearnMore from "@/pages/LearnMore/LearnMore";
 import RoleSelection from "@/components/onboarding/RoleSelection";
 import PublicProperties from "@/pages/Landing/PublicProperties";
 import PropertyDetail from "@/pages/PropertyDetail";
+import LandlordPropertiesPage from "@/pages/Landlords/LandlordPropertiesPage";
 import Blog from "@/pages/Blog";
 import BlogPost from "@/pages/BlogPost";
 import DocumentationPage from "@/pages/Documentation/DocumentationPage";
@@ -60,8 +61,9 @@ import PublicLayout from "@/components/layout/PublicLayout";
 import NotFound from "@/pages/NotFound";
 
 // Dev Tools (only in development)
-import DebugToggle from "@/components/DebugToggle";
+import DemoModeToggle from "@/components/shared/DemoModeToggle";
 import RoleSwitcher from "@/components/RoleSwitcher";
+
 
 // NEW: Global Announcement Banner + Audio Notifications
 import AnnouncementBanner from "@/components/AnnouncementBanner";
@@ -163,6 +165,7 @@ function AnimatedRoutes() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/properties" element={<PublicProperties />} />
             <Route path="/properties/:id" element={<PropertyDetail />} />
+            <Route path="/landlords/:id/properties" element={<LandlordPropertiesPage />} />
             <Route path="/learn-more" element={<LearnMore />} />
             <Route path="/role-selection" element={<RoleSelection />} />
             <Route path="/documentation" element={<DocumentationPage />} />
@@ -193,7 +196,7 @@ function AnimatedRoutes() {
       {/* Dev tools only in development */}
       {import.meta.env.DEV && (
         <div className="fixed bottom-4 left-4 z-50 flex flex-col gap-2">
-          <DebugToggle key="debug-toggle" />
+          <DemoModeToggle key="demo-mode-toggle" position="relative" showLabel={true} />
           <RoleSwitcher key="role-switcher" />
         </div>
       )}

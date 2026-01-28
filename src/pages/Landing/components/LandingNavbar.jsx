@@ -54,6 +54,7 @@ export default function LandingNavbar({
       "benefits",
       "plans",
       "trust",
+      "efie-ai",
       "advertise",
     ];
 
@@ -84,6 +85,7 @@ export default function LandingNavbar({
     { id: "benefits", label: "Benefits" },
     { id: "plans", label: "Pricing" },
     { id: "trust", label: "Trust" },
+    { id: "efie-ai", label: "Efie AI" },
     { id: "advertise", label: "Advertise" },
     { id: "properties", label: "Browse Properties", route: true },
   ];

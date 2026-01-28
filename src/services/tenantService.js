@@ -261,40 +261,312 @@ export const createViewingRequest = async (payload) => {
     const propertyId = payload.propertyId || payload.property_id || payload.property;
     const preferredDate = payload.preferredDate || payload.preferred_date || payload.preferredDate;
     
+    // Normalize payload - don't include contact_phone if it's null/empty
     const normalizedPayload = {
       property_id: propertyId,
       preferred_date: preferredDate,
       message: payload.message || "",
-      contact_phone: payload.contact_phone || payload.contactPhone || null,
     };
+    
+    // Only include contact_phone if provided and not empty
+    const contactPhone = payload.contact_phone || payload.contactPhone;
+    if (contactPhone && contactPhone.trim() !== "") {
+      normalizedPayload.contact_phone = contactPhone.trim();
+    }
+
+    // Validate required fields
+    if (!propertyId) {
+      throw new Error("Property ID is required");
+    }
+    if (!normalizedPayload.preferred_date) {
+      throw new Error("Preferred date is required");
+    }
 
     // Try property-scoped endpoint first (more RESTful)
     try {
       const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+      
+      // Build request payload - only include contact_phone if it has a value
+      const requestPayload = {
+        preferred_date: normalizedPayload.preferred_date,
+        message: normalizedPayload.message || "",
+      };
+      
+      // Only include contact_phone if it's provided and not empty
+      const contactPhone = payload.contact_phone || payload.contactPhone;
+      if (contactPhone && contactPhone.trim() !== "") {
+        requestPayload.contact_phone = contactPhone.trim();
+      }
+      
       const { data } = await apiClient.post(
         API_ENDPOINTS.PROPERTIES.CREATE_VIEWING_REQUEST(propertyId),
-        {
-          preferred_date: normalizedPayload.preferred_date,
-          message: normalizedPayload.message,
-          contact_phone: normalizedPayload.contact_phone,
-        }
+        requestPayload
       );
       return data;
     } catch (err1) {
+      // If 400 error, provide more specific error message
+      if (err1.response?.status === 400) {
+        const errorMsg = err1.response?.data?.message || 
+                        err1.response?.data?.detail || 
+                        err1.response?.data?.error ||
+                        "Invalid viewing request data. Please check your input.";
+        throw new Error(errorMsg);
+      }
+      
       // Fallback: try tenant-scoped endpoint
       try {
-        const { data } = await apiClient.post("/tenant/viewing-requests/", normalizedPayload);
+        // Build request payload - only include contact_phone if it has a value
+        const fallbackPayload = {
+          property_id: normalizedPayload.property_id,
+          preferred_date: normalizedPayload.preferred_date,
+          message: normalizedPayload.message || "",
+        };
+        
+        // Only include contact_phone if it's provided and not empty
+        const contactPhone = payload.contact_phone || payload.contactPhone;
+        if (contactPhone && contactPhone.trim() !== "") {
+          fallbackPayload.contact_phone = contactPhone.trim();
+        }
+        
+        const { data } = await apiClient.post("/tenant/viewing-requests/", fallbackPayload);
         return data;
       } catch (err2) {
+        // If 400 error, provide more specific error message
+        if (err2.response?.status === 400) {
+          const errorMsg = err2.response?.data?.message || 
+                          err2.response?.data?.detail || 
+                          err2.response?.data?.error ||
+                          "Invalid viewing request data. Please check your input.";
+          throw new Error(errorMsg);
+        }
+        
         // Fallback: try without trailing slash
-        const { data } = await apiClient.post("/tenant/viewing-requests", normalizedPayload);
-        return data;
+        try {
+          // Build request payload - only include contact_phone if it has a value
+          const finalPayload = {
+            property_id: normalizedPayload.property_id,
+            preferred_date: normalizedPayload.preferred_date,
+            message: normalizedPayload.message || "",
+          };
+          
+          // Only include contact_phone if it's provided and not empty
+          const contactPhone = payload.contact_phone || payload.contactPhone;
+          if (contactPhone && contactPhone.trim() !== "") {
+            finalPayload.contact_phone = contactPhone.trim();
+          }
+          
+          const { data } = await apiClient.post("/tenant/viewing-requests", finalPayload);
+          return data;
+        } catch (err3) {
+          // If 400 error, provide more specific error message
+          if (err3.response?.status === 400) {
+            const errorMsg = err3.response?.data?.message || 
+                            err3.response?.data?.detail || 
+                            err3.response?.data?.error ||
+                            "Invalid viewing request data. Please check your input.";
+            throw new Error(errorMsg);
+          }
+          throw err3;
+        }
       }
     }
   } catch (err) {
     throw new Error(
       getErrorMessage(err, "Failed to submit property viewing request")
     );
+  }
+};
+
+/**
+ * Get all viewing requests for the current tenant
+ * @returns {Promise<Array>} Array of viewing requests
+ */
+export const getViewingRequests = async () => {
+  try {
+    const { data } = await apiClient.get("/tenant/viewing-requests/");
+    return data.results || data.data || data || [];
+  } catch (err) {
+    if (err?.response?.status === 404) return [];
+    throw new Error(getErrorMessage(err, "Could not load viewing requests"));
+  }
+};
+
+/**
+ * Get all bookings for the current tenant (all statuses)
+ * Includes: pending, approved, scheduled, rescheduled, cancelled, completed, no-show
+ * @returns {Promise<Array>} Array of booking objects
+ */
+export const getTenantBookings = async () => {
+  try {
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    let bookings = [];
+    
+    // Try primary endpoint: /tenant/bookings/
+    try {
+      const { data } = await apiClient.get(API_ENDPOINTS.TENANT.BOOKINGS);
+      bookings = data.results || data.data || (Array.isArray(data) ? data : []);
+    } catch (err1) {
+      // Fallback: try viewing-requests endpoint
+      try {
+        const { data } = await apiClient.get(API_ENDPOINTS.TENANT.VIEWING_REQUESTS);
+        bookings = data.results || data.data || (Array.isArray(data) ? data : []);
+      } catch (err2) {
+        // If both fail, return empty array (not an error - tenant may have no bookings)
+        if (err2.response?.status === 404) return [];
+        throw err2;
+      }
+    }
+    
+    // Normalize booking data structure
+    return Array.isArray(bookings) ? bookings.map(normalizeBookingData) : [];
+  } catch (err) {
+    if (err?.response?.status === 404) return [];
+    throw new Error(getErrorMessage(err, "Could not load bookings"));
+  }
+};
+
+/**
+ * Get scheduled/approved bookings only (for dashboard overview)
+ * @returns {Promise<Array>} Array of scheduled booking objects
+ */
+export const getScheduledBookings = async () => {
+  try {
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    let bookings = [];
+    
+    // Try scheduled bookings endpoint
+    try {
+      const { data } = await apiClient.get(API_ENDPOINTS.TENANT.BOOKINGS_SCHEDULED);
+      bookings = data.results || data.data || (Array.isArray(data) ? data : []);
+    } catch (err1) {
+      // Fallback: get all bookings and filter
+      try {
+        const allBookings = await getTenantBookings();
+        bookings = allBookings.filter((b) => {
+          const status = String(b.status || "").toLowerCase();
+          return ["approved", "scheduled", "accepted"].includes(status);
+        });
+      } catch (err2) {
+        if (err2.response?.status === 404) return [];
+        throw err2;
+      }
+    }
+    
+    // Sort by date (upcoming first)
+    return Array.isArray(bookings)
+      ? bookings
+          .map(normalizeBookingData)
+          .sort((a, b) => {
+            const dateA = new Date(a.preferred_date || a.scheduled_date || a.dateRequested || 0);
+            const dateB = new Date(b.preferred_date || b.scheduled_date || b.dateRequested || 0);
+            return dateA - dateB;
+          })
+      : [];
+  } catch (err) {
+    if (err?.response?.status === 404) return [];
+    throw new Error(getErrorMessage(err, "Could not load scheduled bookings"));
+  }
+};
+
+/**
+ * Reschedule a booking
+ * @param {string|number} bookingId - Booking ID
+ * @param {string} newDate - New date (ISO format: YYYY-MM-DD)
+ * @param {string} [newTime] - New time (optional, format: HH:MM)
+ * @param {string} [message] - Optional message to landlord
+ * @returns {Promise<Object>} Updated booking object
+ */
+export const rescheduleBooking = async (bookingId, newDate, newTime = null, message = null) => {
+  if (!bookingId) throw new Error("Booking ID is required");
+  if (!newDate) throw new Error("New date is required");
+
+  try {
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    
+    const payload = {
+      new_date: newDate,
+    };
+    
+    if (newTime) payload.new_time = newTime;
+    if (message) payload.message = message;
+    
+    const { data } = await apiClient.patch(API_ENDPOINTS.TENANT.RESCHEDULE_BOOKING(bookingId), payload);
+    return normalizeBookingData(data.booking || data);
+  } catch (err) {
+    throw new Error(getErrorMessage(err, "Failed to reschedule booking"));
+  }
+};
+
+/**
+ * Cancel a booking
+ * @param {string|number} bookingId - Booking ID
+ * @param {string} [reason] - Optional cancellation reason
+ * @returns {Promise<Object>} Updated booking object
+ */
+export const cancelBooking = async (bookingId, reason = null) => {
+  if (!bookingId) throw new Error("Booking ID is required");
+
+  try {
+    const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+    
+    const payload = {};
+    if (reason) payload.reason = reason;
+    
+    const { data } = await apiClient.patch(API_ENDPOINTS.TENANT.CANCEL_BOOKING(bookingId), payload);
+    return normalizeBookingData(data.booking || data);
+  } catch (err) {
+    throw new Error(getErrorMessage(err, "Failed to cancel booking"));
+  }
+};
+
+/**
+ * Normalize booking data structure from various backend formats
+ * Ensures consistent field names across different API responses
+ */
+function normalizeBookingData(booking) {
+  if (!booking || typeof booking !== "object") return booking;
+  
+  return {
+    id: booking.id,
+    property_id: booking.property_id || booking.propertyId || booking.property?.id,
+    propertyId: booking.property_id || booking.propertyId || booking.property?.id,
+    propertyTitle: booking.propertyTitle || booking.property?.title || booking.property_title,
+    property: booking.property || {},
+    tenant_id: booking.tenant_id || booking.tenantId || booking.tenant?.id,
+    status: booking.status || "pending",
+    preferred_date: booking.preferred_date || booking.preferredDate,
+    scheduled_date: booking.scheduled_date || booking.scheduledDate || booking.preferred_date,
+    scheduled_time: booking.scheduled_time || booking.scheduledTime,
+    dateRequested: booking.dateRequested || booking.requested_date || booking.preferred_date || booking.created_at,
+    message: booking.message || booking.notes,
+    contact_phone: booking.contact_phone || booking.contactPhone || booking.phone,
+    landlord: booking.landlord || booking.landlord_profile || booking.property?.landlord,
+    created_at: booking.created_at || booking.createdAt,
+    updated_at: booking.updated_at || booking.updatedAt,
+  };
+}
+
+/**
+ * Check if tenant has a viewing request or booking for a specific property
+ * @param {string|number} propertyId - Property ID to check
+ * @returns {Promise<boolean>} True if tenant has viewed or booked the property
+ */
+export const hasViewedOrBookedProperty = async (propertyId) => {
+  try {
+    const viewingRequests = await getViewingRequests();
+    // Check if any viewing request exists for this property (any status)
+    const hasViewingRequest = viewingRequests.some(
+      (request) => 
+        (request.property_id?.toString() === propertyId?.toString()) ||
+        (request.property?.id?.toString() === propertyId?.toString())
+    );
+    
+    // Also check for bookings/rentals if that endpoint exists
+    // For now, viewing request is sufficient
+    return hasViewingRequest;
+  } catch (err) {
+    console.warn("Could not check viewing/booking status:", err);
+    return false; // Fail closed - don't allow messaging if check fails
   }
 };
 

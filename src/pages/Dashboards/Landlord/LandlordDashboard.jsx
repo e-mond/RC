@@ -16,6 +16,7 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Link } from "react-router-dom";
 import UpgradeBanner from "@/components/common/UpgradeBanner";
+import RecentNotificationsWidget from "@/components/Notifications/RecentNotificationsWidget";
 
 import { getLandlordDashboardStats, getLandlordRecentActivity } from "@/services/landlordService";
 
@@ -57,7 +58,8 @@ export default function LandlordDashboard() {
       setActivity(activityData || []);
     } catch (err) {
       console.error("Failed to load landlord dashboard:", err);
-      setError(err.message || "Failed to load dashboard data");
+      const { getErrorMessage } = await import("@/utils/errorMessages");
+      setError(getErrorMessage(err, "Failed to load dashboard data. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -185,6 +187,9 @@ export default function LandlordDashboard() {
           </CardContent>
         </Card>
       </section>
+
+      {/* Recent Notifications */}
+      <RecentNotificationsWidget limit={5} />
 
       {/* Recent Activity + Quick Actions */}
       <section className="grid lg:grid-cols-3 gap-6">

@@ -401,28 +401,128 @@ export const deleteProperty = async (id) => {
 
 export const fetchBookings = async () => {
   try {
-    // Backend filters by role: landlords automatically see their own bookings
-    const { data } = await apiClient.get("/bookings/");
-    const list = data?.results ?? data ?? [];
-    return Array.isArray(list) ? list : [];
+    // Try multiple endpoints to find viewing requests/bookings
+    // Backend may use different endpoints: /bookings/, /properties/viewing-requests/, or /landlord/bookings/
+    let list = [];
+    
+    try {
+      // First try: /properties/viewing-requests/ (same as dashboard uses)
+      const { data: viewingData } = await apiClient.get("/properties/viewing-requests/");
+      list = viewingData?.results ?? viewingData?.data ?? (Array.isArray(viewingData) ? viewingData : []);
+    } catch (err1) {
+      // Fallback 1: /bookings/
+      try {
+        const { data: bookingsData } = await apiClient.get("/bookings/");
+        list = bookingsData?.results ?? bookingsData?.data ?? (Array.isArray(bookingsData) ? bookingsData : []);
+      } catch (err2) {
+        // Fallback 2: /landlord/bookings/
+        try {
+          const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+          const { data: landlordBookingsData } = await apiClient.get(API_ENDPOINTS.LANDLORD?.BOOKINGS || "/landlord/bookings/");
+          list = landlordBookingsData?.results ?? landlordBookingsData?.data ?? (Array.isArray(landlordBookingsData) ? landlordBookingsData : []);
+        } catch (err3) {
+          // All endpoints failed, return empty array
+          console.warn("All booking endpoints failed, returning empty list");
+          list = [];
+        }
+      }
+    }
+    
+    // Normalize booking data structure for consistent display
+    return Array.isArray(list) ? list.map(normalizeBookingData) : [];
   } catch (err) {
     throw extractError(err, "Failed to fetch bookings");
   }
 };
 
-export const respondBooking = async (id, action) => {
-  try {
-    // Map UI actions to backend booking statuses
-    let status;
-    if (action === "accept") status = "approved";
-    else if (action === "decline") status = "rejected";
-    else status = action;
+/**
+ * Normalize booking data structure from various backend formats
+ * Ensures consistent field names across different API responses
+ */
+function normalizeBookingData(booking) {
+  if (!booking || typeof booking !== "object") return booking;
+  
+  return {
+    id: booking.id,
+    property_id: booking.property_id || booking.propertyId || booking.property?.id,
+    propertyId: booking.property_id || booking.propertyId || booking.property?.id,
+    propertyTitle: booking.propertyTitle || booking.property?.title || booking.property_title,
+    tenant_id: booking.tenant_id || booking.tenantId || booking.tenant?.id,
+    applicantId: booking.tenant_id || booking.tenantId || booking.applicantId || booking.tenant?.id,
+    applicantName: booking.applicantName || booking.tenant_name || booking.tenant?.full_name || booking.tenant?.name || booking.tenantName,
+    phone: booking.phone || booking.contact_phone || booking.contactPhone || booking.tenant?.phone,
+    status: booking.status || "pending",
+    preferred_date: booking.preferred_date || booking.preferredDate,
+    dateRequested: booking.dateRequested || booking.requested_date || booking.preferred_date || booking.preferredDate || booking.created_at,
+    requestedDate: booking.dateRequested || booking.requested_date || booking.preferred_date || booking.preferredDate || booking.created_at,
+    message: booking.message || booking.notes,
+    created_at: booking.created_at || booking.createdAt || booking.dateRequested,
+  };
+}
 
-    const { data } = await apiClient.patch(`/bookings/${encodeURIComponent(id)}/`, { status });
-    return data;
-  } catch (err) {
-    throw extractError(err, "Failed to respond to booking");
+export const respondBooking = async (id, action) => {
+  if (!id) {
+    throw new Error("Booking ID is required");
   }
+
+  // Map UI actions to backend booking statuses
+  let status;
+  if (action === "accept") status = "approved";
+  else if (action === "decline") status = "rejected";
+  else status = action;
+
+  const encodedId = encodeURIComponent(id);
+  let data;
+  let lastError;
+
+  // Try multiple endpoints in order of likelihood
+  // Endpoint 1: /properties/viewing-requests/{id}/respond/ (most likely correct)
+  try {
+    const response = await apiClient.patch(`/properties/viewing-requests/${encodedId}/respond/`, { status });
+    data = response.data;
+  } catch (err1) {
+    // Endpoint 2: /properties/viewing-requests/{id}/ (fallback, but backend has bug)
+    try {
+      const response = await apiClient.patch(`/properties/viewing-requests/${encodedId}/`, { status });
+      data = response.data;
+    } catch (err2) {
+      // Endpoint 3: /landlord/bookings/{id}/respond/ (alternative)
+      try {
+        const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+        const endpoint = API_ENDPOINTS.LANDLORD?.RESPOND_BOOKING?.(id) || `/landlord/bookings/${encodedId}/respond/`;
+        const response = await apiClient.patch(endpoint, { status });
+        data = response.data;
+      } catch (err3) {
+        // Endpoint 4: /bookings/{id}/ (last resort)
+        try {
+          const response = await apiClient.patch(`/bookings/${encodedId}/`, { status });
+          data = response.data;
+        } catch (err4) {
+          // All endpoints failed
+          lastError = err4;
+          console.error("All booking response endpoints failed:", {
+            endpoint1: err1.response?.status,
+            endpoint2: err2.response?.status,
+            endpoint3: err3.response?.status,
+            endpoint4: err4.response?.status,
+          });
+        }
+      }
+    }
+  }
+
+  if (data) {
+    return data;
+  }
+
+  // Provide user-friendly error message
+  const errorMessage = lastError?.response?.status === 404
+    ? "Booking not found. The booking may have been deleted or the ID is incorrect."
+    : lastError?.response?.status === 500
+    ? "Server error while processing your request. Please try again later."
+    : lastError?.message || "Failed to respond to booking. Please try again.";
+
+  throw extractError(lastError || new Error(errorMessage), errorMessage);
 };
 
 /* ---------- Dashboard helpers ---------- */

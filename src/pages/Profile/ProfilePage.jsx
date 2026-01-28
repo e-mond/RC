@@ -30,6 +30,7 @@ import WalletSetupModal from "@/components/common/WalletSetupModal";
 import WalletTopUpModal from "@/components/common/WalletTopUpModal";
 import { ReviewsList, ReviewForm, BackgroundStatusPanel } from "@/components/reviews";
 import { getUserReviews, createReview } from "@/services/reviewService";
+import TrustScore from "@/components/ai/TrustScore";
 
 import { SUBSCRIPTION_CONFIG } from "@/config/subscriptionConfig";
 import { isMockMode } from "@/mocks/mockManager";
@@ -411,6 +412,11 @@ const ProfilePage = () => {
             {formattedRole}
             {!isAdmin && ` • ${isPremium ? t("premiumPlan") : t("freePlan")}`}
           </p>
+          {user?.id && (
+            <div className="mt-3">
+              <TrustScore userId={user.id} size="md" />
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-4">

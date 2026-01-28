@@ -9,6 +9,7 @@ import PropertyApprovalBanner from "@/components/common/PropertyApprovalBanner";
 import { ArrowLeft, Edit, Trash2, MapPin, Bed, Bath, Square, Loader2, AlertTriangle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
+import { getAmenityName, getAmenityId } from "@/utils/amenityUtils";
 
 /**
  * PropertyDetailsPage
@@ -208,14 +209,19 @@ export default function PropertyDetailsPage() {
           <div className="mt-6">
             <h3 className="text-lg font-semibold mb-2">Amenities</h3>
             <div className="flex flex-wrap gap-2">
-              {property.amenities.map((amenity, idx) => (
-                <span
-                  key={idx}
-                  className="px-3 py-1 bg-[#0b6e4f]/10 text-[#0b6e4f] rounded-full text-sm"
-                >
-                  {amenity.name || amenity}
-                </span>
-              ))}
+              {property.amenities.map((amenity, idx) => {
+                const amenityName = getAmenityName(amenity, idx);
+                const amenityId = getAmenityId(amenity);
+                
+                return (
+                  <span
+                    key={amenityId || idx}
+                    className="px-3 py-1 bg-[#0b6e4f]/10 text-[#0b6e4f] rounded-full text-sm"
+                  >
+                    {amenityName}
+                  </span>
+                );
+              })}
             </div>
           </div>
         )}

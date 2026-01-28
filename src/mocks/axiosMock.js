@@ -38,37 +38,48 @@ export const enableMock = () => {
   // ================================================================
   // AUTH ENDPOINTS
   // ================================================================
-  mock.onPost("/auth/login").reply((config) => {
-    const { email } = JSON.parse(config.data);
+  // Login handler - handles both /auth/login and /auth/login/
+  const loginHandler = (config) => {
+    const { email, password } = JSON.parse(config.data);
 
     const demoAccounts = {
-      "tenant@demo.com": { role: "tenant", name: "Adwoa Mensah" },
-      "landlord@demo.com": { role: "landlord", name: "Kwame Asare" },
-      "artisan@demo.com": { role: "artisan", name: "Ebo Plumbing" },
-      "admin@demo.com": { role: "admin", name: "Nana Yaa Admin" },
-      "super@demo.com": { role: "super-admin", name: "Super Emma Osei" },
+      "tenant@demo.com": { role: "tenant", name: "Adwoa Mensah", full_name: "Adwoa Mensah" },
+      "landlord@demo.com": { role: "landlord", name: "Kwame Asare", full_name: "Kwame Asare" },
+      "artisan@demo.com": { role: "artisan", name: "Ebo Plumbing", full_name: "Ebo Plumbing" },
+      "admin@demo.com": { role: "admin", name: "Nana Yaa Admin", full_name: "Nana Yaa Admin" },
+      "super@demo.com": { role: "super-admin", name: "Super Emma Osei", full_name: "Super Emma Osei" },
     };
 
-    const account = demoAccounts[email];
+    const account = demoAccounts[email?.toLowerCase()];
     if (!account) {
-      return [400, { message: "Invalid credentials" }];
+      return [400, { message: "Invalid credentials. Use demo emails (tenant@demo.com, landlord@demo.com, etc.)" }];
     }
 
     localStorage.setItem("userRole", account.role);
 
+    const mockToken = `mock-jwt-${Date.now()}`;
+    const mockRefresh = `mock-refresh-${Date.now()}`;
+
     return [
       200,
       {
-        token: `mock-jwt-${Date.now()}`,
+        access: mockToken,
+        refresh: mockRefresh,
+        token: mockToken, // Backward compatibility
         user: {
           id: genId("u"),
-          email,
+          email: email.toLowerCase(),
           role: account.role,
           name: account.name,
+          full_name: account.full_name,
         },
       },
     ];
-  });
+  };
+  
+  // Register handler for both endpoint variations
+  mock.onPost("/auth/login/").reply(loginHandler);
+  mock.onPost("/auth/login").reply(loginHandler);
 
   mock.onGet("/auth/profile").reply(() => {
     const role = localStorage.getItem("userRole") || "tenant";

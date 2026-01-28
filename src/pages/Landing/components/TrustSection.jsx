@@ -90,7 +90,7 @@ export default function TrustSection() {
             Trust
           </motion.h4>
           <motion.h2
-            className="text-4xl font-semibold text-gray-900 mb-3"
+             className="text-3xl md:text-4xl font-bold text-[#0f1724] mb-4 leading-snug"
             variants={item}
           >
             Secure rental ecosystem

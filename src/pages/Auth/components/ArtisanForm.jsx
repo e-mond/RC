@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { signupArtisan } from "@/services/authService";
 import ProgressIndicator from "@/components/onboarding/ProgressIndicator";
 import { PrimaryButton, SecondaryButton } from "@/components/ui/Button";
+import FormInput from "@/components/ui/FormInput";
 import artisan_onboarding from "@/assets/images/artisan_onboarding.jpeg";
 import TermsPrivacyModal from "@/components/legal/TermsPrivacyModal";
 
@@ -198,51 +199,55 @@ export default function ArtisanForm() {
           >
             {step === 1 ? (
               <>
-                <input
+                <FormInput
+                  id="fullName"
+                  label="Full Name"
                   type="text"
                   name="fullName"
-                  placeholder="Full Name (e.g., John Doe)"
                   value={form.fullName}
+                  placeholder="Full Name (e.g., John Doe)"
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none focus:bg-white"
                   required
                 />
-                <input
+                <FormInput
+                  id="email"
+                  label="Email Address"
                   type="email"
                   name="email"
+                  value={form.email}
                   placeholder="Email Address"
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none focus:bg-white"
                   required
                 />
-                <input
+                <FormInput
+                  id="phone"
+                  label="Phone Number"
                   type="tel"
                   name="phone"
-                  placeholder="Phone Number (e.g., +233241234567)"
                   value={form.phone}
+                  placeholder="Phone Number (e.g., +233241234567)"
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none focus:bg-white"
                   required
                 />
-                <input
+                <FormInput
+                  id="password"
+                  label="Password"
                   type="password"
                   name="password"
-                  placeholder="Password (min. 8 characters)"
                   value={form.password}
+                  placeholder="Password (min. 8 characters)"
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none focus:bg-white"
                   required
-                  minLength="8"
                 />
-                <input
+                <FormInput
+                  id="confirmPassword"
+                  label="Confirm Password"
                   type="password"
                   name="confirmPassword"
-                  placeholder="Confirm Password"
                   value={form.confirmPassword}
+                  placeholder="Confirm Password"
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none focus:bg-white"
                   required
-                  minLength="8"
                 />
 
                 <PrimaryButton
@@ -256,56 +261,67 @@ export default function ArtisanForm() {
             ) : (
               <>
                 {/* Profession Selector */}
-                <select
-                  name="profession"
-                  onChange={handleChange}
-                  value={form.profession}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-900 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none focus:bg-white"
-                  required
-                >
-                  <option value="">Select Profession</option>
-                  <option value="plumber">Plumber</option>
-                  <option value="electrician">Electrician</option>
-                  <option value="carpenter">Carpenter</option>
-                  <option value="mason">Mason</option>
-                  <option value="painter">Painter</option>
-                  <option value="other">Other (Specify Below)</option>
-                </select>
+                <div className="w-full">
+                  <label htmlFor="profession" className="block text-sm font-medium text-[#0f1724] mb-1">
+                    Profession <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="profession"
+                    name="profession"
+                    onChange={handleChange}
+                    value={form.profession}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base transition bg-gray-100 text-gray-900 focus:ring-2 focus:outline-none focus:bg-white focus:ring-[#0b6e4f]"
+                    required
+                  >
+                    <option value="">Select Profession</option>
+                    <option value="plumber">Plumber</option>
+                    <option value="electrician">Electrician</option>
+                    <option value="carpenter">Carpenter</option>
+                    <option value="mason">Mason</option>
+                    <option value="painter">Painter</option>
+                    <option value="other">Other (Specify Below)</option>
+                  </select>
+                </div>
 
                 {/* Show this only if user selects "Other" */}
                 {form.profession === "other" && (
-                  <motion.input
-                    type="text"
-                    name="otherProfession"
-                    placeholder="Please specify your profession"
-                    value={form.otherProfession}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none focus:bg-white"
-                    required
+                  <motion.div
                     initial={{ opacity: 0, y: -5 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.25 }}
-                  />
+                  >
+                    <FormInput
+                      id="otherProfession"
+                      label="Specify Your Profession"
+                      type="text"
+                      name="otherProfession"
+                      value={form.otherProfession}
+                      placeholder="Please specify your profession"
+                      onChange={handleChange}
+                      required
+                    />
+                  </motion.div>
                 )}
 
-                <input
+                <FormInput
+                  id="experience"
+                  label="Years of Experience"
                   type="number"
                   name="experience"
-                  placeholder="Years of Experience (e.g., 5)"
                   value={form.experience}
+                  placeholder="Years of Experience (e.g., 5)"
                   onChange={handleChange}
-                  min="0"
-                  max="50"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none focus:bg-white"
                   required
                 />
-                <input
+                <FormInput
+                  id="region"
+                  label="Service Region / City"
                   type="text"
                   name="region"
-                  placeholder="Service Region / City (e.g., Accra, Kumasi)"
                   value={form.region}
+                  placeholder="Service Region / City (e.g., Accra, Kumasi)"
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none focus:bg-white"
+                  required={false}
                 />
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-gray-700">Upload ID Document (Optional)</label>

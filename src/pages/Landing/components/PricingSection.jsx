@@ -109,7 +109,7 @@ export default function PricingSection() {
         <h4 className="text-sm font-semibold text-[#0b6e4f] mb-2 uppercase tracking-wide">
           PRICING
         </h4>
-        <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 mb-4">
+        <h2  className="text-3xl md:text-4xl font-bold text-[#0f1724] mb-4 leading-snug">
           Start free. Upgrade for performance and visibility.
         </h2>
         <p className="text-gray-600 text-base">

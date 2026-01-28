@@ -47,7 +47,8 @@ export default function SuperAdminDashboard() {
       setActivity(statsRes?.recentActivity || []);
     } catch (err) {
       console.error("Load Error:", err);
-      setError("Failed to load dashboard data. Please try again.");
+      const { getErrorMessage } = await import("@/utils/errorMessages");
+      setError(getErrorMessage(err, "Failed to load dashboard data. Please try again."));
     } finally {
       setLoading(false);
     }

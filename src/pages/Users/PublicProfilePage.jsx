@@ -43,6 +43,7 @@ import { createConversation } from "@/services/messagesService";
 import { ReviewsList, BackgroundStatusPanel, VerificationBadge } from "@/components/reviews";
 import Button from "@/components/ui/Button";
 import { toast } from "react-hot-toast";
+import TrustScore from "@/components/ai/TrustScore";
 
 export default function PublicProfilePage() {
   const { id } = useParams();
@@ -300,12 +301,9 @@ export default function PublicProfilePage() {
               </div>
 
               {/* Trust Score */}
-              {trustScore > 0 && (
-                <div className="mt-4 flex items-center gap-2">
-                  <Award className="w-5 h-5 text-amber-500" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Trust Score: {trustScore}/100
-                  </span>
+              {profileUser?.id && (
+                <div className="mt-4">
+                  <TrustScore userId={profileUser.id} size="md" />
                 </div>
               )}
             </div>

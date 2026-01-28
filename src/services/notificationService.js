@@ -233,3 +233,170 @@ export const createLoginNotification = async (user, loginData = {}) => {
     },
   });
 };
+
+/**
+ * Pin a notification
+ * @param {number} id - Notification ID
+ * @returns {Promise} Updated notification
+ */
+export const pinNotification = async (id) => {
+  try {
+    const { data } = await apiClient.patch(`/notifications/${id}/`, { is_pinned: true });
+    return data;
+  } catch (err) {
+    console.error("Pin notification error:", err);
+    throw err.response?.data || { message: "Failed to pin notification" };
+  }
+};
+
+/**
+ * Unpin a notification
+ * @param {number} id - Notification ID
+ * @returns {Promise} Updated notification
+ */
+export const unpinNotification = async (id) => {
+  try {
+    const { data } = await apiClient.patch(`/notifications/${id}/`, { is_pinned: false });
+    return data;
+  } catch (err) {
+    console.error("Unpin notification error:", err);
+    throw err.response?.data || { message: "Failed to unpin notification" };
+  }
+};
+
+/**
+ * Archive a notification
+ * @param {number} id - Notification ID
+ * @returns {Promise} Updated notification
+ */
+export const archiveNotification = async (id) => {
+  try {
+    const { data } = await apiClient.patch(`/notifications/${id}/`, { is_archived: true });
+    return data;
+  } catch (err) {
+    console.error("Archive notification error:", err);
+    throw err.response?.data || { message: "Failed to archive notification" };
+  }
+};
+
+/**
+ * Unarchive a notification
+ * @param {number} id - Notification ID
+ * @returns {Promise} Updated notification
+ */
+export const unarchiveNotification = async (id) => {
+  try {
+    const { data } = await apiClient.patch(`/notifications/${id}/`, { is_archived: false });
+    return data;
+  } catch (err) {
+    console.error("Unarchive notification error:", err);
+    throw err.response?.data || { message: "Failed to unarchive notification" };
+  }
+};
+
+/**
+ * Delete a notification
+ * @param {number} id - Notification ID
+ * @returns {Promise}
+ */
+export const deleteNotification = async (id) => {
+  try {
+    await apiClient.delete(`/notifications/${id}/`);
+  } catch (err) {
+    console.error("Delete notification error:", err);
+    throw err.response?.data || { message: "Failed to delete notification" };
+  }
+};
+
+/**
+ * Get archived notifications
+ * @param {Object} filters - Filter options
+ * @returns {Promise} Archived notification list
+ */
+export const getArchivedNotifications = async (filters = {}) => {
+  try {
+    const params = new URLSearchParams();
+    params.append("is_archived", "true");
+    
+    Object.keys(filters).forEach((key) => {
+      if (filters[key] !== null && filters[key] !== undefined && filters[key] !== "") {
+        params.append(key, filters[key]);
+      }
+    });
+    
+    const { data } = await apiClient.get(`/notifications/?${params.toString()}`);
+    return data;
+  } catch (err) {
+    console.error("Get archived notifications error:", err);
+    throw err.response?.data || { message: "Failed to fetch archived notifications" };
+  }
+};
+
+/**
+ * Trigger email notification
+ * 
+ * Sends an email notification in parallel with in-system notification.
+ * This is a frontend helper that calls the backend email endpoint.
+ * 
+ * @param {Object} emailData - Email notification data
+ * @param {string} emailData.type - Email type (e.g., 'booking_approved', 'booking_cancelled')
+ * @param {string|number} emailData.recipientId - Recipient user ID
+ * @param {Object} emailData.data - Email payload (subject, template data, etc.)
+ * @returns {Promise<Object>} Email notification result
+ */
+export const triggerEmailNotification = async (emailData) => {
+  try {
+    // Call backend email notification endpoint
+    // Backend should handle email sending and return success/failure
+    const { data } = await apiClient.post("/notifications/send-email/", {
+      notification_type: emailData.type,
+      recipient_id: emailData.recipientId,
+      email_data: emailData.data || {},
+      metadata: emailData.metadata || {},
+    });
+    return data;
+  } catch (err) {
+    // Don't throw - email failure should not break UX
+    console.warn("Email notification failed (non-blocking):", err);
+    return { success: false, error: err.response?.data || { message: "Email notification failed" } };
+  }
+};
+
+/**
+ * Trigger both in-system and email notifications
+ * 
+ * Creates an in-system notification and triggers email in parallel.
+ * Email failure is handled gracefully and doesn't affect in-system notification.
+ * 
+ * @param {Object} notificationData - In-system notification data
+ * @param {Object} emailData - Email notification data (optional)
+ * @returns {Promise<Object>} Result with both notification and email status
+ */
+export const triggerNotifications = async (notificationData, emailData = null) => {
+  try {
+    // Create in-system notification
+    const notification = await createNotification(notificationData);
+    
+    // Trigger email in parallel (non-blocking)
+    let emailResult = null;
+    if (emailData) {
+      triggerEmailNotification({
+        ...emailData,
+        recipientId: emailData.recipientId || notificationData.recipientId,
+      }).then((result) => {
+        emailResult = result;
+      }).catch((err) => {
+        console.warn("Email notification failed (non-blocking):", err);
+        emailResult = { success: false, error: err };
+      });
+    }
+    
+    return {
+      notification,
+      email: emailResult,
+    };
+  } catch (err) {
+    console.error("Failed to trigger notifications:", err);
+    throw err;
+  }
+};
