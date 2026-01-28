@@ -22,6 +22,7 @@ const TenantRentalHistory = lazy(() => import("@/pages/Dashboards/Tenant/TenantR
 const TenantProperties = lazy(() => import("@/pages/Dashboards/Tenant/TenantProperties"));
 const TenantLeasesPage = lazy(() => import("@/pages/Dashboards/Tenant/Leases/TenantLeasesPage"));
 const TenantBookingsPage = lazy(() => import("@/pages/Dashboards/Tenant/Bookings/TenantBookingsPage"));
+const TenantArtisansPage = lazy(() => import("@/pages/Dashboards/Tenant/TenantArtisansPage"));
 const PropertyDetail = lazy(() => import("@/pages/PropertyDetail"));
 const LandlordPropertiesViewPage = lazy(() => import("@/pages/Dashboards/Landlord/Properties/LandlordPropertiesViewPage"));
 
@@ -67,6 +68,7 @@ const SA_PendingUserApprovals = lazy(() => import("@/pages/Dashboards/SuperAdmin
 const SA_UserApprovalDetailPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/approvals/SA_UserApprovalDetailPage"));
 const SA_PendingPropertyApprovals = lazy(() => import("@/pages/Dashboards/SuperAdmin/approvals/SA_PendingPropertyApprovals"));
 const SA_LeasesPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/leases/SA_LeasesPage"));
+const ProfessionChangeRequestsPage = lazy(() => import("@/pages/Dashboards/Admin/ProfessionChangeRequestsPage"));
 
 // ---------------------------
 // Components
@@ -106,6 +108,7 @@ const dashboardRoutes = [
           { path: "wishlist", element: <TenantWishlist /> },
           { path: "history", element: <TenantRentalHistory /> },
           { path: "leases", element: <TenantLeasesPage /> },
+          { path: "artisans", element: <TenantArtisansPage /> },
           { path: "messages", element: <MessagesInbox /> },
     ],
   },
@@ -222,6 +225,7 @@ const dashboardRoutes = [
           { path: "marketing", element: <SA_MarketingCampaigns /> },
           { path: "reports", element: <AdminReports /> },
           { path: "leases", element: <AdminLeasesPage /> },
+          { path: "profession-change-requests", element: <ProfessionChangeRequestsPage /> },
           { path: "messages", element: <MessagesInbox /> },
     ],
   },

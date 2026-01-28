@@ -7,6 +7,7 @@ import { PrimaryButton, SecondaryButton } from "@/components/ui/Button";
 import FormInput from "@/components/ui/FormInput";
 import artisan_onboarding from "@/assets/images/artisan_onboarding.jpeg";
 import TermsPrivacyModal from "@/components/legal/TermsPrivacyModal";
+import { Camera, X, Image as ImageIcon, Plus, AlertCircle } from "lucide-react";
 
 export default function ArtisanForm() {
   const navigate = useNavigate();
@@ -26,8 +27,15 @@ export default function ArtisanForm() {
     experience: "",
     region: "",
     idUpload: null,
+    profilePhoto: null,
+    workSamples: [], // Array of work sample images
     agree: false,
   });
+  
+  // Profile photo preview
+  const [profilePreview, setProfilePreview] = useState(null);
+  // Work sample previews
+  const [workSamplePreviews, setWorkSamplePreviews] = useState([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -38,11 +46,81 @@ export default function ArtisanForm() {
   /** Handle field changes */
   const handleChange = (e) => {
     const { name, value, type, checked, files } = e.target;
+    
+    // Handle profile photo separately
+    if (name === "profilePhoto" && files && files[0]) {
+      const file = files[0];
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        setError("Please select a valid image file for your profile photo.");
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError("Profile photo must be less than 5MB.");
+        return;
+      }
+      setForm((prev) => ({ ...prev, profilePhoto: file }));
+      setProfilePreview(URL.createObjectURL(file));
+      setError("");
+      return;
+    }
+    
+    // Handle work samples separately (multiple files)
+    if (name === "workSamples" && files) {
+      const newFiles = Array.from(files);
+      const validFiles = [];
+      
+      for (const file of newFiles) {
+        if (!file.type.startsWith("image/")) {
+          setError("Work samples must be image files.");
+          return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          setError("Each work sample must be less than 10MB.");
+          return;
+        }
+        validFiles.push(file);
+      }
+      
+      // Max 5 work samples
+      if (form.workSamples.length + validFiles.length > 5) {
+        setError("You can upload a maximum of 5 work samples.");
+        return;
+      }
+      
+      setForm((prev) => ({ 
+        ...prev, 
+        workSamples: [...prev.workSamples, ...validFiles] 
+      }));
+      setWorkSamplePreviews((prev) => [
+        ...prev, 
+        ...validFiles.map(f => URL.createObjectURL(f))
+      ]);
+      setError("");
+      return;
+    }
+    
     setForm((prev) => ({
       ...prev,
       [name]:
         type === "checkbox" ? checked : type === "file" ? files[0] : value,
     }));
+  };
+  
+  /** Remove a work sample */
+  const removeWorkSample = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      workSamples: prev.workSamples.filter((_, i) => i !== index),
+    }));
+    setWorkSamplePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+  
+  /** Remove profile photo */
+  const removeProfilePhoto = () => {
+    setForm((prev) => ({ ...prev, profilePhoto: null }));
+    setProfilePreview(null);
   };
 
   /** Proceed to next step */
@@ -90,6 +168,13 @@ export default function ArtisanForm() {
   /** Submit to API */
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate profile photo
+    if (!form.profilePhoto) {
+      setError("Profile photo is required. Please upload a clear photo of yourself.");
+      return;
+    }
+    
     if (!termsAgreed || !privacyAgreed) {
       setError("Please read and agree to both Terms & Conditions and Privacy Policy.");
       return;
@@ -113,6 +198,9 @@ export default function ArtisanForm() {
       formData.append("confirmPassword", form.confirmPassword); // Backend expects confirmPassword
       formData.append("profession", finalProfession); // Keep camelCase: profession
       
+      // Profile photo - required for artisans
+      formData.append("profilePhoto", form.profilePhoto);
+      
       // Optional fields
       if (form.experience) {
         formData.append("experience", form.experience); // Keep camelCase: experience
@@ -124,6 +212,13 @@ export default function ArtisanForm() {
         formData.append("idUpload", form.idUpload); // Keep camelCase: idUpload
       }
       
+      // Work samples - optional
+      if (form.workSamples.length > 0) {
+        form.workSamples.forEach((sample, index) => {
+          formData.append("workSamples", sample);
+        });
+      }
+      
       // Debug logging
       if (import.meta.env.DEV) {
         console.log("Artisan signup data:", {
@@ -133,7 +228,9 @@ export default function ArtisanForm() {
           profession: finalProfession,
           experience: form.experience,
           region: form.region,
-          has_idUpload: !!form.idUpload
+          has_idUpload: !!form.idUpload,
+          has_profilePhoto: !!form.profilePhoto,
+          workSamplesCount: form.workSamples.length,
         });
       }
       
@@ -323,6 +420,100 @@ export default function ArtisanForm() {
                   onChange={handleChange}
                   required={false}
                 />
+
+                {/* Profile Photo - Required */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Profile Photo <span className="text-red-500">*</span>
+                  </label>
+                  <p className="text-xs text-gray-500">
+                    A clear photo of yourself helps build trust with clients.
+                  </p>
+                  <div className="flex items-center gap-4">
+                    {profilePreview ? (
+                      <div className="relative">
+                        <img
+                          src={profilePreview}
+                          alt="Profile preview"
+                          className="w-24 h-24 rounded-full object-cover border-2 border-[#0b6e4f]"
+                        />
+                        <button
+                          type="button"
+                          onClick={removeProfilePhoto}
+                          className="absolute -top-1 -right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-[#0b6e4f] hover:bg-[#0b6e4f]/5 transition">
+                        <Camera className="w-6 h-6 text-gray-400" />
+                        <span className="text-xs text-gray-500 mt-1">Upload</span>
+                        <input
+                          type="file"
+                          name="profilePhoto"
+                          onChange={handleChange}
+                          accept="image/*"
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                    {!form.profilePhoto && (
+                      <div className="flex items-start gap-2 text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
+                        <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+                        <span className="text-xs">Profile photo is required to create your artisan profile.</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Work Samples - Optional but Recommended */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Work Samples <span className="text-gray-400">(Optional - Recommended)</span>
+                  </label>
+                  <p className="text-xs text-gray-500">
+                    Upload photos of your past work to showcase your skills. Max 5 images.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    {workSamplePreviews.map((preview, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={preview}
+                          alt={`Work sample ${index + 1}`}
+                          className="w-20 h-20 rounded-lg object-cover border border-gray-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeWorkSample(index)}
+                          className="absolute -top-1 -right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                    {form.workSamples.length < 5 && (
+                      <label className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-[#0b6e4f] hover:bg-[#0b6e4f]/5 transition">
+                        <Plus className="w-5 h-5 text-gray-400" />
+                        <span className="text-xs text-gray-500">Add</span>
+                        <input
+                          type="file"
+                          name="workSamples"
+                          onChange={handleChange}
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                  </div>
+                  {form.workSamples.length > 0 && (
+                    <p className="text-xs text-gray-500">
+                      {form.workSamples.length} of 5 work samples added
+                    </p>
+                  )}
+                </div>
+
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-gray-700">Upload ID Document (Optional)</label>
                   <input
@@ -391,7 +582,7 @@ export default function ArtisanForm() {
                   </SecondaryButton>
                   <PrimaryButton
                     type="submit"
-                    disabled={loading || !form.agree || !termsAgreed || !privacyAgreed}
+                    disabled={loading || !form.agree || !termsAgreed || !privacyAgreed || !form.profilePhoto}
                     className="w-1/2 bg-[#0b6e4f] hover:bg-[#095c42] text-white text-base py-2.5 text-nowrap rounded-lg font-medium transition-colors"
                   >
                     {loading ? "Creating..." : "Create Account"}

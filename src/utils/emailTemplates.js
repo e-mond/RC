@@ -799,6 +799,130 @@ export const generateSuspiciousLoginEmail = ({ userName, loginTime, ipAddress, d
 };
 
 /**
+ * Role promotion email template
+ * Sent when a user is promoted to a new role (admin, super-admin, etc.)
+ */
+export const generateRolePromotionEmail = ({ userName, newRole, promotedBy, dashboardUrl, logoUrl = null }) => {
+  const roleLabels = {
+    admin: 'Admin',
+    'super-admin': 'Super Admin',
+    moderator: 'Moderator',
+  };
+  
+  const roleLabel = roleLabels[newRole?.toLowerCase()] || newRole || 'New Role';
+  
+  return generateEmailTemplate({
+    title: `Congratulations! You've Been Promoted to ${roleLabel}`,
+    preheader: `You have been granted ${roleLabel} privileges on RentalConnects`,
+    content: `
+      <p style="margin: 0 0 16px;">Hello ${userName || 'there'},</p>
+      <p style="margin: 0 0 16px;">Great news! You have been promoted to <strong>${roleLabel}</strong> on RentalConnects.</p>
+      ${promotedBy ? `<p style="margin: 0 0 16px;">This promotion was granted by <strong>${promotedBy}</strong>.</p>` : ''}
+      <p style="margin: 0 0 16px;">As a ${roleLabel}, you now have access to:</p>
+      <ul style="margin: 16px 0; padding-left: 24px; color: #111827;">
+        ${newRole?.toLowerCase() === 'super-admin' ? `
+          <li style="margin-bottom: 8px;">Full platform administration</li>
+          <li style="margin-bottom: 8px;">User and role management</li>
+          <li style="margin-bottom: 8px;">System configuration</li>
+          <li style="margin-bottom: 8px;">Audit logs and analytics</li>
+          <li style="margin-bottom: 8px;">Announcement management</li>
+        ` : `
+          <li style="margin-bottom: 8px;">User approval management</li>
+          <li style="margin-bottom: 8px;">Property moderation</li>
+          <li style="margin-bottom: 8px;">Platform oversight tools</li>
+          <li style="margin-bottom: 8px;">Report management</li>
+        `}
+      </ul>
+      <p style="margin: 16px 0 0; padding: 12px; background-color: #dbeafe; border-left: 4px solid #0b6e4f; border-radius: 4px; color: #111827;">
+        <strong>ℹ️ Note:</strong> With great power comes great responsibility. Please use your new privileges responsibly and in accordance with our platform guidelines.
+      </p>
+    `,
+    buttonText: 'Go to Dashboard',
+    buttonUrl: dashboardUrl || '#',
+    logoUrl,
+    type: 'role_promotion',
+  });
+};
+
+/**
+ * Account suspension notification email template
+ * Sent when a user's account is suspended
+ */
+export const generateAccountBannedEmail = ({ userName, reason, supportUrl, logoUrl = null }) => {
+  return generateEmailTemplate({
+    title: 'Account Banned',
+    preheader: 'Your account has been banned',
+    content: `
+      <p style="margin: 0 0 16px;">Hello ${userName || 'there'},</p>
+      <p style="margin: 0 0 16px;">We regret to inform you that your RentalConnects account has been banned.</p>
+      ${reason ? `<p style="margin: 0 0 16px; padding: 12px; background-color: #f3f4f6; border-left: 4px solid #ef4444; border-radius: 4px;"><strong>Reason:</strong> ${reason}</p>` : ''}
+      <p style="margin: 16px 0 0;">This action was taken due to a violation of our terms of service. If you believe this is an error, please contact our support team.</p>
+    `,
+    buttonText: 'Contact Support',
+    buttonUrl: supportUrl || '#',
+    logoUrl,
+    type: 'account_banned',
+  });
+};
+
+/**
+ * Announcement notification email template
+ * Sent when a critical or important announcement is published
+ */
+export const generateAnnouncementEmail = ({ userName, title, message, severity, expiresAt, announcementUrl, logoUrl = null }) => {
+  const severityColors = {
+    critical: { bg: '#fee2e2', border: '#ef4444', text: 'CRITICAL' },
+    warning: { bg: '#fef3c7', border: '#f59e0b', text: 'WARNING' },
+    info: { bg: '#dbeafe', border: '#3b82f6', text: 'INFO' },
+  };
+  
+  const style = severityColors[severity?.toLowerCase()] || severityColors.info;
+  
+  return generateEmailTemplate({
+    title: `Announcement: ${title}`,
+    preheader: `Important announcement from RentalConnects: ${title}`,
+    content: `
+      <p style="margin: 0 0 16px;">Hello ${userName || 'there'},</p>
+      <p style="margin: 0 0 16px;">We have an important announcement for you:</p>
+      
+      <div style="margin: 20px 0; padding: 16px; background-color: ${style.bg}; border-left: 4px solid ${style.border}; border-radius: 4px;">
+        <p style="margin: 0 0 8px; font-weight: 700; color: #111827; font-size: 18px;">${title}</p>
+        <span style="display: inline-block; padding: 2px 8px; background-color: ${style.border}; color: white; font-size: 11px; font-weight: 600; border-radius: 4px; margin-bottom: 12px;">${style.text}</span>
+        <p style="margin: 12px 0 0; color: #374151;">${message}</p>
+        ${expiresAt ? `<p style="margin: 12px 0 0; font-size: 12px; color: #6b7280;">This announcement expires on: ${new Date(expiresAt).toLocaleDateString()}</p>` : ''}
+      </div>
+      
+      <p style="margin: 16px 0 0;">Please log in to your account for more details or to take any required action.</p>
+    `,
+    buttonText: 'View Announcement',
+    buttonUrl: announcementUrl || '#',
+    logoUrl,
+    type: 'announcement',
+  });
+};
+
+/**
+ * Account restored notification email template
+ * Sent when a suspended/banned account is restored
+ */
+export const generateAccountRestoredEmail = ({ userName, loginUrl, logoUrl = null }) => {
+  return generateEmailTemplate({
+    title: 'Account Restored',
+    preheader: 'Your account has been restored',
+    content: `
+      <p style="margin: 0 0 16px;">Hello ${userName || 'there'},</p>
+      <p style="margin: 0 0 16px;">Good news! Your RentalConnects account has been restored and you can now access the platform again.</p>
+      <p style="margin: 0 0 16px;">We appreciate your patience during this process. If you have any questions, please don't hesitate to contact our support team.</p>
+      <p style="margin: 16px 0 0;">You can now log in and continue using RentalConnects.</p>
+    `,
+    buttonText: 'Log In Now',
+    buttonUrl: loginUrl || '#',
+    logoUrl,
+    type: 'account_restored',
+  });
+};
+
+/**
  * Get logo URL from environment or use local logo
  * Priority:
  * 1. VITE_EMAIL_LOGO_URL (environment variable)

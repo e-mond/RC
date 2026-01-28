@@ -190,6 +190,50 @@ export const loginUser = async (credentials) => {
       throw error;
     }
     
+    // Handle AccountSuspendedError (403) - Account suspended
+    if (err?.response?.status === 403 && err?.response?.data?.error === 'AccountSuspendedError') {
+      const error = new Error(err.response.data.message || "Your account has been suspended.");
+      error.name = 'AccountSuspendedError';
+      error.status = 'suspended';
+      error.reason = err.response.data.reason || null;
+      error.suspendedAt = err.response.data.suspended_at || null;
+      error.suspendedUntil = err.response.data.suspended_until || null;
+      error.response = err.response;
+      throw error;
+    }
+    
+    // Handle AccountBannedError (403) - Account banned
+    if (err?.response?.status === 403 && err?.response?.data?.error === 'AccountBannedError') {
+      const error = new Error(err.response.data.message || "Your account has been permanently banned.");
+      error.name = 'AccountBannedError';
+      error.status = 'banned';
+      error.reason = err.response.data.reason || null;
+      error.bannedAt = err.response.data.banned_at || null;
+      error.response = err.response;
+      throw error;
+    }
+    
+    // Handle generic 403 with status field (fallback)
+    if (err?.response?.status === 403 && err?.response?.data?.status) {
+      const status = err.response.data.status;
+      if (status === 'suspended') {
+        const error = new Error(err.response.data.message || "Your account has been suspended.");
+        error.name = 'AccountSuspendedError';
+        error.status = 'suspended';
+        error.reason = err.response.data.reason || null;
+        error.response = err.response;
+        throw error;
+      }
+      if (status === 'banned') {
+        const error = new Error(err.response.data.message || "Your account has been permanently banned.");
+        error.name = 'AccountBannedError';
+        error.status = 'banned';
+        error.reason = err.response.data.reason || null;
+        error.response = err.response;
+        throw error;
+      }
+    }
+    
     throw new Error(extractError(err, "Login failed"));
   }
 };

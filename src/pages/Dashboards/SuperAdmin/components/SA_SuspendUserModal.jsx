@@ -12,6 +12,9 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 // import { suspendUser } from "@/services/adminService";
+import { createNotification } from "@/services/notificationService";
+import { sendAccountSuspensionEmail } from "@/services/emailService";
+import { useAuthStore } from "@/stores/authStore";
 import { X, Ban, AlertTriangle, Calendar, Clock } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Button from "@/components/ui/Button";
@@ -22,6 +25,9 @@ export default function SA_SuspendUserModal({ user, open, onClose, onSuccess, on
   const [suspensionType, setSuspensionType] = useState("permanent"); // "permanent" or "temporary"
   const [durationDays, setDurationDays] = useState(30);
   const [errors, setErrors] = useState({});
+  
+  // Get current admin user for attribution
+  const currentUser = useAuthStore((state) => state.user);
 
   // If 'open' prop is provided, respect it; otherwise show when user exists (backward compatibility)
   const shouldShow = open !== undefined ? (user && open) : !!user;
@@ -67,20 +73,49 @@ export default function SA_SuspendUserModal({ user, open, onClose, onSuccess, on
       // Use onConfirm if provided (for UserApprovalDetailPage), otherwise use suspendUser directly
       if (onConfirm) {
         await onConfirm(suspensionData);
-        toast.success(
-          suspensionType === "permanent"
-            ? "User suspended permanently. Suspension email has been sent."
-            : `User suspended for ${durationDays} days. Suspension email has been sent.`
-        );
-        onClose?.();
       } else {
         const { suspendUserSA } = await import("@/services/adminService");
         await suspendUserSA(user.id || user._id, suspensionData);
-        toast.success(
-          suspensionType === "permanent"
-            ? "User suspended permanently. Suspension email has been sent."
-            : `User suspended for ${durationDays} days. Suspension email has been sent.`
-        );
+      }
+      
+      // Create in-system notification for the suspended user (non-blocking)
+      try {
+        await createNotification({
+          type: "account_suspended",
+          title: "Account Suspended",
+          message: suspensionType === "permanent"
+            ? `Your account has been suspended by ${currentUser?.fullName || currentUser?.name || "an administrator"}.\n\nReason: ${reason.trim()}\n\nIf you believe this is an error, please contact support.`
+            : `Your account has been suspended for ${durationDays} days by ${currentUser?.fullName || currentUser?.name || "an administrator"}.\n\nReason: ${reason.trim()}\n\nYour account will be automatically restored after the suspension period.`,
+          actionUrl: "/support",
+          metadata: {
+            suspended_by: currentUser?.id,
+            suspended_by_name: currentUser?.fullName || currentUser?.name,
+            reason: reason.trim(),
+            suspension_type: suspensionType,
+            duration_days: suspensionType === "temporary" ? durationDays : null,
+            suspended_at: new Date().toISOString(),
+          },
+        });
+      } catch (notifErr) {
+        console.warn("Failed to create suspension notification:", notifErr);
+        // Non-blocking - don't fail the whole operation
+      }
+      
+      // Send suspension email (non-blocking, as fallback if backend doesn't send it)
+      sendAccountSuspensionEmail(user, reason.trim()).catch((emailErr) => {
+        console.warn("Failed to send suspension email:", emailErr);
+        // Non-blocking - backend should also send this email
+      });
+      
+      toast.success(
+        suspensionType === "permanent"
+          ? "User suspended permanently. Notifications have been sent."
+          : `User suspended for ${durationDays} days. Notifications have been sent.`
+      );
+      
+      if (onConfirm) {
+        onClose?.();
+      } else {
         onSuccess?.();
         onClose?.();
       }

@@ -101,6 +101,10 @@ export default function LoginForm() {
                 ? "bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                 : error.includes("rejected")
                 ? "bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800"
+                : error.includes("suspended")
+                ? "bg-orange-50 dark:bg-orange-900/20 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-800"
+                : error.includes("banned")
+                ? "bg-red-100 dark:bg-red-900/30 text-red-900 dark:text-red-200 border-red-300 dark:border-red-700"
                 : "bg-red-100 text-red-700 border-red-300"
             }`}
             initial={{ opacity: 0, y: -5 }}
@@ -113,6 +117,10 @@ export default function LoginForm() {
                   ? "Account Under Review"
                   : error.includes("rejected")
                   ? "Account Rejected"
+                  : error.includes("suspended")
+                  ? "Account Suspended"
+                  : error.includes("banned")
+                  ? "Account Banned"
                   : "Login Error"}
               </span>
             </div>
@@ -120,6 +128,16 @@ export default function LoginForm() {
             {(error.includes("pending") || error.includes("approval")) && (
               <p className="mt-2 text-xs opacity-90">
                 You will receive an email notification once your account has been approved.
+              </p>
+            )}
+            {error.includes("suspended") && (
+              <p className="mt-2 text-xs opacity-90">
+                If you believe this is an error, please contact our support team for assistance.
+              </p>
+            )}
+            {error.includes("banned") && (
+              <p className="mt-2 text-xs opacity-90">
+                This action was taken due to a violation of our terms of service. Contact support if you wish to appeal.
               </p>
             )}
           </motion.div>

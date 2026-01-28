@@ -13,8 +13,11 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, UserCheck, Users, Search, Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import { Shield, UserCheck, Users, Search, Loader2, AlertCircle, CheckCircle, Home, Building, Wrench, Crown } from "lucide-react";
 import { assignRole, fetchAllUsers } from "@/services/adminService";
+import { createNotification, triggerEmailNotification } from "@/services/notificationService";
+import { sendRolePromotionEmail } from "@/services/emailService";
+import { useAuthStore } from "@/stores/authStore";
 import { toast } from "react-hot-toast";
 import { RoleBadge } from "./SA_AssignRoleModalHelpers";
 
@@ -23,13 +26,22 @@ export default function SA_RoleDelegation({ onSuccess, className = "" }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [delegating, setDelegating] = useState({}); // { userId: true }
+  
+  // Get current user for "promoted by" attribution
+  const currentUser = useAuthStore((state) => state.user);
 
   // Filter eligible users (can become admin)
   const eligibleUsers = useMemo(() => {
     const filtered = users.filter((user) => {
       const role = user.role?.toLowerCase();
+      const status = user.status?.toLowerCase();
+      
       // Only show users who are not already admin or super-admin
       if (role === "admin" || role === "super-admin") return false;
+      
+      // Filter out suspended, deleted, or inactive users
+      if (status === "suspended" || status === "deleted" || status === "inactive" || status === "banned") return false;
+      if (user.deleted === true) return false;
       
       // Filter by search
       const matchesSearch =
@@ -87,6 +99,34 @@ export default function SA_RoleDelegation({ onSuccess, className = "" }) {
             : u
         )
       );
+      
+      // Send in-system notification to the promoted user
+      try {
+        await createNotification({
+          type: "role_promoted",
+          title: "Congratulations! You've Been Promoted to Admin",
+          message: `You have been promoted to Admin by ${currentUser?.fullName || currentUser?.name || "a Super Admin"}. You now have access to user approvals, property moderation, and platform oversight tools.`,
+          actionUrl: "/admin/overview",
+          metadata: {
+            new_role: "admin",
+            promoted_by: currentUser?.id,
+            promoted_by_name: currentUser?.fullName || currentUser?.name,
+            promoted_at: new Date().toISOString(),
+          },
+        });
+      } catch (notifErr) {
+        console.warn("Failed to create role promotion notification:", notifErr);
+        // Non-blocking - don't fail the whole operation
+      }
+      
+      // Send email notification (non-blocking)
+      sendRolePromotionEmail(user, {
+        newRole: "admin",
+        promotedBy: currentUser?.fullName || currentUser?.name || "Super Admin",
+      }).catch((emailErr) => {
+        console.warn("Failed to send role promotion email:", emailErr);
+        // Non-blocking - don't fail the whole operation
+      });
       
       onSuccess?.();
     } catch (err) {

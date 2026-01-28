@@ -1,7 +1,7 @@
 // src/pages/Dashboards/SuperAdmin/AnnouncementsPage.jsx
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Megaphone, Plus, Trash2, AlertCircle, Loader2 } from "lucide-react";
+import { Megaphone, Plus, Trash2, AlertCircle, Loader2, Mail, Info } from "lucide-react";
 import { toast } from "react-hot-toast";
 import PageHeader from "@/modules/dashboard/PageHeader";
 import SectionCard from "@/modules/dashboard/SectionCard";
@@ -11,6 +11,7 @@ import {
   createAnnouncement,
   deleteAnnouncement,
 } from "@/services/adminAnnouncementService";
+import { triggerEmailNotification } from "@/services/notificationService";
 
 const MAX_TITLE = 120;
 const MAX_MESSAGE = 600;
@@ -50,8 +51,10 @@ export default function SA_AnnouncementsPage() {
     message: "",
     severity: "info",
     expires_at: "", // ISO date string or empty (null means no expiration)
+    sendEmail: false, // Whether to send email notification
   });
   const [error, setError] = useState(null);
+  const [sendingEmails, setSendingEmails] = useState(false);
 
   const loadAnnouncements = useCallback(async () => {
     try {
@@ -84,18 +87,50 @@ export default function SA_AnnouncementsPage() {
 
     try {
       setSubmitting(true);
-      await createAnnouncement({
+      const newAnnouncement = await createAnnouncement({
         title,
         message,
         severity: form.severity,
         expires_at: form.expires_at || null, // null = never expire
       });
-      toast.success("Announcement published successfully!");
+      
+      // Trigger email notifications if checkbox is checked
+      if (form.sendEmail) {
+        setSendingEmails(true);
+        try {
+          // Send email notification via backend (non-blocking)
+          await triggerEmailNotification({
+            type: 'announcement',
+            recipientId: 'all', // Special value indicating all users
+            data: {
+              title,
+              message,
+              severity: form.severity,
+              expires_at: form.expires_at || null,
+              announcement_id: newAnnouncement?.id,
+            },
+            metadata: {
+              send_to_all: true,
+              severity: form.severity,
+            },
+          });
+          toast.success("Announcement published and email notifications triggered!");
+        } catch (emailErr) {
+          console.warn("Email notification failed:", emailErr);
+          toast.success("Announcement published! (Email notification may be delayed)");
+        } finally {
+          setSendingEmails(false);
+        }
+      } else {
+        toast.success("Announcement published successfully!");
+      }
+      
       setForm({
         title: "",
         message: "",
         severity: "info",
         expires_at: "",
+        sendEmail: false,
       });
       await loadAnnouncements();
     } catch (err) {
@@ -209,6 +244,33 @@ export default function SA_AnnouncementsPage() {
               />
             </div>
 
+            {/* Email Notification Option */}
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.sendEmail}
+                  onChange={(e) => setForm((prev) => ({ ...prev, sendEmail: e.target.checked }))}
+                  className="mt-1 w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 focus:ring-2"
+                />
+                <div>
+                  <span className="flex items-center gap-2 font-medium text-gray-900 dark:text-white">
+                    <Mail size={16} className="text-blue-600 dark:text-blue-400" />
+                    Send Email Notification
+                  </span>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    Send this announcement via email to all users. Recommended for critical announcements.
+                  </p>
+                </div>
+              </label>
+              {form.sendEmail && form.severity === "info" && (
+                <div className="mt-3 flex items-start gap-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 p-2 rounded">
+                  <Info size={14} className="mt-0.5 shrink-0" />
+                  <span>Tip: Consider using "Warning" or "Critical" severity for email notifications to ensure users pay attention.</span>
+                </div>
+              )}
+            </div>
+
             {error && (
               <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 rounded-lg text-sm">
                 <AlertCircle size={18} />
@@ -218,18 +280,18 @@ export default function SA_AnnouncementsPage() {
 
             <button
               type="submit"
-              disabled={submitting || loading}
+              disabled={submitting || loading || sendingEmails}
               className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition disabled:opacity-60"
             >
-              {submitting ? (
+              {submitting || sendingEmails ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Publishing...
+                  {sendingEmails ? "Sending notifications..." : "Publishing..."}
                 </>
               ) : (
                 <>
                   <Plus size={18} />
-                  Publish Announcement
+                  {form.sendEmail ? "Publish & Notify" : "Publish Announcement"}
                 </>
               )}
             </button>

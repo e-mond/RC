@@ -11,6 +11,7 @@ import EnhancedPropertyMapSearch from "@/components/property/EnhancedPropertyMap
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import PropertyCard from "@/components/shared/PropertyCard";
 import RecommendationsSection from "@/components/ai/RecommendationsSection";
+import AdPlacement from "@/components/ads/AdPlacement";
 
 /**
  * TenantProperties - Browse all available properties
@@ -160,6 +161,9 @@ export default function TenantProperties() {
                 </div>
             </div>
 
+            {/* Top Ad Placement */}
+            <AdPlacement placement="banner" limit={1} className="rounded-xl overflow-hidden" />
+
             {error && (
                 <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg">
                     {error}
@@ -219,6 +223,11 @@ export default function TenantProperties() {
                     </AnimatePresence>
                 </div>
             )}
+
+            {/* Inline Ad Placement */}
+            <div className="mt-8">
+                <AdPlacement placement="inline" limit={1} className="rounded-xl" />
+            </div>
 
             {/* Artisan Recommendations Section */}
             <div className="mt-12">

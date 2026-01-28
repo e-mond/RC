@@ -30,6 +30,10 @@ import {
   generateFailedLoginEmail,
   generateNewDeviceLoginEmail,
   generateSuspiciousLoginEmail,
+  generateRolePromotionEmail,
+  generateAccountBannedEmail,
+  generateAccountRestoredEmail,
+  generateAnnouncementEmail,
   generateEmailTemplate,
   getLogoUrl,
 } from "@/utils/emailTemplates";
@@ -319,6 +323,149 @@ export const sendPremiumUpgradeEmail = async (user, upgradeData) => {
     subject: 'Welcome to Premium - RentalConnects',
     html,
   });
+};
+
+/**
+ * Send role promotion email
+ * Notifies a user when they've been promoted to a new role (admin, super-admin, etc.)
+ * 
+ * @param {Object} user - User object with email and name
+ * @param {Object} promotionData - Promotion details
+ * @param {string} promotionData.newRole - The new role assigned (e.g., 'admin', 'super-admin')
+ * @param {string} [promotionData.promotedBy] - Name of the person who granted the promotion
+ * @returns {Promise<Object>} Email send response
+ */
+export const sendRolePromotionEmail = async (user, promotionData) => {
+  const logoUrl = getLogoUrl();
+  const dashboardUrl = promotionData.newRole?.toLowerCase() === 'super-admin'
+    ? `${getBaseUrl()}/super-admin/overview`
+    : `${getBaseUrl()}/admin/overview`;
+  
+  const html = generateRolePromotionEmail({
+    userName: user.fullName || user.name || user.email,
+    newRole: promotionData.newRole,
+    promotedBy: promotionData.promotedBy,
+    dashboardUrl,
+    logoUrl,
+  });
+
+  const roleLabel = promotionData.newRole?.toLowerCase() === 'super-admin' 
+    ? 'Super Admin' 
+    : promotionData.newRole?.charAt(0).toUpperCase() + promotionData.newRole?.slice(1) || 'Admin';
+
+  return sendEmail({
+    to: user.email,
+    subject: `Congratulations! You've Been Promoted to ${roleLabel} - RentalConnects`,
+    html,
+  });
+};
+
+/**
+ * Send account banned email
+ * Notifies a user when their account has been banned
+ */
+export const sendAccountBannedEmail = async (user, reason) => {
+  const logoUrl = getLogoUrl();
+  const html = generateAccountBannedEmail({
+    userName: user.fullName || user.name || user.email,
+    reason,
+    supportUrl: `${getBaseUrl()}/support`,
+    logoUrl,
+  });
+
+  return sendEmail({
+    to: user.email,
+    subject: 'Important: Your RentalConnects Account Has Been Banned',
+    html,
+  });
+};
+
+/**
+ * Send account restored email
+ * Notifies a user when their suspended/banned account has been restored
+ */
+export const sendAccountRestoredEmail = async (user) => {
+  const logoUrl = getLogoUrl();
+  const html = generateAccountRestoredEmail({
+    userName: user.fullName || user.name || user.email,
+    loginUrl: `${getBaseUrl()}/login`,
+    logoUrl,
+  });
+
+  return sendEmail({
+    to: user.email,
+    subject: 'Good News! Your RentalConnects Account Has Been Restored',
+    html,
+  });
+};
+
+/**
+ * Send announcement email
+ * Notifies a user about an important platform announcement
+ * 
+ * @param {Object} user - User object with email and name
+ * @param {Object} announcement - Announcement details
+ * @param {string} announcement.title - Announcement title
+ * @param {string} announcement.message - Announcement content
+ * @param {string} [announcement.severity] - Severity level (info, warning, critical)
+ * @param {string} [announcement.expiresAt] - Expiration date
+ * @returns {Promise<Object>} Email send response
+ */
+export const sendAnnouncementEmail = async (user, announcement) => {
+  const logoUrl = getLogoUrl();
+  const html = generateAnnouncementEmail({
+    userName: user.fullName || user.name || user.email,
+    title: announcement.title,
+    message: announcement.message,
+    severity: announcement.severity || 'info',
+    expiresAt: announcement.expiresAt || announcement.expires_at,
+    announcementUrl: `${getBaseUrl()}/dashboard`,
+    logoUrl,
+  });
+
+  const severityLabel = announcement.severity === 'critical' ? 'CRITICAL: ' : 
+                        announcement.severity === 'warning' ? 'IMPORTANT: ' : '';
+
+  return sendEmail({
+    to: user.email,
+    subject: `${severityLabel}${announcement.title} - RentalConnects`,
+    html,
+  });
+};
+
+/**
+ * Send announcement emails to multiple users (batch)
+ * Used when publishing a platform-wide announcement
+ * 
+ * @param {Array} users - Array of user objects with email and name
+ * @param {Object} announcement - Announcement details
+ * @returns {Promise<Object>} Results summary
+ */
+export const sendAnnouncementEmailBatch = async (users, announcement) => {
+  const results = {
+    total: users.length,
+    success: 0,
+    failed: 0,
+    errors: [],
+  };
+
+  // Process in parallel with limited concurrency
+  const batchSize = 10;
+  for (let i = 0; i < users.length; i += batchSize) {
+    const batch = users.slice(i, i + batchSize);
+    const promises = batch.map(async (user) => {
+      try {
+        await sendAnnouncementEmail(user, announcement);
+        results.success++;
+      } catch (err) {
+        results.failed++;
+        results.errors.push({ email: user.email, error: err.message });
+      }
+    });
+    await Promise.all(promises);
+  }
+
+  return results;
 };
 
 /**
@@ -635,6 +782,33 @@ export const generateEmailHTML = {
       device: loginData.device,
       location: loginData.location,
       reason: loginData.reason,
+      logoUrl: getLogoUrl(),
+    });
+  },
+  rolePromotion: (user, promotionData) => {
+    const dashboardUrl = promotionData.newRole?.toLowerCase() === 'super-admin'
+      ? `${getBaseUrl()}/super-admin/overview`
+      : `${getBaseUrl()}/admin/overview`;
+    return generateRolePromotionEmail({
+      userName: user.fullName || user.name || user.email,
+      newRole: promotionData.newRole,
+      promotedBy: promotionData.promotedBy,
+      dashboardUrl,
+      logoUrl: getLogoUrl(),
+    });
+  },
+  accountBanned: (user, reason) => {
+    return generateAccountBannedEmail({
+      userName: user.fullName || user.name || user.email,
+      reason,
+      supportUrl: `${getBaseUrl()}/support`,
+      logoUrl: getLogoUrl(),
+    });
+  },
+  accountRestored: (user) => {
+    return generateAccountRestoredEmail({
+      userName: user.fullName || user.name || user.email,
+      loginUrl: `${getBaseUrl()}/login`,
       logoUrl: getLogoUrl(),
     });
   },

@@ -47,6 +47,9 @@ import { useFeatureAccess } from "@/context/FeatureAccessContext";
 // Service for unread message count
 import { getUnreadCount } from "@/services/messagesService";
 
+// Service for pending approval counts (admin/super-admin)
+import { fetchAdminDashboardStats } from "@/services/adminService";
+
 // Static configuration for role badges (color + label + icon)
 const roleConfig = {
   "super-admin": { color: "bg-purple-600", label: "Super Admin", icon: Shield },
@@ -61,8 +64,8 @@ const roleMenus = {
   "super-admin": [
     { to: "/super-admin/overview",       labelKey: "Overview",           icon: <Home size={18} /> },
     { to: "/super-admin/users",          labelKey: "Manage Users",        icon: <Users size={18} /> },
-    { to: "/super-admin/users/pending",  labelKey: "Pending User Approvals", icon: <AlertCircle size={18} /> },
-    { to: "/super-admin/properties/pending", labelKey: "Pending Property Approvals", icon: <Building2 size={18} /> },
+    { to: "/super-admin/users/pending",  labelKey: "Pending User Approvals", icon: <AlertCircle size={18} />, hasPendingBadge: "users" },
+    { to: "/super-admin/properties/pending", labelKey: "Pending Property Approvals", icon: <Building2 size={18} />, hasPendingBadge: "properties" },
     { to: "/super-admin/roles",          labelKey: "Role Delegation",     icon: <Settings size={18} /> },
     { to: "/super-admin/pricing",        labelKey: "Premium Pricing",     icon: <Crown size={18} /> },
     { to: "/super-admin/marketing",     labelKey: "Marketing",           icon: <Megaphone size={18} /> },
@@ -74,11 +77,12 @@ const roleMenus = {
   ],
       admin: [
         { to: "/admin/overview",             labelKey: "Overview",           icon: <Home size={18} /> },
-        { to: "/admin/approvals",            labelKey: "Pending Approvals",   icon: <AlertCircle size={18} /> },
+        { to: "/admin/approvals",            labelKey: "Pending Approvals",   icon: <AlertCircle size={18} />, hasPendingBadge: "all" },
         { to: "/admin/assigned-roles",      labelKey: "Assigned Roles",      icon: <Shield size={18} /> },
         { to: "/admin/marketing",           labelKey: "Marketing",           icon: <Megaphone size={18} /> },
         { to: "/admin/reports",              labelKey: "Reports",            icon: <FileText size={18} /> },
         { to: "/admin/leases",               labelKey: "Lease Management",    icon: <FileText size={18} /> },
+        { to: "/admin/profession-change-requests", labelKey: "Profession Requests", icon: <Wrench size={18} />, hasPendingBadge: "professionRequests" },
         { to: "/admin/messages",             labelKey: "Messages",           icon: <MessageSquare size={18} />, hasMessages: true },
         { to: "/profile",                   labelKey: "Profile",           icon: <Users size={18} /> },
       ],
@@ -157,10 +161,17 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [showLangMenu, setShowLangMenu] = useState(false);
+  const [pendingCounts, setPendingCounts] = useState({
+    users: 0,
+    properties: 0,
+    all: 0,
+    professionRequests: 0,
+  });
 
   // Determine current user role (fallback to tenant)
   const role = user?.role?.toLowerCase() || "tenant";
   const config = roleConfig[role] || roleConfig.tenant;
+  const isAdminRole = role === "admin" || role === "super-admin";
 
   // Fetch unread message count (with polling)
   useEffect(() => {
@@ -178,6 +189,34 @@ export default function Sidebar() {
     const interval = setInterval(updateCount, 60000); // every 1 minute
     return () => clearInterval(interval);
   }, []);
+
+  // Fetch pending approval counts for admin/super-admin (with polling)
+  useEffect(() => {
+    if (!isAdminRole) return;
+
+    const updatePendingCounts = async () => {
+      try {
+        const stats = await fetchAdminDashboardStats();
+        const usersPending = stats?.pendingUsers || stats?.pending_users || 0;
+        const propertiesPending = stats?.pendingProperties || stats?.pending_properties || 0;
+        const professionRequestsPending = stats?.pendingProfessionRequests || stats?.pending_profession_requests || 0;
+        
+        setPendingCounts({
+          users: usersPending,
+          properties: propertiesPending,
+          all: usersPending + propertiesPending,
+          professionRequests: professionRequestsPending,
+        });
+      } catch (err) {
+        console.warn("Failed to fetch pending approval counts:", err);
+        // Don't reset counts on error to avoid flickering
+      }
+    };
+
+    updatePendingCounts();
+    const interval = setInterval(updatePendingCounts, 60000); // every 1 minute
+    return () => clearInterval(interval);
+  }, [isAdminRole]);
 
   // Helper to check if current route matches menu item
   const isActive = useCallback(
@@ -316,8 +355,12 @@ export default function Sidebar() {
           <nav className="px-3 py-6 space-y-1">
             {visibleMenuItems.map((item) => {
               const active = isActive(item.to, visibleMenuItems);
-              const showBadge = item.hasMessages && unreadMessages > 0;
+              const showMessageBadge = item.hasMessages && unreadMessages > 0;
               const isLocked = item.requiredFeature && !canAccessFeature(item.requiredFeature);
+              
+              // Calculate pending badge count based on badge type
+              const pendingBadgeCount = item.hasPendingBadge ? pendingCounts[item.hasPendingBadge] || 0 : 0;
+              const showPendingBadge = item.hasPendingBadge && pendingBadgeCount > 0;
 
               return (
                 <Link
@@ -362,9 +405,16 @@ export default function Sidebar() {
                   )}
 
                   {/* Unread messages badge */}
-                  {showBadge && !isLocked && (
+                  {showMessageBadge && !isLocked && (
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-red-500 text-white text-xs font-bold rounded-full min-w-6 h-6 px-1.5 flex items-center justify-center shadow-md animate-pulse">
                       {unreadMessages > 99 ? "99+" : unreadMessages}
+                    </span>
+                  )}
+
+                  {/* Pending approval badge */}
+                  {showPendingBadge && !isLocked && !showMessageBadge && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-amber-500 text-white text-xs font-bold rounded-full min-w-6 h-6 px-1.5 flex items-center justify-center shadow-md">
+                      {pendingBadgeCount > 99 ? "99+" : pendingBadgeCount}
                     </span>
                   )}
 
@@ -373,7 +423,8 @@ export default function Sidebar() {
                     <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900/95 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none whitespace-nowrap shadow-xl border border-gray-700/50">
                       {t(item.labelKey)}
                       {isLocked && " (Premium)"}
-                      {showBadge && ` (${unreadMessages})`}
+                      {showMessageBadge && ` (${unreadMessages})`}
+                      {showPendingBadge && ` (${pendingBadgeCount} pending)`}
                     </div>
                   )}
                 </Link>

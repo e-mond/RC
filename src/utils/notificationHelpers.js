@@ -25,12 +25,15 @@ import {
   Bell,
   AlertCircle,
   Info,
+  Crown,
+  UserCheck,
+  Ban,
 } from "lucide-react";
 
 /**
  * Get notification type category
  * @param {string} type - Notification type (e.g., 'booking_accepted', 'payment_received')
- * @returns {string} Category (booking, payment, approval, maintenance, system, info, rejection)
+ * @returns {string} Category (booking, payment, approval, maintenance, system, info, rejection, role)
  */
 export const getNotificationCategory = (type) => {
   if (!type) return "system";
@@ -39,8 +42,12 @@ export const getNotificationCategory = (type) => {
   if (type.startsWith("approval_") || type.startsWith("property_approved") || type.startsWith("account_approved")) return "approval";
   if (type.startsWith("rejection_") || type.startsWith("property_rejected") || type.startsWith("account_rejected") || type.startsWith("booking_rejected")) return "rejection";
   if (type.startsWith("maintenance_")) return "maintenance";
+  // Handle role promotion notifications
+  if (type.startsWith("role_")) return "role";
   // Handle login activity notifications
   if (type.startsWith("login_")) return "system";
+  // Handle account status notifications (suspended, banned, restored)
+  if (type === "account_suspended" || type === "account_banned" || type === "account_restored") return "account_status";
   // Handle account_pending as a warning/info type
   if (type === "account_pending") return "info";
   if (type === "system" || type.startsWith("system_") || type.startsWith("welcome") || type.startsWith("account_")) return "system";
@@ -86,6 +93,24 @@ export const getNotificationIcon = (type) => {
 
     case "maintenance":
       return Wrench;
+
+    case "role":
+      if (type?.includes("promoted") || type?.includes("assigned")) {
+        return Crown;
+      }
+      if (type?.includes("removed") || type?.includes("demoted")) {
+        return UserCheck;
+      }
+      return Shield;
+
+    case "account_status":
+      if (type === "account_suspended" || type === "account_banned") {
+        return Ban;
+      }
+      if (type === "account_restored") {
+        return CheckCircle;
+      }
+      return AlertCircle;
 
     case "info":
       return Info;
@@ -192,6 +217,30 @@ export const getNotificationColors = (type) => {
         icon: "text-orange-600 dark:text-orange-400",
       };
 
+    case "role":
+      return {
+        bg: "bg-purple-50 dark:bg-purple-900/20",
+        text: "text-purple-800 dark:text-purple-300",
+        border: "border-purple-200 dark:border-purple-800",
+        icon: "text-purple-600 dark:text-purple-400",
+      };
+
+    case "account_status":
+      if (type === "account_restored") {
+        return {
+          bg: "bg-green-50 dark:bg-green-900/20",
+          text: "text-green-800 dark:text-green-300",
+          border: "border-green-200 dark:border-green-800",
+          icon: "text-green-600 dark:text-green-400",
+        };
+      }
+      return {
+        bg: "bg-red-50 dark:bg-red-900/20",
+        text: "text-red-800 dark:text-red-300",
+        border: "border-red-200 dark:border-red-800",
+        icon: "text-red-600 dark:text-red-400",
+      };
+
     case "info":
       return {
         bg: "bg-blue-50 dark:bg-blue-900/20",
@@ -226,9 +275,12 @@ export const getNotificationColors = (type) => {
 export const getNotificationPriority = (type) => {
   if (type?.includes("error") || type?.includes("failed")) return 5;
   if (type === "login_suspicious") return 5; // High priority for security alerts
+  if (type === "account_suspended" || type === "account_banned") return 5; // High priority for account status
   if (type?.includes("payment") || type?.includes("wallet")) return 4;
   if (type === "login_new_device") return 4; // High priority for new device
+  if (type?.startsWith("role_")) return 4; // High priority for role changes
   if (type?.includes("approval")) return 3;
+  if (type === "account_restored") return 3; // Medium priority for account restoration
   if (type?.includes("booking") || type?.includes("viewing")) return 2;
   if (type === "login_success") return 1; // Low priority for regular logins
   return 1;

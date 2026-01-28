@@ -6,18 +6,30 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import LandingNavbar from "./components/LandingNavbar";
 import Footer from "@/components/layout/Footer";
+import { getFirstValidImage, getPlaceholderImage } from "@/utils/imageValidation";
 
 /* ======================================================
    PROPERTY CARD COMPONENT
 ====================================================== */
 function PropertyCard({ property, index, onSignUpClick }) {
-  const imageUrl =
-    property.images?.[0] ||
-    property.image ||
-    "https://placehold.co/400x300?text=Property";
+  // Use image validation utilities for robust image handling
+  const imageUrl = getFirstValidImage(
+    property.images || [property.image],
+    getPlaceholderImage("Property", 400, 300)
+  );
+  const [imgSrc, setImgSrc] = useState(imageUrl);
+  const [imgError, setImgError] = useState(false);
 
   const price = property.price || property.priceGhs || property.rent || 0;
   const currency = property.currency || "GHS";
+
+  // Handle image load error
+  const handleImageError = () => {
+    if (!imgError) {
+      setImgError(true);
+      setImgSrc(getPlaceholderImage("Property", 400, 300));
+    }
+  };
 
   return (
     <motion.div
@@ -30,9 +42,11 @@ function PropertyCard({ property, index, onSignUpClick }) {
       {/* Image */}
       <div className="relative h-56 overflow-hidden bg-gray-200">
         <img
-          src={imageUrl}
+          src={imgSrc}
           alt={property.title || "Property"}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+          onError={handleImageError}
+          loading="lazy"
         />
       </div>
 

@@ -236,6 +236,59 @@ export const useAuthStore = create(
             };
           }
           
+          // Handle AccountSuspendedError - Account suspended
+          if (err?.name === 'AccountSuspendedError' || err?.response?.data?.error === 'AccountSuspendedError' || err?.status === 'suspended') {
+            const reason = err?.reason || err?.response?.data?.reason;
+            const suspendedUntil = err?.suspendedUntil || err?.response?.data?.suspended_until;
+            let errorMessage = err?.response?.data?.message || err?.message || "Your account has been suspended.";
+            
+            // Add reason and duration to message if available
+            if (reason) {
+              errorMessage += `\n\nReason: ${reason}`;
+            }
+            if (suspendedUntil) {
+              errorMessage += `\nSuspended until: ${new Date(suspendedUntil).toLocaleDateString()}`;
+            }
+            
+            set({
+              authLoading: false,
+              error: errorMessage,
+              accountSuspended: true,
+            });
+            return { 
+              success: false, 
+              error: errorMessage,
+              accountSuspended: true,
+              status: 'suspended',
+              reason: reason,
+              suspendedUntil: suspendedUntil
+            };
+          }
+          
+          // Handle AccountBannedError - Account banned
+          if (err?.name === 'AccountBannedError' || err?.response?.data?.error === 'AccountBannedError' || err?.status === 'banned') {
+            const reason = err?.reason || err?.response?.data?.reason;
+            let errorMessage = err?.response?.data?.message || err?.message || "Your account has been permanently banned.";
+            
+            // Add reason to message if available
+            if (reason) {
+              errorMessage += `\n\nReason: ${reason}`;
+            }
+            
+            set({
+              authLoading: false,
+              error: errorMessage,
+              accountBanned: true,
+            });
+            return { 
+              success: false, 
+              error: errorMessage,
+              accountBanned: true,
+              status: 'banned',
+              reason: reason
+            };
+          }
+          
           set({
             authLoading: false,
             error: err?.response?.data?.message || err?.message || "Login failed",

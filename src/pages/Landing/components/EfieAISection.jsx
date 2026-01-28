@@ -154,12 +154,15 @@ Your intelligent assistant for perfect rentals and trusted artisans, powered by 
 
               {/* CTA Button inside card */}
               <div className="text-center">
-                <a
-                  href="/role-selection"
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-white text-[#0b6e4f] rounded-lg font-semibold hover:bg-gray-100 transition-colors shadow-lg"
+                <button
+                  onClick={() => {
+                    // Dispatch custom event to open AI chatbot
+                    window.dispatchEvent(new CustomEvent('openAIChatbot'));
+                  }}
+                  className="inline-flex items-center gap-2 px-8 py-4 bg-white text-[#0b6e4f] rounded-lg font-semibold hover:bg-gray-100 transition-colors shadow-lg cursor-pointer"
                 >
                   Get Started with Efie AI
-                </a>
+                </button>
               </div>
             </div>
           </div>

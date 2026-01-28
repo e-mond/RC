@@ -28,6 +28,7 @@ import Button from "@/components/ui/Button";
 import WalletDisplay from "@/components/common/WalletDisplay";
 import WalletSetupModal from "@/components/common/WalletSetupModal";
 import WalletTopUpModal from "@/components/common/WalletTopUpModal";
+import TwoFactorSetupModal from "@/components/security/TwoFactorSetupModal";
 import { ReviewsList, ReviewForm, BackgroundStatusPanel } from "@/components/reviews";
 import { getUserReviews, createReview } from "@/services/reviewService";
 import TrustScore from "@/components/ai/TrustScore";
@@ -80,6 +81,7 @@ const ProfilePage = () => {
 
   const [preferences, setPreferences] = useState(null);
   const [savingPrefs, setSavingPrefs] = useState(false);
+  const [show2FAModal, setShow2FAModal] = useState(false);
 
   // Reviews states
   const [reviews, setReviews] = useState([]);
@@ -526,21 +528,25 @@ const ProfilePage = () => {
               <div className="flex items-center justify-between py-2">
                 <div className="flex items-center gap-2">
                   <Lock size={16} className="text-sky-500" />
-                  <span className="font-medium">{t("twoFactorAuth", "Two-Factor Authentication")}</span>
+                  <div>
+                    <span className="font-medium">{t("twoFactorAuth", "Two-Factor Authentication")}</span>
+                    {preferences.twoFactorAuth && (
+                      <span className="ml-2 px-1.5 py-0.5 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded">
+                        Enabled
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <button
-                  onClick={() => handlePreferenceToggle("twoFactorAuth", !(preferences.twoFactorAuth || false))}
+                  onClick={() => setShow2FAModal(true)}
                   disabled={savingPrefs}
-                  className={`w-11 h-6 rounded-full transition-colors relative ${
-                    preferences.twoFactorAuth ? "bg-emerald-600" : "bg-gray-300 dark:bg-gray-600"
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                    preferences.twoFactorAuth 
+                      ? "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                      : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/50"
                   }`}
-                  aria-label={preferences.twoFactorAuth ? "Disable 2FA" : "Enable 2FA"}
                 >
-                  <div
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                      preferences.twoFactorAuth ? "translate-x-5" : ""
-                    }`}
-                  />
+                  {preferences.twoFactorAuth ? "Manage" : "Enable"}
                 </button>
               </div>
 
@@ -833,6 +839,19 @@ const ProfilePage = () => {
           />
         </>
       )}
+
+      {/* Two-Factor Authentication Modal */}
+      <TwoFactorSetupModal
+        isOpen={show2FAModal}
+        onClose={() => setShow2FAModal(false)}
+        userEmail={user?.email || ""}
+        isEnabled={preferences?.twoFactorAuth || false}
+        onSuccess={({ enabled }) => {
+          setPreferences((prev) => ({ ...prev, twoFactorAuth: enabled }));
+          // Also update backend
+          updatePreferences({ twoFactorAuth: enabled }).catch(console.warn);
+        }}
+      />
     </div>
   );
 };

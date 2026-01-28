@@ -701,3 +701,106 @@ export const generateRentalReference = async (rentalId) => {
     throw new Error(getErrorMessage(err, "Failed to generate rental reference"));
   }
 };
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ARTISAN BROWSING (Tenant Side)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Get list of verified artisans for tenants to browse
+ * @param {Object} filters - Filter options
+ * @param {string} [filters.profession] - Filter by profession
+ * @param {string} [filters.location] - Filter by location/region
+ * @param {number} [filters.minRating] - Minimum rating
+ * @param {string} [filters.search] - Search term
+ * @param {number} [filters.page] - Page number
+ * @param {number} [filters.limit] - Items per page
+ * @returns {Promise<Object>} { artisans: [], total: number, page: number }
+ */
+export const getArtisans = async (filters = {}) => {
+  try {
+    const params = new URLSearchParams();
+    
+    if (filters.profession) params.append("profession", filters.profession);
+    if (filters.location) params.append("location", filters.location);
+    if (filters.minRating) params.append("min_rating", filters.minRating);
+    if (filters.search) params.append("search", filters.search);
+    if (filters.page) params.append("page", filters.page);
+    if (filters.limit) params.append("limit", filters.limit);
+    
+    const { data } = await apiClient.get(`/artisans/?${params.toString()}`);
+    return {
+      artisans: data.artisans || data.results || data.data || data || [],
+      total: data.total || data.count || 0,
+      page: data.page || 1,
+    };
+  } catch (err) {
+    if (err?.response?.status === 404) {
+      return { artisans: [], total: 0, page: 1 };
+    }
+    throw new Error(getErrorMessage(err, "Failed to load artisans"));
+  }
+};
+
+/**
+ * Get single artisan details by ID
+ * @param {string|number} artisanId - Artisan ID
+ * @returns {Promise<Object>} Artisan profile with reviews
+ */
+export const getArtisanDetails = async (artisanId) => {
+  try {
+    const { data } = await apiClient.get(`/artisans/${artisanId}/`);
+    return data.artisan || data;
+  } catch (err) {
+    throw new Error(getErrorMessage(err, "Failed to load artisan details"));
+  }
+};
+
+/**
+ * Get artisan reviews
+ * @param {string|number} artisanId - Artisan ID
+ * @returns {Promise<Array>} List of reviews
+ */
+export const getArtisanReviews = async (artisanId) => {
+  try {
+    const { data } = await apiClient.get(`/artisans/${artisanId}/reviews/`);
+    return data.reviews || data.data || data || [];
+  } catch (err) {
+    if (err?.response?.status === 404) return [];
+    throw new Error(getErrorMessage(err, "Failed to load artisan reviews"));
+  }
+};
+
+/**
+ * Book an artisan service
+ * @param {Object} bookingData - Booking details
+ * @param {string|number} bookingData.artisan_id - Artisan ID
+ * @param {string} bookingData.service_type - Type of service needed
+ * @param {string} bookingData.description - Description of the work
+ * @param {string} bookingData.preferred_date - Preferred date for service
+ * @param {string} [bookingData.preferred_time] - Preferred time
+ * @param {string} [bookingData.address] - Service location address
+ * @returns {Promise<Object>} Booking confirmation
+ */
+export const bookArtisan = async (bookingData) => {
+  try {
+    const { data } = await apiClient.post("/artisan-bookings/", bookingData);
+    return data;
+  } catch (err) {
+    throw new Error(getErrorMessage(err, "Failed to book artisan"));
+  }
+};
+
+/**
+ * Get tenant's artisan service bookings
+ * @returns {Promise<Array>} List of artisan bookings
+ */
+export const getArtisanBookings = async () => {
+  try {
+    const { data } = await apiClient.get("/tenant/artisan-bookings/");
+    return data.bookings || data.data || data || [];
+  } catch (err) {
+    if (err?.response?.status === 404) return [];
+    throw new Error(getErrorMessage(err, "Failed to load artisan bookings"));
+  }
+};

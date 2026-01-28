@@ -45,6 +45,18 @@ export default function AIChatbot({ defaultOpen = false, position = "bottom-righ
     }
   }, [isOpen]);
 
+  // Listen for custom event to open chatbot from anywhere (e.g., landing page CTA)
+  useEffect(() => {
+    const handleOpenChatbot = () => {
+      setIsOpen(true);
+    };
+    
+    window.addEventListener('openAIChatbot', handleOpenChatbot);
+    return () => {
+      window.removeEventListener('openAIChatbot', handleOpenChatbot);
+    };
+  }, []);
+
   // Load history when user is authenticated & chat opens (skip for public users)
   useEffect(() => {
     if (user && isOpen && !messages.length) {

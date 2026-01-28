@@ -60,26 +60,96 @@ const formatGhanaTime = (timestamp) => {
 };
 
 /**
- * Get a safe display name for the user
- * Backend may send: actor, actorName, user, userName, userId, created_by
+ * Get a safe display name for the actor (who performed the action)
+ * Backend may send: actor, actorName, user, userName, userId, created_by, performed_by
  */
-const getUserDisplay = (log) => {
-  // Try multiple field names from backend (check normalized userName first)
-  return (
+const getActorDisplay = (log) => {
+  // Priority order for actor name
+  const actorName = 
+    log.actorName ||           // Explicit actor name
+    log.actor_name ||          // Snake case variant
+    log.performed_by_name ||   // "Performed by" name
     log.userName ||            // Normalized field from fetchAuditLogs
-    log.actorName ||           // Backend field: actorName
     log.user?.name ||          // Nested: user.name
     log.user?.fullName ||      // Nested: user.fullName
-    log.user?.username ||      // Nested: user.username
-    log.actor ||               // Backend field: actor (email)
-    log.user?.email ||         // Nested: user.email
-    log.userId ||              // Alternative: userId
-    log.user?.id ||            // Nested: user.id
+    log.user?.full_name ||     // Nested: user.full_name (snake case)
+    log.performer?.name ||     // Nested: performer.name
+    log.performer?.fullName || // Nested: performer.fullName
     log.created_by?.name ||    // Nested: created_by.name
+    log.created_by?.fullName;  // Nested: created_by.fullName
+  
+  // Try email/username as fallback  
+  const actorEmail = 
+    log.actor ||               // Backend field: actor (often email)
+    log.actor_email ||         // Explicit actor email
+    log.performed_by ||        // "Performed by" (may be email)
+    log.user?.email ||         // Nested: user.email
+    log.user?.username ||      // Nested: user.username
+    log.performer?.email ||    // Nested: performer.email
     log.created_by?.email ||   // Nested: created_by.email
-    log.created_by ||          // Direct: created_by
-    "Unknown User"
-  );
+    log.created_by;            // Direct: created_by
+
+  // Return name if available, otherwise email/username, otherwise "Unknown"
+  if (actorName && actorName !== "Unknown" && actorName !== "System") {
+    return actorName;
+  }
+  if (actorEmail && typeof actorEmail === "string" && actorEmail !== "Unknown") {
+    return actorEmail;
+  }
+  
+  // Check for system-initiated actions
+  if (log.system || log.is_system || log.isSystem || log.actor === "system") {
+    return "System";
+  }
+  
+  return "Unknown User";
+};
+
+/**
+ * Get the target entity display
+ * Backend may send: target, targetName, resource, entity, detail
+ */
+const getTargetDisplay = (log) => {
+  // Try to construct a meaningful target description
+  const targetType = log.target_type || log.targetType || log.entity_type || log.entityType;
+  const targetName = log.target_name || log.targetName || log.resource_name || log.resourceName;
+  const targetId = log.target_id || log.targetId || log.resource_id || log.resourceId;
+  
+  // Try explicit target fields
+  if (log.target && typeof log.target === "string" && log.target !== "Unknown") {
+    return log.target;
+  }
+  
+  // Try resource field
+  if (log.resource && typeof log.resource === "string" && log.resource !== "Unknown") {
+    return log.resource;
+  }
+  
+  // Construct from type + name/id
+  if (targetType || targetName) {
+    let display = "";
+    if (targetType) {
+      display += targetType.charAt(0).toUpperCase() + targetType.slice(1);
+    }
+    if (targetName) {
+      display += display ? `: ${targetName}` : targetName;
+    } else if (targetId) {
+      display += display ? ` #${targetId}` : `#${targetId}`;
+    }
+    if (display) return display;
+  }
+  
+  // Try detail field
+  if (log.detail && typeof log.detail === "string") {
+    return log.detail;
+  }
+  
+  // Try nested target object
+  if (log.target && typeof log.target === "object") {
+    return log.target.name || log.target.title || log.target.email || log.target.id || "Unknown";
+  }
+  
+  return "—";
 };
 
 export default function SA_AuditTable({ logs = [], loading = false, onRefresh = () => {} }) {
@@ -157,35 +227,46 @@ export default function SA_AuditTable({ logs = [], loading = false, onRefresh = 
                       </div>
                     </td>
 
-                    {/* User */}
+                    {/* User / Actor */}
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-700 dark:text-gray-300">
-                        {getUserDisplay(log)}
+                      <div className="text-sm text-gray-700 dark:text-gray-300 font-medium">
+                        {getActorDisplay(log)}
                       </div>
-                      {/* Show email if different from display name */}
-                      {(log.actor || log.userEmail || log.user?.email) && 
-                       (log.actor || log.userEmail || log.user?.email) !== getUserDisplay(log) && (
-                        <div className="text-xs text-gray-500 dark:text-gray-500">
-                          {log.actor || log.userEmail || log.user?.email}
-                        </div>
-                      )}
+                      {/* Show email if different from display name and available */}
+                      {(() => {
+                        const actorDisplay = getActorDisplay(log);
+                        const actorEmail = log.actor || log.actor_email || log.userEmail || log.user?.email;
+                        if (actorEmail && typeof actorEmail === "string" && actorEmail !== actorDisplay && !actorDisplay.includes("@")) {
+                          return (
+                            <div className="text-xs text-gray-500 dark:text-gray-500 truncate max-w-[200px]">
+                              {actorEmail}
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </td>
 
                     {/* Action */}
                     <td className="px-6 py-4">
                       <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        {log.action || "—"}
+                        {log.action || log.action_type || "—"}
                       </span>
+                      {log.description && (
+                        <div className="text-xs text-gray-500 dark:text-gray-500 truncate max-w-[200px]">
+                          {log.description}
+                        </div>
+                      )}
                     </td>
 
                     {/* Target */}
                     <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                      {log.target || log.resource || log.detail || log.originalTarget || log.originalResource || log.originalDetail || "—"}
+                      {getTargetDisplay(log)}
                     </td>
 
-                    {/* Level Badge */}
+                    {/* Level Badge - now with action for smart classification */}
                     <td className="px-6 py-4">
-                      <LevelBadge level={log.level} />
+                      <LevelBadge level={log.level} action={log.action || log.action_type} />
                     </td>
                   </motion.tr>
                 );
