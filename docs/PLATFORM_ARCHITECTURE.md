@@ -19,6 +19,10 @@
 
 RentalConnects is a modern rental property management platform serving multiple user roles across Ghana. The platform facilitates connections between tenants, landlords, and artisans while providing administrative oversight through a role-based access control system.
 
+### Implementation Status
+- **Frontend**: Implemented as a single-page React application using the structure and patterns described in this document.
+- **Backend**: Django REST API expected to expose the endpoints specified in `API_REFERENCE.md`. Some endpoints are still **pending backend implementation** and are currently backed by mock data in development where noted.
+
 ### Core User Roles
 - **Tenant**: Browse properties, make bookings, hire artisans, manage leases
 - **Landlord**: List properties, manage tenants, receive payments

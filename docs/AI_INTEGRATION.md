@@ -16,6 +16,15 @@
 
 RentalConnects integrates AI capabilities to enhance user experience, build trust, and automate platform operations.
 
+### Implementation Status
+- **Implemented in Frontend**:
+  - Efie AI chatbot shell (`AIChatbot.jsx`) including open/close behavior and the `openAIChatbot` custom event used from the landing page.
+  - Trust Score component (`TrustScore.jsx`) and UI integration on the profile page.
+  - Recommendations section shell (`RecommendationsSection.jsx`) and integration where used.
+- **Backend Required**:
+  - AI endpoints (`/ai/chat/`, `/ai/trust-score/`, `/ai/recommendations/*`, `/ai/fraud-detection/`) described here and in `API_REFERENCE.md` must be implemented by the backend for full functionality.
+  - Fraud detection and advanced recommendation algorithms are currently **design-time only** and not enforced in the running system without backend support.
+
 ### AI Features
 - **Efie AI Chatbot**: Conversational assistant for platform navigation
 - **Trust Score**: AI-calculated reputation metric

@@ -18,6 +18,15 @@
 
 The Artisan System enables skilled service providers (plumbers, electricians, carpenters, etc.) to connect with tenants and property owners for home maintenance and repair services.
 
+### Implementation Status
+- **Frontend**:
+  - Artisan signup with required profile photo and optional work samples is implemented in `ArtisanForm.jsx`.
+  - Artisan listing, search, filters, and cards (with work samples) are implemented via `TenantArtisansPage.jsx` and `ArtisanCard.jsx`.
+  - Profession change request flow (modal + admin review page) is implemented and wired to `artisanService.js`.
+  - Booking UI and notification triggers for artisans are implemented.
+- **Backend**:
+  - All endpoints under “API Reference” are **expected** but not guaranteed to exist yet. Where backend is missing, development uses mock mode as configured in `mockManager.js` and the relevant services.
+
 ### Key Features
 - **Profile Showcase**: Artisans display skills, experience, and work samples
 - **Service Booking**: Tenants can browse, filter, and book artisans

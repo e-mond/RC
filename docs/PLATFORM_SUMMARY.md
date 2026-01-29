@@ -73,15 +73,15 @@ Signup → Document upload → Admin review → Approval/Rejection → Access gr
 
 ## Technology Highlights
 
-| Aspect | Solution |
-|--------|----------|
-| Frontend | React 19 + Vite |
-| Styling | Tailwind CSS |
-| Payments | Paystack Integration |
-| Maps | Leaflet/OpenLayers |
-| Images | Cloudinary CDN |
-| Real-time | WebSocket |
-| AI | Efie Chatbot + Trust Scoring |
+| Aspect | Solution | Status |
+|--------|----------|--------|
+| Frontend | React 19 + Vite | Implemented |
+| Styling | Tailwind CSS | Implemented |
+| Payments | Paystack integration | Implemented in frontend; backend verification endpoint required |
+| Maps | Leaflet/OpenLayers | Implemented where used |
+| Images | Cloudinary CDN | Integrated at service level; backend/media config required |
+| Real-time | WebSocket | Designed; backend WebSocket endpoints required |
+| AI | Efie Chatbot + Trust Scoring | UI implemented; AI endpoints required |
 
 ---
 

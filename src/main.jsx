@@ -20,7 +20,7 @@
  * @requires react-router-dom
  */
 
-// main.jsx
+
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter as Router } from "react-router-dom";
@@ -33,6 +33,7 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { registerServiceWorker } from "@/utils/registerServiceWorker";
 import { enableAllMocks, isMockMode } from "@/mocks/mockManager";
+import apiClient from "@/services/apiClient.js";               // ← added this import
 
 /**
  * Root DOM Element Validation
@@ -56,7 +57,7 @@ await useAuthStore.getState().loadSession();
  * This ensures mock mode persists across page refreshes
  */
 if (isMockMode()) {
-  enableAllMocks();
+  enableAllMocks(apiClient);                                // ← changed: pass apiClient
 }
 
 /**

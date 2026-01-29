@@ -30,7 +30,9 @@ export const getNotifications = async (filters = {}) => {
     const { data } = await apiClient.get(`/notifications/?${params.toString()}`);
     return data;
   } catch (err) {
-    console.error("Get notifications error:", err);
+    if (import.meta.env.DEV) {
+      console.error("Get notifications error:", err);
+    }
     throw err.response?.data || { message: "Failed to fetch notifications" };
   }
 };
@@ -45,7 +47,9 @@ export const getNotification = async (id) => {
     const { data } = await apiClient.get(`/notifications/${id}/`);
     return data;
   } catch (err) {
-    console.error("Get notification error:", err);
+    if (import.meta.env.DEV) {
+      console.error("Get notification error:", err);
+    }
     throw err.response?.data || { message: "Failed to fetch notification" };
   }
 };
@@ -61,7 +65,9 @@ export const markNotificationAsRead = async (id) => {
     const { data } = await apiClient.patch(`/notifications/${id}/`, { is_read: true });
     return data;
   } catch (err) {
-    console.error("Mark notification as read error:", err);
+    if (import.meta.env.DEV) {
+      console.error("Mark notification as read error:", err);
+    }
     throw err.response?.data || { message: "Failed to mark notification as read" };
   }
 };
@@ -74,7 +80,9 @@ export const markAllNotificationsAsRead = async () => {
   try {
     await apiClient.post("/notifications/mark-all-read/");
   } catch (err) {
-    console.error("Mark all notifications as read error:", err);
+    if (import.meta.env.DEV) {
+      console.error("Mark all notifications as read error:", err);
+    }
     throw err.response?.data || { message: "Failed to mark all notifications as read" };
   }
 };
@@ -88,8 +96,11 @@ export const getUnreadCount = async () => {
     const { data } = await apiClient.get("/notifications/unread-count/");
     return data;
   } catch (err) {
-    console.error("Get unread count error:", err);
-    throw err.response?.data || { message: "Failed to fetch unread count" };
+    if (import.meta.env.DEV) {
+      console.error("Get unread count error:", err);
+    }
+    // Return 0 instead of throwing for unread count - fail gracefully
+    return { unread: 0, count: 0 };
   }
 };
 
@@ -122,8 +133,15 @@ export const createNotification = async (notificationData) => {
     });
     return data;
   } catch (err) {
-    console.error("Create notification error:", err);
-    throw err.response?.data || { message: "Failed to create notification" };
+    if (import.meta.env.DEV) {
+      console.error("Create notification error:", err);
+    }
+    // Don't throw - notification creation failure shouldn't break UX
+    // Return a mock notification or null
+    if (import.meta.env.DEV) {
+      console.warn("Notification creation failed, continuing without notification");
+    }
+    return null;
   }
 };
 
@@ -244,7 +262,9 @@ export const pinNotification = async (id) => {
     const { data } = await apiClient.patch(`/notifications/${id}/`, { is_pinned: true });
     return data;
   } catch (err) {
-    console.error("Pin notification error:", err);
+    if (import.meta.env.DEV) {
+      console.error("Pin notification error:", err);
+    }
     throw err.response?.data || { message: "Failed to pin notification" };
   }
 };
@@ -259,7 +279,9 @@ export const unpinNotification = async (id) => {
     const { data } = await apiClient.patch(`/notifications/${id}/`, { is_pinned: false });
     return data;
   } catch (err) {
-    console.error("Unpin notification error:", err);
+    if (import.meta.env.DEV) {
+      console.error("Unpin notification error:", err);
+    }
     throw err.response?.data || { message: "Failed to unpin notification" };
   }
 };
@@ -274,7 +296,9 @@ export const archiveNotification = async (id) => {
     const { data } = await apiClient.patch(`/notifications/${id}/`, { is_archived: true });
     return data;
   } catch (err) {
-    console.error("Archive notification error:", err);
+    if (import.meta.env.DEV) {
+      console.error("Archive notification error:", err);
+    }
     throw err.response?.data || { message: "Failed to archive notification" };
   }
 };
@@ -289,7 +313,9 @@ export const unarchiveNotification = async (id) => {
     const { data } = await apiClient.patch(`/notifications/${id}/`, { is_archived: false });
     return data;
   } catch (err) {
-    console.error("Unarchive notification error:", err);
+    if (import.meta.env.DEV) {
+      console.error("Unarchive notification error:", err);
+    }
     throw err.response?.data || { message: "Failed to unarchive notification" };
   }
 };
@@ -303,7 +329,9 @@ export const deleteNotification = async (id) => {
   try {
     await apiClient.delete(`/notifications/${id}/`);
   } catch (err) {
-    console.error("Delete notification error:", err);
+    if (import.meta.env.DEV) {
+      console.error("Delete notification error:", err);
+    }
     throw err.response?.data || { message: "Failed to delete notification" };
   }
 };
@@ -327,7 +355,9 @@ export const getArchivedNotifications = async (filters = {}) => {
     const { data } = await apiClient.get(`/notifications/?${params.toString()}`);
     return data;
   } catch (err) {
-    console.error("Get archived notifications error:", err);
+    if (import.meta.env.DEV) {
+      console.error("Get archived notifications error:", err);
+    }
     throw err.response?.data || { message: "Failed to fetch archived notifications" };
   }
 };
@@ -357,7 +387,9 @@ export const triggerEmailNotification = async (emailData) => {
     return data;
   } catch (err) {
     // Don't throw - email failure should not break UX
-    console.warn("Email notification failed (non-blocking):", err);
+    if (import.meta.env.DEV) {
+      console.warn("Email notification failed (non-blocking):", err);
+    }
     return { success: false, error: err.response?.data || { message: "Email notification failed" } };
   }
 };
@@ -386,7 +418,9 @@ export const triggerNotifications = async (notificationData, emailData = null) =
       }).then((result) => {
         emailResult = result;
       }).catch((err) => {
-        console.warn("Email notification failed (non-blocking):", err);
+        if (import.meta.env.DEV) {
+          console.warn("Email notification failed (non-blocking):", err);
+        }
         emailResult = { success: false, error: err };
       });
     }
@@ -396,7 +430,9 @@ export const triggerNotifications = async (notificationData, emailData = null) =
       email: emailResult,
     };
   } catch (err) {
-    console.error("Failed to trigger notifications:", err);
+    if (import.meta.env.DEV) {
+      console.error("Failed to trigger notifications:", err);
+    }
     throw err;
   }
 };

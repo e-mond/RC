@@ -97,7 +97,9 @@ export const useAuthStore = create(
             useFeatureStore.getState().setPlan(subscription);
           }
         } catch (err) {
-          console.warn("Session invalid or expired:", err);
+          if (import.meta.env.DEV) {
+            console.warn("Session invalid or expired:", err);
+          }
           get().logout(); // Centralized cleanup
           set({ loading: false });
         }
@@ -188,7 +190,9 @@ export const useAuthStore = create(
           } catch (notifErr) {
             // Don't fail login if notification creation fails
             // Log error but continue with login flow
-            console.warn("Failed to create login notification:", notifErr);
+            if (import.meta.env.DEV) {
+              console.warn("Failed to create login notification:", notifErr);
+            }
           }
 
           // Debug logging

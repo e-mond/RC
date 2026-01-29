@@ -19,6 +19,7 @@ import { isMockMode } from "@/mocks/mockManager";
 // CONFIGURATION
 // ───────────────────────────────────────────────────────────────
 const USE_MOCK = isMockMode();
+const IS_DEV = import.meta.env.DEV;
 
 let mockImports = {};
 
@@ -39,9 +40,14 @@ if (USE_MOCK) {
         ...(axiosMock.default || axiosMock),
       };
 
-      console.log("[AdminService] Mock data loaded successfully");
+      if (IS_DEV) {
+        // Safe to log in development for debugging
+        console.log("[AdminService] Mock data loaded successfully");
+      }
     } catch (err) {
-      console.warn("[AdminService] Failed to load mocks → falling back to real API", err);
+      if (IS_DEV) {
+        console.warn("[AdminService] Failed to load mocks → falling back to real API", err);
+      }
       // Continue silently — real API calls will be used
     }
   })();
@@ -274,6 +280,45 @@ export const fetchPendingProperties = async () => {
     return data;
   } catch (err) {
     throw extractError(err, "Failed to fetch pending properties");
+  }
+};
+
+/**
+ * Fetch high-level admin dashboard statistics (users/properties/profession requests).
+ * Used for sidebar badges and admin overview cards.
+ * 
+ * Backend:
+ * - Preferred: API_ENDPOINTS.ADMIN.DASHBOARD_STATS
+ * - Fallback:  GET /admin/dashboard/stats/
+ */
+export const fetchAdminDashboardStats = async () => {
+  if (USE_MOCK && mockImports.fetchAdminDashboardStatsMock) {
+    return withDelay(
+      typeof mockImports.fetchAdminDashboardStatsMock === "function"
+        ? mockImports.fetchAdminDashboardStatsMock()
+        : mockImports.fetchAdminDashboardStatsMock,
+      700
+    );
+  }
+
+  try {
+    // Try configured endpoint first
+    try {
+      const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
+      const endpoint = API_ENDPOINTS?.ADMIN?.DASHBOARD_STATS;
+      if (endpoint) {
+        const { data } = await apiClient.get(endpoint);
+        return data;
+      }
+    } catch {
+      // Silently fall through to hard-coded fallback
+    }
+
+    // Fallback to conventional path
+    const { data } = await apiClient.get("/admin/dashboard/stats/");
+    return data;
+  } catch (err) {
+    throw extractError(err, "Failed to fetch admin dashboard stats");
   }
 };
 
@@ -540,7 +585,9 @@ export const getPublicPricing = async () => {
     return data;
   } catch (err) {
     // Fallback to default pricing if API fails
-    console.warn("Failed to fetch public pricing, using defaults:", err);
+    if (IS_DEV) {
+      console.warn("Failed to fetch public pricing, using defaults:", err);
+    }
     return {
       monthly: 49.0,
       yearly: 490.0,
@@ -647,14 +694,16 @@ export const createUser = async (payload) => {
       style: { maxWidth: "420px" },
     });
 
-    // Debug info
-    console.groupCollapsed("CREATE USER FAILED");
-    console.log("Payload:", payload);
-    console.log("Clean payload:", cleanPayload);
-    console.log("Status:", err.response?.status);
-    console.log("Response:", err.response?.data);
-    console.log("Error:", err);
-    console.groupEnd();
+    // Debug info (development only)
+    if (IS_DEV) {
+      console.groupCollapsed("CREATE USER FAILED");
+      console.log("Payload:", payload);
+      console.log("Clean payload:", cleanPayload);
+      console.log("Status:", err.response?.status);
+      console.log("Response:", err.response?.data);
+      console.log("Error:", err);
+      console.groupEnd();
+    }
 
     throw new Error(displayMessage);
   }
@@ -703,11 +752,13 @@ export const deleteUser = async (userId, options = {}) => {
 - DELETE /api/super-admin/users/${userId}/
 - POST /api/super-admin/users/${userId}/delete/
 - PATCH /api/super-admin/users/${userId}/`;
-                console.error("Delete user - Backend endpoint missing:", {
-                  attemptedMethods: ["DELETE", "POST", "PATCH"],
-                  endpoint: userEndpoint,
-                  userId,
-                });
+                if (IS_DEV) {
+                  console.error("Delete user - Backend endpoint missing:", {
+                    attemptedMethods: ["DELETE", "POST", "PATCH"],
+                    endpoint: userEndpoint,
+                    userId,
+                  });
+                }
                 throw new Error(errorMsg);
               }
               
@@ -750,12 +801,16 @@ export const fetchAuditLogs = async () => {
     } else if (data && typeof data === 'object') {
       // If data is an object but not an array, try to extract logs
       logs = [];
-      console.warn("Unexpected audit logs response format:", data);
+      if (IS_DEV) {
+        console.warn("Unexpected audit logs response format:", data);
+      }
     }
     
     // Ensure logs is always an array before mapping
     if (!Array.isArray(logs)) {
-      console.warn("Audit logs is not an array, returning empty array:", logs);
+      if (IS_DEV) {
+        console.warn("Audit logs is not an array, returning empty array:", logs);
+      }
       return [];
     }
     
@@ -765,7 +820,9 @@ export const fetchAuditLogs = async () => {
     return logs.map((log, index) => {
       // Ensure log is an object
       if (!log || typeof log !== 'object') {
-        console.warn("Invalid log entry:", log);
+        if (IS_DEV) {
+          console.warn("Invalid log entry:", log);
+        }
         return {
           id: Date.now(),
           action: "unknown",
@@ -775,7 +832,8 @@ export const fetchAuditLogs = async () => {
       }
       
       // Debug: Log first few entries to see actual structure
-      if (index < 3) {
+      if (IS_DEV && index < 3) {
+        // Development-only deep inspection of first few audit log entries
         console.log(`🔍 Audit log entry ${index}:`, {
           allKeys: Object.keys(log),
           fullObject: JSON.parse(JSON.stringify(log)), // Deep clone for logging
@@ -865,7 +923,9 @@ export const fetchAuditLogs = async () => {
       };
     });
   } catch (err) {
-    console.error("Error fetching audit logs:", err);
+    if (IS_DEV) {
+      console.error("Error fetching audit logs:", err);
+    }
     throw extractError(err, "Failed to load audit logs");
   }
 };
@@ -1004,6 +1064,7 @@ export default {
   fetchPendingProperties,
   approveProperty,
   rejectProperty,
+  fetchAdminDashboardStats,
   fetchMaintenance,
   // Super Admin endpoints
   fetchPendingUsersSA,

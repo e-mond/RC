@@ -9,12 +9,15 @@
 
 ```
 Base URL: ${VITE_API_BASE_URL}
-Default: https://api.rentalconnects.com/api/v1
 
 Authentication: Bearer Token (JWT)
 Content-Type: application/json (default)
 Content-Type: multipart/form-data (file uploads)
 ```
+
+> **Status Legend**
+> - **Implemented (Frontend)**: The React app already calls this endpoint via the corresponding service.
+> - **Backend Required**: Endpoint is expected by the frontend but still needs backend implementation.
 
 ---
 

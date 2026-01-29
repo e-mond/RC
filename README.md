@@ -6,14 +6,21 @@ It connects **Tenants**, **Landlords**, **Artisans**, **Admins**, and **Super Ad
 **Status:** Production-Ready Frontend (January 2026)  
 **Live Demo:** [https://rental-connects.vercel.app](https://rental-connects.vercel.app) *(coming soon)*  
 **GitHub:** https://github.com/e-mond/RC  
-**Documentation:** 
-- `FRONTEND_DOCUMENTATION.md` - Complete frontend documentation (single source of truth)
-- `docs/README.md` - Documentation index
-- `docs/SECURITY.md` - Security documentation
-- `docs/PRODUCTION_READINESS.md` - Production readiness
-- `docs/PROJECT_CLOSURE.md` - Project closure summary
-- `BACKEND_IMPLEMENTATION_GUIDE.md` - Backend integration guide
-- `BACKEND_API_COMPLETE_REFERENCE.md` - Complete backend API reference
+**Documentation (current phase):**
+- `docs/BACKEND_HANDOVER.md` - **⭐ NEW** Complete backend handover with all fixes, APIs, and requirements
+- `docs/PLATFORM_ARCHITECTURE.md` - High-level architecture and component structure
+- `docs/PLATFORM_SUMMARY.md` - Stakeholder-friendly summary
+- `docs/API_REFERENCE.md` - Frontend-expected API contract for backend team
+- `docs/NOTIFICATION_SYSTEM.md` - Notification types, lifecycle, and integration points
+- `docs/ARTISAN_SYSTEM.md` - End-to-end artisan flows (signup, profession change, booking)
+- `docs/AI_INTEGRATION.md` - Efie AI, Trust Score, recommendations (frontend + backend expectations)
+
+**Legacy / Extended Documentation (historical but still valid where present):**
+- `FRONTEND_DOCUMENTATION.md`
+- `docs/README.md`
+- `docs/SECURITY.md`
+- `docs/PRODUCTION_READINESS.md`
+- `BACKEND_IMPLEMENTATION_GUIDE.md`
 
 ---
 

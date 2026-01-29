@@ -195,7 +195,9 @@ export const initiatePayment = async ({
 
     handler.openIframe();
   } catch (error) {
-    console.error("Initiate payment error:", error);
+    if (import.meta.env.DEV) {
+      console.error("Initiate payment error:", error);
+    }
     if (onError) {
       onError(error);
     } else {
@@ -234,7 +236,9 @@ export const verifyPaystackPayment = async (reference) => {
 
     return data;
   } catch (err) {
-    console.error("Verify payment error:", err);
+    if (import.meta.env.DEV) {
+      console.error("Verify payment error:", err);
+    }
     throw err.response?.data || { message: "Failed to verify payment" };
   }
 };

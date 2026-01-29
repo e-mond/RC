@@ -17,9 +17,9 @@
 
 RentalConnects implements a comprehensive notification system that keeps users informed about important events through multiple channels:
 
-- **In-System Notifications**: Real-time notifications displayed within the platform
-- **Email Notifications**: Transactional emails for important events
-- **Push Notifications**: Browser push notifications (optional)
+- **In-System Notifications**: Implemented. Backed by `notificationService.js`, `notificationHelpers.js`, and UI components under `components/notifications`.
+- **Email Notifications**: Implemented on the frontend via `emailService.js` and `emailTemplates.js`. Delivery depends on backend email endpoints documented in `API_REFERENCE.md`.
+- **Push Notifications**: **Not yet implemented**. Described here for future backend and frontend expansion.
 
 ---
 

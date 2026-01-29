@@ -139,7 +139,9 @@ function AnimatedRoutes() {
         setLastNotifCount(newNotifCount);
         setLastAnnounceCount(newAnnounceCount);
       } catch (err) {
-        console.warn("Failed to poll notifications/announcements:", err);
+        if (import.meta.env.DEV) {
+          console.warn("Failed to poll notifications/announcements:", err);
+        }
       }
     };
 

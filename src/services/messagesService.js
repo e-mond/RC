@@ -38,7 +38,9 @@ export const getConversations = async () => {
     const { data } = await apiClient.get("/messages/conversations/");
     return data.data || data.conversations || data || [];
   } catch (err) {
-    console.error("Failed to fetch conversations:", err);
+    if (import.meta.env.DEV) {
+      console.error("Failed to fetch conversations:", err);
+    }
     throw err.response?.data || { message: "Unable to load conversations" };
   }
 };
@@ -54,7 +56,9 @@ export const getMessages = async (conversationId) => {
     const { data } = await apiClient.get(`/messages/conversations/${conversationId}/`);
     return data.data || data.messages || { messages: [] };
   } catch (err) {
-    console.error("Failed to fetch messages:", err);
+    if (import.meta.env.DEV) {
+      console.error("Failed to fetch messages:", err);
+    }
     throw err.response?.data || { message: "Unable to load messages" };
   }
 };
@@ -77,7 +81,9 @@ export const sendMessage = async (conversationId, text, attachments = []) => {
     });
     return data.data || data;
   } catch (err) {
-    console.error("Send message failed:", err);
+    if (import.meta.env.DEV) {
+      console.error("Send message failed:", err);
+    }
     throw err.response?.data || { message: "Failed to send message" };
   }
 };
@@ -111,7 +117,9 @@ export const createConversation = async (data) => {
     });
     return response.data || response;
   } catch (err) {
-    console.error("Create conversation error:", err);
+    if (import.meta.env.DEV) {
+      console.error("Create conversation error:", err);
+    }
     
     // Provide user-friendly error messages
     if (err.response?.status === 400) {
@@ -143,7 +151,9 @@ export const markConversationAsRead = async (conversationId) => {
   try {
     await apiClient.post(`/messages/conversations/${conversationId}/read/`);
   } catch (err) {
-    console.error("Mark as read failed:", err);
+    if (import.meta.env.DEV) {
+      console.error("Mark as read failed:", err);
+    }
     // Fail silently - not critical
   }
 };
@@ -160,7 +170,9 @@ export const getUnreadCount = async () => {
     // Backend should return { unread: 5 } or { count: 5 } or direct number
     return data.unread || data.count || data || 0;
   } catch (err) {
-    console.warn("Failed to fetch unread count:", err);
+    if (import.meta.env.DEV) {
+      console.warn("Failed to fetch unread count:", err);
+    }
     return 0; // Fail silently — badge just won't show
   }
 };

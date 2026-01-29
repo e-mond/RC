@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import LandingNavbar from "./components/LandingNavbar";
 import Footer from "@/components/layout/Footer";
 import { getFirstValidImage, getPlaceholderImage } from "@/utils/imageValidation";
+import AdPlacement from "@/components/ads/AdPlacement";
 
 /* ======================================================
    PROPERTY CARD COMPONENT
@@ -196,7 +197,7 @@ export default function PublicProperties() {
     <div className="min-h-screen bg-gray-50">
       <LandingNavbar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
 
-      {/* Page Header  */}
+      {/* Page Header */}
       <div className="bg-linear-to-br from-[#0b6e4f] to-[#095c42] pt-28 pb-14 text-white">
         <div className="mx-auto max-w-7xl px-6 text-center">
           <motion.div
@@ -212,6 +213,16 @@ export default function PublicProperties() {
             </p>
           </motion.div>
         </div>
+      </div>
+
+      {/* Top Ad Placement (public-facing) */}
+      <div className="mx-auto max-w-7xl px-6 mt-8">
+        <AdPlacement
+          placement="banner"
+          limit={1}
+          className="rounded-xl overflow-hidden"
+          showIfEmpty={false}
+        />
       </div>
 
       {/* Content */}
@@ -230,23 +241,35 @@ export default function PublicProperties() {
         {filteredProperties.length === 0 ? (
           <EmptyState hasSearchTerm={!!searchTerm} />
         ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6 }}
-            className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
-          >
-            <AnimatePresence>
-              {filteredProperties.map((property, index) => (
-                <PropertyCard
-                  key={property.id}
-                  property={property}
-                  index={index}
-                  onSignUpClick={() => navigate("/role-selection")}
-                />
-              ))}
-            </AnimatePresence>
-          </motion.div>
+          <>
+            {/* Inline Ad between header and grid */}
+            <div className="mb-6">
+              <AdPlacement
+                placement="inline"
+                limit={1}
+                className="rounded-xl"
+                showIfEmpty={false}
+              />
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6 }}
+              className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
+            >
+              <AnimatePresence>
+                {filteredProperties.map((property, index) => (
+                  <PropertyCard
+                    key={property.id}
+                    property={property}
+                    index={index}
+                    onSignUpClick={() => navigate("/role-selection")}
+                  />
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          </>
         )}
 
         {/* CTA */}

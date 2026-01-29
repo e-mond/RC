@@ -120,6 +120,12 @@ const decodeToken = (token) => {
  */
 const isTokenExpired = (token) => {
   if (!token) return true;
+  
+  // Mock tokens don't expire - they start with "mock-jwt-"
+  if (token.startsWith("mock-jwt-")) {
+    return false;
+  }
+  
   const decoded = decodeToken(token);
   if (!decoded || !decoded.exp) return true;
   const now = Date.now() / 1000;
@@ -137,10 +143,12 @@ export default function RoleProtectedRoute({
   // Validate token expiration on mount and periodically
   useEffect(() => {
     if (!loading && user) {
-      const checkToken = () => {
+        const checkToken = () => {
         const token = session.getToken();
         if (token && isTokenExpired(token)) {
-          console.warn("[RoleProtectedRoute] Token expired, logging out");
+          if (import.meta.env.DEV) {
+            console.warn("[RoleProtectedRoute] Token expired, logging out");
+          }
           setTokenValid(false);
           logout();
         } else {
@@ -185,7 +193,9 @@ export default function RoleProtectedRoute({
 
   // Role not allowed → redirect
   if (!allowedList.includes(userRole)) {
-    console.warn(`[RoleProtectedRoute] Access denied: User role "${userRole}" not in allowed roles:`, allowedList);
+    if (import.meta.env.DEV) {
+      console.warn(`[RoleProtectedRoute] Access denied: User role "${userRole}" not in allowed roles:`, allowedList);
+    }
     return <Navigate to={fallback} replace />;
   }
 
