@@ -9,49 +9,80 @@ import "react-calendar/dist/Calendar.css";
  * BookingsCalendar - Calendar view for viewing requests
  * Shows bookings on their requested dates with status indicators
  */
-export default function BookingsCalendar({ bookings = [], onDateClick }) {
+export default function BookingsCalendar({ bookings = [], onDateClick, filter = "all", normalizeStatus }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
 
-  // Group bookings by date
+  // Normalize status function (use passed prop or define locally)
+  const normalizeStatusLocal = normalizeStatus || ((status) => {
+    if (!status) return "pending";
+    const s = String(status).toLowerCase();
+    if (["requested", "pending"].includes(s)) return "pending";
+    if (["accepted", "approved"].includes(s)) return "accepted";
+    if (["declined", "rejected"].includes(s)) return "declined";
+    return s;
+  });
+
+  // Filter bookings based on filter prop (calendar shows all by default, but can be filtered)
+  const filteredBookings = useMemo(() => {
+    if (filter === "all") return bookings;
+    return bookings.filter((b) => {
+      const status = normalizeStatusLocal(b.status);
+      if (filter === "pending") return status === "pending";
+      if (filter === "accepted") return status === "accepted";
+      if (filter === "declined") return status === "declined";
+      return true;
+    });
+  }, [bookings, filter, normalizeStatusLocal]);
+
+  // Group bookings by date (use filteredBookings to respect filter)
   const bookingsByDate = useMemo(() => {
     const grouped = {};
-    bookings.forEach((booking) => {
-      if (booking.dateRequested || booking.requestedDate) {
-        const dateKey = format(
-          new Date(booking.dateRequested || booking.requestedDate),
-          "yyyy-MM-dd"
-        );
-        if (!grouped[dateKey]) grouped[dateKey] = [];
-        grouped[dateKey].push(booking);
+    filteredBookings.forEach((booking) => {
+      // Try multiple date field names to handle different API response formats
+      const dateValue = booking.dateRequested || 
+                       booking.requestedDate || 
+                       booking.preferred_date || 
+                       booking.preferredDate ||
+                       booking.created_at ||
+                       booking.createdAt;
+      
+      if (dateValue) {
+        try {
+          const dateKey = format(new Date(dateValue), "yyyy-MM-dd");
+          if (!grouped[dateKey]) grouped[dateKey] = [];
+          grouped[dateKey].push(booking);
+        } catch (err) {
+          console.warn("Failed to parse booking date:", dateValue, err);
+        }
       }
     });
     return grouped;
-  }, [bookings]);
+  }, [filteredBookings]);
 
   const getBookingsForDate = (date) => {
     const dateKey = format(date, "yyyy-MM-dd");
     return bookingsByDate[dateKey] || [];
   };
 
-  const tileContent = ({ date, view }) => {
+    const tileContent = ({ date, view }) => {
     if (view !== "month") return null;
     const dayBookings = getBookingsForDate(date);
     if (dayBookings.length === 0) return null;
 
-    const pendingCount = dayBookings.filter((b) => ["requested", "pending"].includes(b.status)).length;
-    const acceptedCount = dayBookings.filter((b) => ["accepted", "approved"].includes(b.status)).length;
-    const declinedCount = dayBookings.filter((b) => ["declined", "rejected"].includes(b.status)).length;
+    const pendingCount = dayBookings.filter((b) => normalizeStatusLocal(b.status) === "pending").length;
+    const acceptedCount = dayBookings.filter((b) => normalizeStatusLocal(b.status) === "accepted").length;
+    const declinedCount = dayBookings.filter((b) => normalizeStatusLocal(b.status) === "declined").length;
 
     return (
       <div className="flex flex-col gap-0.5 mt-1">
         {pendingCount > 0 && (
-          <div className="h-1 w-full bg-yellow-500 rounded" title={`${pendingCount} pending`} />
+          <div className="h-1.5 w-full bg-yellow-500 rounded-sm" title={`${pendingCount} pending`} />
         )}
         {acceptedCount > 0 && (
-          <div className="h-1 w-full bg-green-500 rounded" title={`${acceptedCount} accepted`} />
+          <div className="h-1.5 w-full bg-green-500 rounded-sm" title={`${acceptedCount} accepted`} />
         )}
         {declinedCount > 0 && (
-          <div className="h-1 w-full bg-red-500 rounded" title={`${declinedCount} declined`} />
+          <div className="h-1.5 w-full bg-red-500 rounded-sm" title={`${declinedCount} declined`} />
         )}
       </div>
     );
@@ -59,7 +90,19 @@ export default function BookingsCalendar({ bookings = [], onDateClick }) {
 
   const tileClassName = ({ date, view }) => {
     if (view !== "month") return null;
-    return getBookingsForDate(date).length > 0 ? "has-bookings" : null;
+    const dayBookings = getBookingsForDate(date);
+    if (dayBookings.length === 0) return null;
+    
+    const hasPending = dayBookings.some((b) => normalizeStatusLocal(b.status) === "pending");
+    const hasAccepted = dayBookings.some((b) => normalizeStatusLocal(b.status) === "accepted");
+    const hasDeclined = dayBookings.some((b) => normalizeStatusLocal(b.status) === "declined");
+    
+    let className = "has-bookings";
+    if (hasPending) className += " has-pending";
+    if (hasAccepted) className += " has-accepted";
+    if (hasDeclined) className += " has-declined";
+    
+    return className;
   };
 
   const handleDateChange = (date) => {
@@ -102,7 +145,7 @@ export default function BookingsCalendar({ bookings = [], onDateClick }) {
           className="w-full border-0"
         />
 
-        <style jsx>{`
+        <style>{`
           .react-calendar {
             background: transparent;
             font-family: inherit;
@@ -115,6 +158,15 @@ export default function BookingsCalendar({ bookings = [], onDateClick }) {
           .react-calendar__tile.has-bookings {
             background-color: rgb(240 253 244 / 0.6);
             font-weight: 600;
+          }
+          .react-calendar__tile.has-pending {
+            background-color: rgb(254 252 232 / 0.8);
+          }
+          .react-calendar__tile.has-accepted {
+            background-color: rgb(240 253 244 / 0.8);
+          }
+          .react-calendar__tile.has-declined {
+            background-color: rgb(254 242 242 / 0.8);
           }
           .react-calendar__tile--active {
             background: #0b6e4f !important;

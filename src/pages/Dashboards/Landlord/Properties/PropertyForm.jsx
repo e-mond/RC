@@ -8,13 +8,14 @@ import {
   createProperty,
   updateProperty,
   getAmenities,
-  uploadImage,
 } from "@/services/propertyService";
 import { propertySchema } from "@/utils/propertyValidation";
+import { sanitizeImageUrls, filterValidImageUrls } from "@/utils/imageValidation";
 import ImageUploader from "@/components/landlord/ImageUploader";
 import MapPicker from "@/components/landlord/MapPicker";
 import Button from "@/components/ui/Button";
-import { AlertCircle, Loader2, X, UploadCloud } from "lucide-react";
+import { AlertCircle, Loader2, X, UploadCloud, CheckCircle } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 export default function PropertyForm() {
   const { id } = useParams();
@@ -25,6 +26,7 @@ export default function PropertyForm() {
   const [submitting, setSubmitting] = useState(false);
   const [amenitiesList, setAmenitiesList] = useState([]);
   const [amenitiesLoading, setAmenitiesLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
   const {
     register,
@@ -48,9 +50,9 @@ export default function PropertyForm() {
       bathrooms: 1,
       area: "",
       property_type: "apartment",
-      status: "draft",
+      status: "draft", // Initial form state, will change to pending_approval on submit
       amenities: [],
-      images: [], // Will hold { url: string } or { status: "uploading" | "error" }
+      images: [], // array of strings (URLs)
       lat: "",
       lng: "",
     },
@@ -58,7 +60,11 @@ export default function PropertyForm() {
   });
 
   const watchedImages = watch("images") || [];
-  const watchedAmenities = watch("amenities");
+  const watchedAmenities = watch("amenities") || [];
+  // Ensure watchedAmenities is always an array of strings
+  const normalizedWatchedAmenities = Array.isArray(watchedAmenities) 
+    ? watchedAmenities.map(a => typeof a === "string" ? a : (a?.name || a?.amenity?.name || String(a)))
+    : [];
   const watchedAddress = watch("address");
   const watchedLat = watch("lat");
   const watchedLng = watch("lng");
@@ -73,8 +79,38 @@ export default function PropertyForm() {
     const load = async () => {
       try {
         setLoading(true);
+        setLoadError(null);
         const res = await fetchProperty(id);
         const prop = res?.data ?? res;
+
+        // Property data loaded successfully
+
+        // Normalize amenities: extract names from objects or use strings directly
+        // Backend may return amenities as: strings, {id, name} objects, or {id, amenity: {id, name}} nested objects
+        const normalizedAmenities = (prop.amenities || []).map((a) => {
+          // If already a string, return as-is
+          if (typeof a === "string") {
+            return a;
+          }
+          
+          // If it's an object, extract the name
+          if (a && typeof a === "object") {
+            // Handle { name: "Parking" } format
+            if (a.name && typeof a.name === "string") {
+              return a.name;
+            }
+            // Handle { amenity: { name: "Parking" } } nested format
+            if (a.amenity && typeof a.amenity === "object") {
+              if (a.amenity.name && typeof a.amenity.name === "string") {
+                return a.amenity.name;
+              }
+            }
+          }
+          
+          // Fallback: log warning and return null
+          console.warn("[PropertyForm] Unexpected amenity format, cannot extract name:", a);
+          return null;
+        }).filter((a) => a !== null && a !== undefined && typeof a === "string"); // Only keep valid strings
 
         reset({
           title: prop.title || "",
@@ -89,15 +125,28 @@ export default function PropertyForm() {
           bathrooms: prop.bathrooms ?? 1,
           area: prop.area_sqm || "",
           property_type: prop.property_type || "apartment",
-          status: prop.status === "available" ? "active" : prop.status || "draft",
-          amenities: prop.amenities?.map((a) => a.name || a) || [],
-          images: prop.images?.map((img) => ({ url: img.image_url || img.image || img })) || [],
+          status: prop.status || "draft", // Keep existing status, default to draft
+          amenities: normalizedAmenities,
+          images: filterValidImageUrls(prop.images || []),
           lat: prop.latitude || prop.lat || "",
           lng: prop.longitude || prop.lng || "",
         });
       } catch (err) {
         console.error("Failed to load property:", err);
-        alert("Could not load property details.");
+        const errorMessage = err.message || "Could not load property details.";
+        const isNotFound = errorMessage.includes("not found") || err.response?.status === 404;
+        
+        setLoadError(errorMessage);
+        
+        if (isNotFound) {
+          toast.error(`Property with ID "${id}" not found. It may have been deleted.`);
+          // Redirect to properties list after a short delay
+          setTimeout(() => {
+            navigate("/landlord/properties");
+          }, 2000);
+        } else {
+          toast.error(errorMessage);
+        }
       } finally {
         setLoading(false);
       }
@@ -113,6 +162,7 @@ export default function PropertyForm() {
         setAmenitiesLoading(true);
         const data = await getAmenities();
         setAmenitiesList(data);
+        // Amenities list loaded successfully
       } catch (err) {
         console.error("Failed to load amenities:", err);
       } finally {
@@ -125,46 +175,38 @@ export default function PropertyForm() {
 
   // Sync map changes
   const handleLocationChange = useCallback(
-    ({ address, lat, lng } = {}) => {
+    ({ address, lat, lng, city, region } = {}) => {
       if (address !== undefined) setValue("address", address || "", { shouldDirty: true });
       if (lat !== undefined) setValue("lat", lat || "", { shouldDirty: true });
       if (lng !== undefined) setValue("lng", lng || "", { shouldDirty: true });
+      if (city !== undefined) setValue("city", city || "", { shouldDirty: true });
+      if (region !== undefined) setValue("region", region || "", { shouldDirty: true });
     },
     [setValue]
   );
 
-  // Handle image uploads with progress
-  const handleImageChange = async (files) => {
-    if (files.length === 0) return;
-
-    const currentImages = watchedImages.filter((img) => img.url); // Keep only uploaded ones
-    const uploadingPlaceholders = files.map(() => ({ status: "uploading" }));
-    setValue("images", [...currentImages, ...uploadingPlaceholders], { shouldDirty: true });
-
-    const uploadPromises = files.map(async (file) => {
-      try {
-        const res = await uploadImage(file);
-        return { url: res.url };
-      } catch (err) {
-        console.error("Image upload failed:", err);
-        return { status: "error", message: "Upload failed" };
-      }
-    });
-
-    const results = await Promise.all(uploadPromises);
-
-    const finalImages = [
-      ...currentImages,
-      ...results,
-    ];
-
-    setValue("images", finalImages, { shouldDirty: true });
+  // Handle image changes
+  // ImageUploader component already handles file uploads internally
+  // and passes an array of image URLs (strings) to this function
+  const handleImageChange = (imageUrls) => {
+    if (!imageUrls || !Array.isArray(imageUrls)) return;
+    
+    // Use shared validation utility to filter invalid URLs
+    const validUrls = sanitizeImageUrls(imageUrls);
+    
+    setValue("images", validUrls, { shouldDirty: true });
+    if (process.env.NODE_ENV === 'development') {
+      console.log("[DEBUG] Images updated:", validUrls.length, "valid images");
+    }
   };
 
   // Remove image by index
   const removeImage = (index) => {
     const newImages = watchedImages.filter((_, i) => i !== index);
     setValue("images", newImages, { shouldDirty: true });
+    if (process.env.NODE_ENV === 'development') {
+      console.log("[DEBUG] Image removed at index:", index, "New images count:", newImages.length);
+    }
   };
 
   // Toggle amenity
@@ -180,67 +222,229 @@ export default function PropertyForm() {
         : [...current, amenity.name],
       { shouldDirty: true }
     );
-  };
-
-  // Submit
-  const onSubmit = async (data) => {
-    setSubmitting(true);
-    try {
-      const payload = {
-        title: data.title.trim(),
-        description: data.description?.trim() || "",
-        property_type: data.property_type,
-        address: data.address.trim(),
-        city: data.city?.trim() || "",
-        region: data.region?.trim() || "",
-        country: "Ghana",
-        price: Number(data.price),
-        currency: data.currency,
-        bedrooms: Number(data.bedrooms),
-        bathrooms: Number(data.bathrooms),
-        status: data.status === "active" ? "available" : data.status,
-      };
-
-      if (data.deposit) payload.deposit = Number(data.deposit);
-      if (data.area) payload.area_sqm = Number(data.area);
-      if (data.lat) payload.latitude = Number(data.lat);
-      if (data.lng) payload.longitude = Number(data.lng);
-
-      // Amenities: send IDs
-      if (data.amenities.length > 0) {
-        const ids = data.amenities
-          .map((name) => amenitiesList.find((a) => a.name === name)?.id)
-          .filter(Boolean);
-        if (ids.length > 0) payload.amenity_ids = ids;
-      }
-
-      // Images: send only successful URLs
-      const imageUrls = watchedImages
-        .filter((img) => img.url)
-        .map((img) => img.url);
-      if (imageUrls.length > 0) {
-        payload.images = imageUrls;
-      }
-
-      if (isEdit) {
-        await updateProperty(id, payload);
-      } else {
-        await createProperty(payload);
-      }
-
-      navigate("/landlord/properties");
-    } catch (err) {
-      console.error("Submission failed:", err.response?.data || err);
-      alert("Failed to save property. Check console for details.");
-    } finally {
-      setSubmitting(false);
+    if (process.env.NODE_ENV === 'development') {
+      console.log("[DEBUG] Amenity toggled:", amenity.name, "Current amenities:", watchedAmenities);
     }
   };
+const onSubmit = async (data) => {
+  setSubmitting(true);
+
+  console.log("[DEBUG] === SUBMIT STARTED ===");
+  console.log("[DEBUG] Raw form data:", data);
+
+  try {
+    const payload = {
+      title: (data.title || "").trim(),
+      description: (data.description || "").trim() || null,
+      property_type: data.property_type || "apartment",
+      address: (data.address || "").trim(),
+      city: (data.city || "").trim() || null,
+      region: (data.region || "").trim() || null,
+      country: "Ghana",
+
+      // Numbers: only include if valid & positive
+      price: data.price && !isNaN(data.price) && Number(data.price) > 0 
+        ? Number(data.price) 
+        : undefined,
+
+      currency: data.currency || "GHS",
+
+      deposit: data.deposit && !isNaN(data.deposit) && Number(data.deposit) >= 0 
+        ? Number(data.deposit) 
+        : undefined,
+
+      bedrooms: data.bedrooms && !isNaN(data.bedrooms) 
+        ? Number(data.bedrooms) 
+        : 1,
+
+      bathrooms: data.bathrooms && !isNaN(data.bathrooms) 
+        ? Number(data.bathrooms) 
+        : 1,
+
+      area_sqm: data.area && !isNaN(data.area) && Number(data.area) > 0 
+        ? Number(data.area) 
+        : undefined,
+
+      // Status: Backend-controlled workflow
+      // - Create/Submit → pending_approval (submitted for approval immediately)
+      // - Edit/Submit → pending_approval (requires re-approval)
+      // - Admin approves → approved
+      // - Admin rejects → rejected
+      // Note: All property submissions (new or edit) go to pending_approval
+      // This ensures properties appear in admin pending approvals immediately
+      status: "pending_approval",  // All submissions require approval
+
+      // Location: only send if both lat & lng are valid numbers
+      // Backend requires max 6 decimal places for coordinates
+      latitude: data.lat && !isNaN(Number(data.lat)) 
+        ? parseFloat(Number(data.lat).toFixed(6)) 
+        : null,
+      longitude: data.lng && !isNaN(Number(data.lng)) 
+        ? parseFloat(Number(data.lng).toFixed(6)) 
+        : null,
+    };
+
+    // Amenities IDs
+    // Convert amenity names to IDs before sending to backend
+    // Backend expects array of strings (amenity IDs as strings)
+    if (data.amenities?.length > 0) {
+      const ids = data.amenities
+        .map(name => {
+          // Ensure name is a string
+          if (typeof name !== "string") {
+            console.warn("[PropertyForm] Invalid amenity name type:", typeof name, name);
+            return null;
+          }
+          const amenity = amenitiesList.find(a => a.name === name);
+          if (!amenity || !amenity.id) {
+            console.warn("[PropertyForm] Amenity not found in list:", name);
+            return null;
+          }
+          // Ensure ID is converted to string
+          return String(amenity.id);
+        })
+        .filter(Boolean); // Remove nulls
+      
+      if (ids.length > 0) {
+        payload.amenity_ids = ids;
+      }
+    }
+
+    // Images: validate and sanitize before sending to backend
+    if (data.images?.length > 0) {
+      // Use shared validation utility to filter invalid URLs
+      payload.images = sanitizeImageUrls(data.images);
+    }
+
+    // Remove undefined values from payload (backend validation doesn't like them)
+    Object.keys(payload).forEach(key => {
+      if (payload[key] === undefined) {
+        delete payload[key];
+      }
+    });
+
+    console.log("[DEBUG] Sending this payload:", payload);
+    console.log("[DEBUG] Amenity IDs being sent:", payload.amenity_ids);
+
+    if (isEdit) {
+      await updateProperty(id, payload);
+    } else {
+      await createProperty(payload);
+    }
+
+    // Success notification
+    toast.success(
+      isEdit 
+        ? "Property updated successfully! It will be reviewed before going live." 
+        : "Property created successfully! It will be reviewed before going live.",
+      {
+        duration: 5000,
+        icon: "✅",
+        style: {
+          borderRadius: "12px",
+          background: "#10b981",
+          color: "#fff",
+        },
+      }
+    );
+
+    console.log("[DEBUG] Success! Property created/updated");
+    
+    // Navigate after a short delay to show the success message
+    setTimeout(() => {
+      navigate("/landlord/properties");
+    }, 1000);
+  } catch (err) {
+    console.error("[DEBUG] Submission error:", err);
+    console.log("[DEBUG] Error details:", {
+      message: err.message,
+      response: err.response,
+      responseData: err.response?.data,
+      status: err.response?.status,
+    });
+
+    // Extract and format error message
+    let errorMessage = err.message || "Failed to save property";
+    let errorDetails = [];
+
+    if (err.response?.data) {
+      const errorData = err.response.data;
+      
+      // Handle Django validation errors
+      if (typeof errorData === 'object' && !Array.isArray(errorData)) {
+        errorDetails = Object.entries(errorData).map(([field, messages]) => {
+          const msg = Array.isArray(messages) ? messages[0] : messages;
+          // Format field name for display
+          const fieldName = field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          return `${fieldName}: ${msg}`;
+        });
+        
+        if (errorDetails.length > 0) {
+          errorMessage = errorDetails.join('\n');
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      } else if (typeof errorData === 'string') {
+        errorMessage = errorData;
+      }
+    }
+
+    // Show error toast with details
+    toast.error(
+      errorDetails.length > 0 
+        ? `Validation errors:\n${errorDetails.slice(0, 3).join('\n')}${errorDetails.length > 3 ? `\n...and ${errorDetails.length - 3} more` : ''}`
+        : errorMessage,
+      {
+        duration: 6000,
+        icon: "❌",
+        style: {
+          borderRadius: "12px",
+          background: "#ef4444",
+          color: "#fff",
+          maxWidth: "500px",
+          whiteSpace: "pre-line",
+        },
+      }
+    );
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
         <Loader2 className="w-16 h-16 animate-spin text-[#0b6e4f]" />
+      </div>
+    );
+  }
+
+  // Show error state if property failed to load
+  if (loadError && isEdit) {
+    const isNotFound = loadError.includes("not found") || loadError.includes("404");
+    
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 text-center">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            {isNotFound ? "Property Not Found" : "Error Loading Property"}
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            {isNotFound 
+              ? `The property with ID "${id}" could not be found. It may have been deleted or doesn't exist. Redirecting to properties list...`
+              : loadError
+            }
+          </p>
+          <Button 
+            onClick={() => navigate("/landlord/properties")} 
+            variant="outline"
+          >
+            Back to Properties
+          </Button>
+        </div>
       </div>
     );
   }
@@ -252,7 +456,7 @@ export default function PropertyForm() {
         <header className="relative border-b dark:border-gray-700 pb-8">
           <div className="absolute top-0 right-0">
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-full">
-              Draft mode until published
+              {isEdit ? "Edit Property" : "Create Property"}
             </p>
           </div>
 
@@ -325,16 +529,34 @@ export default function PropertyForm() {
             </div>
 
             <div>
-              <label className="block text-base font-medium mb-3 text-gray-700 dark:text-gray-300">Listing Status</label>
-              <select
-                {...register("status")}
-                className="w-full px-5 py-4 border-2 border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-800 text-base"
-              >
-                <option value="draft">Draft</option>
-                <option value="pending">Pending Approval</option>
-                <option value="active">Publish Now</option>
-                <option value="suspended">Suspended</option>
-              </select>
+              <label className="block text-base font-medium mb-3 text-gray-700 dark:text-gray-300">
+                Status <span className="text-xs text-gray-500 dark:text-gray-400">(Read-only)</span>
+              </label>
+              <div className="w-full px-5 py-4 border-2 border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-800 text-base bg-gray-50 dark:bg-gray-800/50">
+                <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
+                  watch("status") === 'approved' || watch("status") === 'approved'
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    : watch("status") === 'pending' || watch("status") === 'pending_approval'
+                    ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                    : watch("status") === 'rejected'
+                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                    : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                }`}>
+                  {watch("status") === 'pending_approval' ? 'Pending Approval' : 
+                   watch("status") === 'approved' ? 'Approved' :
+                   watch("status") === 'rejected' ? 'Rejected' :
+                   watch("status") === 'draft' ? 'Draft' :
+                   (watch("status") || 'Draft')}
+                </span>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  {isEdit 
+                    ? "Editing this property will change status to 'Pending Approval' for admin review."
+                    : "New properties start as 'Draft'. Submitting will change status to 'Pending Approval'."
+                  }
+                </p>
+              </div>
+              {/* Hidden input to maintain form state */}
+              <input type="hidden" {...register("status")} />
             </div>
           </div>
         </section>
@@ -372,7 +594,7 @@ export default function PropertyForm() {
             <p className="text-base text-gray-600 dark:text-gray-400 mb-5">
               Search address, use current location, or tap/drag on map
             </p>
-            <div className="h-96 sm:h-[500px] lg:h-[600px] rounded-2xl overflow-hidden border-4 border-gray-200 dark:border-gray-700 shadow-2xl">
+            <div className="h-96 sm:h-125 lg:h-150 rounded-2xl overflow-hidden border-4 border-gray-200 dark:border-gray-700 shadow-2xl">
               <MapPicker
                 value={{
                   address: watchedAddress || "",
@@ -462,7 +684,7 @@ export default function PropertyForm() {
           </h4>
 
           <ImageUploader
-            value={watchedImages.filter((img) => img.url)?.map((img) => img.url) || []}
+            value={watchedImages.filter(img => typeof img === 'string')}
             onChange={handleImageChange}
             multiple
           />
@@ -471,12 +693,12 @@ export default function PropertyForm() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
               {watchedImages.map((img, i) => (
                 <div key={i} className="relative group rounded-xl overflow-hidden shadow-lg bg-gray-100 dark:bg-gray-800">
-                  {img.status === "uploading" ? (
+                  {typeof img === 'object' && img.status === "uploading" ? (
                     <div className="h-48 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
                       <UploadCloud size={32} className="animate-pulse mb-2" />
                       <span className="text-sm">Uploading...</span>
                     </div>
-                  ) : img.status === "error" ? (
+                  ) : typeof img === 'object' && img.status === "error" ? (
                     <div className="h-48 flex items-center justify-center text-red-500">
                       <AlertCircle size={32} />
                       <span className="text-sm mt-2">Failed</span>
@@ -484,7 +706,7 @@ export default function PropertyForm() {
                   ) : (
                     <>
                       <img
-                        src={img.url}
+                        src={img}
                         alt={`Property ${i + 1}`}
                         className="w-full h-48 object-cover transition group-hover:scale-105"
                       />
@@ -520,7 +742,7 @@ export default function PropertyForm() {
           ) : (
             <div className="flex flex-wrap gap-3">
               {amenitiesList.map((amenity) => {
-                const isSelected = watchedAmenities.includes(amenity.name);
+                const isSelected = normalizedWatchedAmenities.includes(amenity.name);
                 return (
                   <button
                     key={amenity.id}

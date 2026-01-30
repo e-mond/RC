@@ -5,59 +5,72 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 import AdBanner from "@/pages/Ads/AdBanner";
+import AIChatbot from "@/components/ai/AIChatbot";
+import { useAuthStore } from "@/stores/authStore";
 
 /**
- * DashboardLayout
- * - Shared layout for all role-based dashboards
- * - Includes Sidebar (collapsible), sticky Navbar, and optional aside
- * - Fully responsive, accessible, and dark-mode compatible
+ * Main dashboard wrapper for all authenticated roles
+ * - Responsive sidebar + sticky navbar
+ * - Optional right aside panel (visible ≥xl)
+ * - Contains global ad banner position
  */
 export default function DashboardLayout({ children, aside }) {
   const content = children ?? <Outlet />;
+  const { isAuthenticated } = useAuthStore();
 
   return (
-    <div className="min-h-screen flex bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
-      {/* Sidebar - Collapsible & Mobile Drawer */}
+    <div className="flex min-h-screen bg-gray-50/50 dark:bg-gray-950/50">
+      {/* Sidebar */}
       <Sidebar />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col">
-        {/* Sticky Navbar */}
+      {/* Main Column */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Navbar */}
         <Navbar />
 
-        {/* Main Content */}
+        {/* Content */}
         <main
-          className="flex-1 p-4 sm:p-6 lg:p-8 xl:p-10 overflow-y-auto"
+          className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 xl:p-10"
           role="main"
-          aria-label="Dashboard content"
+          aria-label="Dashboard main content"
         >
-          <div className="max-w-7xl mx-auto w-full">
+          <div className="max-w-7xl mx-auto w-full space-y-8">
             {content}
-            {/* Role-aware ads for freemium users across dashboards */}
             <AdBanner position="bottom" />
           </div>
         </main>
       </div>
 
-      {/* Optional Aside Panel - Hidden on <xl, visible on xl+ */}
+      {/* Optional Right Aside (large screens only) */}
       {aside && (
         <aside
-          className="hidden xl:block w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 lg:p-6 overflow-y-auto"
-          aria-label="Additional information panel"
+          className="hidden xl:block w-80 2xl:w-96 border-l border-gray-200/60 dark:border-gray-700/60 bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm overflow-y-auto"
+          aria-label="Contextual information panel"
         >
-          {aside}
+          <div className="p-5 lg:p-6">{aside}</div>
         </aside>
+      )}
+
+      {/* AI Chatbot - Fixed to right side of viewport
+          To change position, edit the position prop:
+          - "top-right" (current) - Top right corner, below navbar
+          - "top-left" - Top left corner, below navbar  
+          - "bottom-right" - Bottom right corner
+          - "bottom-left" - Bottom left corner
+      */}
+      {isAuthenticated && (
+        <AIChatbot position="bottom-right" />
       )}
     </div>
   );
 }
 
-// PropTypes
 DashboardLayout.propTypes = {
-  children: PropTypes.node.isRequired,
+  children: PropTypes.node,
   aside: PropTypes.node,
 };
 
 DashboardLayout.defaultProps = {
+  children: null,
   aside: null,
 };

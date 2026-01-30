@@ -15,8 +15,8 @@ import { FileText, RefreshCw } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 import { fetchAuditLogs } from "@/services/adminService";
-import SA_AuditFilter from "../components/SA_AuditFilter";
-import SA_AuditTable from "../components/SA_AuditTable";
+import SA_AuditFilter from "@/pages/Dashboards/SuperAdmin/components/SA_AuditFilter";
+import SA_AuditTable from "@/pages/Dashboards/SuperAdmin/components/SA_AuditTable";
 
 export default function SA_AuditPage() {
   const [logs, setLogs] = useState([]);
@@ -29,12 +29,17 @@ export default function SA_AuditPage() {
     setRefreshing(true);
     try {
       const data = await fetchAuditLogs();
-      setLogs(data);
-      setFiltered(data);
+      // Ensure data is always an array
+      const logsArray = Array.isArray(data) ? data : Array.isArray(data?.results) ? data.results : Array.isArray(data?.logs) ? data.logs : [];
+      setLogs(logsArray);
+      setFiltered(logsArray);
       toast.success("Audit logs updated", { duration: 1500 });
     } catch (err) {
       toast.error(err.message || "Failed to load audit logs");
       console.error("Audit load error:", err);
+      // Set empty array on error to prevent filter errors
+      setLogs([]);
+      setFiltered([]);
     } finally {
       setLoading(false);
       setRefreshing(false);

@@ -1,5 +1,6 @@
 import { Newspaper, Radio } from "lucide-react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import mapPlaceholder from "@/assets/images/map-placeholder.jpg";
 
 export default function ArticlesSection() {
@@ -57,7 +58,7 @@ export default function ArticlesSection() {
               className="text-lg font-semibold text-gray-900 mb-1"
               variants={item}
             >
-              Ghana Living, Modernized
+              Ghana Living, Modernised
             </motion.h3>
             <motion.p
               className="text-gray-600 text-sm mb-4"
@@ -101,12 +102,12 @@ export default function ArticlesSection() {
                 {
                   icon: Newspaper,
                   text: "Featured in emerging proptech reports",
-                  href: "https://example.com/proptech-report",
+                  slug: "proptech-report-2025",
                 },
                 {
                   icon: Radio,
                   text: "Discussed on local business radio",
-                  href: "https://example.com/radio-interview",
+                  slug: "radio-interview-ghana-living",
                 },
               ].map((li, idx) => (
                 <motion.li
@@ -115,14 +116,12 @@ export default function ArticlesSection() {
                   variants={item}
                 >
                 <li.icon className="text-teal-600 w-5 h-5 shrink-0" />
-                  <a
-                    href={li.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <Link
+                    to={`/blog/${li.slug}`}
                     className="hover:text-teal-600 hover:underline transition"
                   >
                     {li.text}
-                  </a>
+                  </Link>
                 </motion.li>
               ))}
             </motion.ul>

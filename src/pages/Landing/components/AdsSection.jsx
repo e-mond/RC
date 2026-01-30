@@ -83,7 +83,7 @@ export default function AdsSection() {
                 growing their reach.
               </motion.p>
 
-              <motion.ul className="space-y-3 text-sm text-gray-700">
+              <motion.ul className="space-y-3 text-sm text-gray-700 mb-6">
                 {[
                   { icon: Sparkles, text: "Sponsored spots in search" },
                   { icon: MapPin, text: "Featured on neighborhood maps" },
@@ -100,6 +100,14 @@ export default function AdsSection() {
                   </motion.li>
                 ))}
               </motion.ul>
+
+              <motion.button
+                onClick={() => window.location.href = "/role-selection"}
+                className="w-full px-4 py-2.5 bg-[#0b6e4f] hover:bg-[#095c42] text-white font-medium rounded-lg transition"
+                variants={item}
+              >
+                Get Started with Ads
+              </motion.button>
             </motion.div>
           </motion.div>
 

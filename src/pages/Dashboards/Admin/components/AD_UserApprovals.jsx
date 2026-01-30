@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { fetchPendingUsers, approveUser, rejectUser } from "@/services/adminService";
 import Button from "@/components/ui/Button";
-import { CheckCircle, XCircle, Filter, Download, CheckSquare, Square, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Filter, Download, CheckSquare, Square, Loader2, Eye, FileText } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "react-hot-toast";
+import SA_ApproveUserModal from "@/pages/Dashboards/SuperAdmin/components/SA_ApproveUserModal";
+import SA_RejectUserModal from "@/pages/Dashboards/SuperAdmin/components/SA_RejectUserModal";
 
 /**
  * Enhanced User Approvals with bulk actions and filtering
  */
 export default function AD_UserApprovals() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
@@ -15,6 +20,8 @@ export default function AD_UserApprovals() {
   const [selectedUsers, setSelectedUsers] = useState(new Set());
   const [filterRole, setFilterRole] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [approveTarget, setApproveTarget] = useState(null);
+  const [rejectTarget, setRejectTarget] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -37,27 +44,43 @@ export default function AD_UserApprovals() {
     };
   }, []);
 
-  const handleApprove = async (id) => {
+  const handleApprove = (user) => {
+    setApproveTarget(user);
+  };
+
+  const handleReject = (user) => {
+    setRejectTarget(user);
+  };
+
+  const confirmApprove = async (notes = "") => {
+    if (!approveTarget) return;
+    const id = approveTarget.id;
+    
     setActionLoading(id);
     try {
-      await approveUser(id);
+      await approveUser(id, notes ? { notes } : undefined);
       setUsers((s) => s.filter((u) => u.id !== id));
       setSelectedUsers((prev) => {
         const next = new Set(prev);
         next.delete(id);
         return next;
       });
+      setApproveTarget(null);
+      // Email notification is sent by backend
+      toast.success("User approved! Approval email has been sent to the user.");
     } catch (err) {
       console.error("approveUser:", err);
       setError(err.message || "Approve failed");
+      throw err; // Let modal handle error display
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleReject = async (id) => {
-    const reason = window.prompt("Reason for rejection (optional):", "");
-    if (reason === null) return; // User cancelled
+  const confirmReject = async (reason) => {
+    if (!rejectTarget) return;
+    const id = rejectTarget.id;
+    
     setActionLoading(id);
     try {
       await rejectUser(id, reason);
@@ -67,9 +90,13 @@ export default function AD_UserApprovals() {
         next.delete(id);
         return next;
       });
+      setRejectTarget(null);
+      // Email notification is sent by backend
+      toast.success("User rejected! Rejection email has been sent to the user.");
     } catch (err) {
       console.error("rejectUser:", err);
       setError(err.message || "Reject failed");
+      throw err; // Let modal handle error display
     } finally {
       setActionLoading(null);
     }
@@ -269,12 +296,27 @@ export default function AD_UserApprovals() {
                     <span className="text-xs text-gray-500">
                       Submitted: {new Date(u.submittedAt || u.createdAt).toLocaleDateString()}
                     </span>
+                    {u.documents && Object.keys(u.documents).length > 0 && (
+                      <span className="flex items-center gap-1 text-xs text-gray-500">
+                        <FileText size={12} />
+                        {Object.keys(u.documents).length} document(s)
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
-                    onClick={() => handleReject(u.id)}
+                    onClick={() => navigate(`/admin/approvals/user/${u.id}`)}
+                    className="flex items-center gap-2"
+                    title="View details and documents"
+                  >
+                    <Eye size={16} />
+                    View Details
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleReject(u)}
                     disabled={actionLoading === u.id}
                     className="flex items-center gap-2 text-red-600 hover:text-red-700"
                   >
@@ -286,7 +328,7 @@ export default function AD_UserApprovals() {
                     Reject
                   </Button>
                   <Button
-                    onClick={() => handleApprove(u.id)}
+                    onClick={() => handleApprove(u)}
                     disabled={actionLoading === u.id}
                     className="flex items-center gap-2"
                   >
@@ -303,6 +345,20 @@ export default function AD_UserApprovals() {
           ))}
         </div>
       )}
+
+      {/* Approve User Modal */}
+      <SA_ApproveUserModal
+        user={approveTarget}
+        onClose={() => setApproveTarget(null)}
+        onConfirm={confirmApprove}
+      />
+
+      {/* Reject User Modal */}
+      <SA_RejectUserModal
+        user={rejectTarget}
+        onClose={() => setRejectTarget(null)}
+        onConfirm={confirmReject}
+      />
     </section>
   );
 }

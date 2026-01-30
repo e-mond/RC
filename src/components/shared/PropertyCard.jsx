@@ -1,133 +1,115 @@
-// src/components/property/PropertyCard.jsx
+// src/components/shared/PropertyCard.jsx
 import React from "react";
 import { Link } from "react-router-dom";
-import { Heart, Zap, Star } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import TrustScore from "@/components/ai/TrustScore";
+import { getFirstValidImage, getPlaceholderImage } from "@/utils/imageValidation";
 
 /**
- * Reusable PropertyCard for tenant browse & detail pages
- * Supports boosted/promoted state with visual indicators
+ * PropertyCard - small, reusable card
+ * props:
+ *  - property: object
+ *  - actions?: JSX (optional action buttons)
+ *  - showTrustScore?: boolean - Show landlord trust score (default: false)
+ *  - linkTo?: string - Custom link destination (default: /properties/:id)
  */
-export default function PropertyCard({
-  property,
-  isFavorited = false,
-  onToggleFavorite,
-  showActions = true,
-  isBoosted = false,
-}) {
+export default function PropertyCard({ property = {}, actions = null, showTrustScore = false, linkTo = null }) {
   const {
     id,
     title,
     address,
     price,
+    priceGhs,
+    rent,
     currency = "GHS",
     images = [],
+    image,
     bedrooms,
     bathrooms,
-    period = "month",
+    status = "draft",
+    landlord,
   } = property;
 
-  const imageUrl = images[0]?.image || images[0] || "https://placehold.co/400x300?text=No+Image";
+  // Normalize images - handle both array and single image
+  const normalizedImages = React.useMemo(() => {
+    if (Array.isArray(images) && images.length > 0) {
+      return images;
+    }
+    if (image) {
+      return [image];
+    }
+    return [];
+  }, [images, image]);
+
+  // Get first valid image with fallback
+  const imageUrl = getFirstValidImage(
+    normalizedImages,
+    getPlaceholderImage(title || "Property", 400, 300)
+  );
+
+  // Normalize price
+  const normalizedPrice = price || priceGhs || rent || 0;
+
+  const defaultLink = linkTo || (id ? `/properties/${id}` : "#");
 
   return (
-    <div
-      className={`relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden transition-all hover:shadow-2xl ${
-        isBoosted ? "ring-4 ring-amber-400/50 shadow-amber-500/20" : "shadow-lg"
-      }`}
-    >
-      {/* Boosted Ribbon Badge */}
-      {isBoosted && (
-        <div className="absolute top-0 left-0 z-10">
-          <div className="relative overflow-hidden">
-            <div className="bg-linear-to-br from-amber-500 to-orange-600 text-white px-8 py-2 rounded-br-3xl font-bold text-sm flex items-center gap-2 shadow-xl">
-              <Zap className="w-5 h-5 animate-pulse" />
-              BOOSTED
+    <article className="bg-white dark:bg-gray-900 rounded-lg shadow-sm dark:shadow-none overflow-hidden border border-gray-200 dark:border-gray-800 transition-colors hover:shadow-md">
+      <div className="w-full h-44 bg-gray-100 dark:bg-gray-800 overflow-hidden">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={title || "Property"}
+            className="w-full h-full object-cover"
+            loading="lazy"
+            onError={(e) => {
+              // Fallback to placeholder on image error
+              e.target.src = getPlaceholderImage(title || "Property", 400, 300);
+            }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500">
+            No image
+          </div>
+        )}
+      </div>
+
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <h4 className="font-semibold text-gray-900 dark:text-white line-clamp-1">{title || "Untitled Property"}</h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{address || "Location not specified"}</p>
+            {showTrustScore && landlord?.id && (
+              <div className="mt-2">
+                <TrustScore userId={landlord.id} size="sm" showLabel={false} />
+              </div>
+            )}
+            <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+              {bedrooms != null && <span>{bedrooms} bed • </span>}
+              {bathrooms != null && <span>{bathrooms} bath • </span>}
+              <span className="font-medium">
+                {currency === "GHS" ? "₵" : "$"} {Number(normalizedPrice).toLocaleString()}
+              </span>
+            </p>
+          </div>
+
+          {status && (
+            <div className="text-right">
+              <span
+                className={`px-2 py-1 text-xs rounded ${
+                  status === "active"
+                    ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400"
+                    : status === "pending"
+                    ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-400"
+                    : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                }`}
+              >
+                {status}
+              </span>
             </div>
-            <div className="absolute top-full left-0 w-0 h-0 border-l-12 border-l-amber-600 border-b-12 border-b-transparent" />
-          </div>
-        </div>
-      )}
-
-      {/* Image */}
-      <div className="relative h-56 bg-gray-100 dark:bg-gray-700">
-        <img
-          src={imageUrl}
-          alt={title}
-          className="w-full h-full object-cover"
-          loading="lazy"
-        />
-
-        {/* Favorite Button */}
-        {showActions && onToggleFavorite && (
-          <button
-            onClick={() => onToggleFavorite(id)}
-            className={`absolute top-4 right-4 p-3 rounded-full shadow-lg transition-all ${
-              isFavorited
-                ? "bg-red-500 text-white hover:bg-red-600"
-                : "bg-white/90 dark:bg-gray-900/90 text-gray-700 dark:text-gray-300 hover:bg-white"
-            } backdrop-blur-sm`}
-          >
-            <Heart className={`w-5 h-5 ${isFavorited ? "fill-current" : ""}`} />
-          </button>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="p-6 space-y-4">
-        <div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white line-clamp-1">
-            {title || "Untitled Property"}
-          </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 flex items-center gap-1">
-            <MapPin className="w-4 h-4" />
-            {address || "Location not specified"}
-          </p>
-        </div>
-
-        {/* Specs */}
-        <div className="flex items-center gap-6 text-sm text-gray-600 dark:text-gray-400">
-          {bedrooms != null && (
-            <span className="flex items-center gap-1">
-              <Bed className="w-5 h-5" />
-              {bedrooms} bed{bedrooms > 1 ? "s" : ""}
-            </span>
-          )}
-          {bathrooms != null && (
-            <span className="flex items-center gap-1">
-              <Bath className="w-5 h-5" />
-              {bathrooms} bath{bathrooms > 1 ? "s" : ""}
-            </span>
           )}
         </div>
 
-        {/* Price & CTA */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-          <div>
-            <span className="text-3xl font-bold text-[#0b6e4f]">
-              {currency === "GHS" ? "₵" : "$"}
-              {Number(price).toLocaleString()}
-            </span>
-            <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-              /{period}
-            </span>
-          </div>
-
-          <Link to={`/tenant/properties/${id}`}>
-            <Button size="sm" className="flex items-center gap-2">
-              View Details
-              <ExternalLink className="w-4 h-4" />
-            </Button>
-          </Link>
-        </div>
-
-        {/* Boosted Footer Note */}
-        {isBoosted && (
-          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-sm font-medium pt-2">
-            <Star className="w-5 h-5 fill-current" />
-            <span>Promoted for maximum visibility • More views & faster inquiries</span>
-          </div>
-        )}
+        {actions && <div className="mt-3">{actions}</div>}
       </div>
-    </div>
+    </article>
   );
 }

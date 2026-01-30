@@ -174,3 +174,123 @@ export const sendArtisanMessage = async (conversationId, message, files = []) =>
     throw new Error(error.message);
   }
 };
+
+/**
+ * ============ PROFESSION CHANGE REQUESTS ============
+ */
+
+/**
+ * Submit a profession change request
+ * 
+ * @param {FormData} formData - Contains:
+ *   - new_profession: string - The new profession/trade
+ *   - reason: string - Reason for the change
+ *   - supporting_documents: File[] - Supporting documents (certificates, etc.)
+ * @returns {Promise<Object>} Created profession change request
+ */
+export const submitProfessionChangeRequest = async (formData) => {
+  try {
+    const { data } = await apiClient.post("/artisan/profession-change/", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data;
+  } catch (err) {
+    const error = normalizeApiError(err);
+    throw new Error(error.message);
+  }
+};
+
+/**
+ * Get artisan's profession change request status
+ * @returns {Promise<Object|null>} Current profession change request or null
+ */
+export const getProfessionChangeRequestStatus = async () => {
+  try {
+    const { data } = await apiClient.get("/artisan/profession-change/my/");
+    return data;
+  } catch (err) {
+    if (err.response?.status === 404) return null;
+    const error = normalizeApiError(err);
+    throw new Error(error.message);
+  }
+};
+
+/**
+ * Cancel a pending profession change request
+ * @returns {Promise<Object>} Cancellation result
+ */
+export const cancelProfessionChangeRequest = async () => {
+  try {
+    const { data } = await apiClient.delete("/artisan/profession-change/my/");
+    return data;
+  } catch (err) {
+    const error = normalizeApiError(err);
+    throw new Error(error.message);
+  }
+};
+
+/**
+ * ============ ADMIN: PROFESSION CHANGE REQUESTS ============
+ */
+
+/**
+ * Get all profession change requests (Admin)
+ * @param {Object} filters - Optional filters { status: 'pending'|'approved'|'rejected' }
+ * @returns {Promise<Array>} List of profession change requests
+ */
+export const getProfessionChangeRequests = async (filters = {}) => {
+  try {
+    const { data } = await apiClient.get("/super-admin/artisan/profession-change-requests/", { params: filters });
+    return data.requests || data.data || data || [];
+  } catch (err) {
+    const error = normalizeApiError(err);
+    throw new Error(error.message);
+  }
+};
+
+/**
+ * Get a single profession change request by ID (Admin)
+ * @param {string|number} id - Request ID
+ * @returns {Promise<Object>} Profession change request details
+ */
+export const getProfessionChangeRequest = async (id) => {
+  try {
+    const { data } = await apiClient.get(`/super-admin/artisan/profession-change-requests/${id}/`);
+    return data;
+  } catch (err) {
+    const error = normalizeApiError(err);
+    throw new Error(error.message);
+  }
+};
+
+/**
+ * Approve a profession change request (Admin)
+ * @param {string|number} id - Request ID
+ * @param {string} notes - Optional admin notes
+ * @returns {Promise<Object>} Updated request
+ */
+export const approveProfessionChangeRequest = async (id, notes = "") => {
+  try {
+    const { data } = await apiClient.patch(`/super-admin/artisan/profession-change-requests/${id}/approve/`, { notes });
+    return data;
+  } catch (err) {
+    const error = normalizeApiError(err);
+    throw new Error(error.message);
+  }
+};
+
+/**
+ * Reject a profession change request (Admin)
+ * @param {string|number} id - Request ID
+ * @param {string} reason - Reason for rejection
+ * @returns {Promise<Object>} Updated request
+ */
+export const rejectProfessionChangeRequest = async (id, reason) => {
+  try {
+    const { data } = await apiClient.patch(`/super-admin/artisan/profession-change-requests/${id}/reject/`, { reason });
+    return data;
+  } catch (err) {
+    const error = normalizeApiError(err);
+    throw new Error(error.message);
+  }
+};

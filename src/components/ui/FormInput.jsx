@@ -34,7 +34,8 @@ export default function FormInput({
         required={required}
         autoComplete={autoComplete || (type === "password" ? "current-password" : "off")}
         className={`w-full border rounded-lg px-3 py-2.5 text-base transition
-          focus:ring-2 focus:outline-none
+          bg-gray-100 text-gray-900 placeholder:text-gray-500
+          focus:ring-2 focus:outline-none focus:bg-white
           ${error ? "border-red-500 ring-red-200" : "border-gray-300 focus:ring-[#0b6e4f]"}`}
       />
 

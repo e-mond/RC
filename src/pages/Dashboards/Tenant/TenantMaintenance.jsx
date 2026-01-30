@@ -1,411 +1,408 @@
 // src/pages/Dashboards/Tenant/TenantMaintenance.jsx
 import React, { useEffect, useState } from "react";
-import { getMaintenanceRequests, createMaintenanceRequest } from "@/services/tenantService";
+import {
+  getMaintenanceRequests,
+  createMaintenanceRequest,
+} from "@/services/tenantService";
+import { getPublicPricing } from "@/services/adminService";
 import { useFeatureAccess } from "@/context/FeatureAccessContext";
-import { Wrench, Plus, Camera, Clock, CheckCircle, XCircle, AlertCircle, Loader2, X } from "lucide-react";
+import {
+  Wrench,
+  Plus,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Loader2,
+  Crown,
+  X,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import FeatureProtectedRoute from "@/routes/FeatureProtectedRoute";
 import ImageUploader from "@/components/landlord/ImageUploader";
+import { useAuthStore } from "@/stores/authStore";
+import { initiatePremiumUpgrade } from "@/services/paystackService";
 
-/**
- * TenantMaintenance - Maintenance Requests (Premium Feature)
- */
 export default function TenantMaintenance() {
   const { isPremium } = useFeatureAccess();
+  const { user } = useAuthStore();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [message, setMessage] = useState({ text: "", type: "" });
+  const [pricing, setPricing] = useState({ monthly: 49, currency: "GHS" });
+  const [pricingLoading, setPricingLoading] = useState(true);
 
+  // Load pricing from API
   useEffect(() => {
+    const loadPricing = async () => {
+      try {
+        setPricingLoading(true);
+        const data = await getPublicPricing();
+        setPricing({
+          monthly: data.monthly || 49,
+          currency: data.currency || "GHS",
+        });
+      } catch (err) {
+        console.error("Failed to load pricing:", err);
+        // Keep default pricing on error
+      } finally {
+        setPricingLoading(false);
+      }
+    };
+    loadPricing();
+  }, []);
+
+  // Load maintenance requests only for premium users
+  useEffect(() => {
+    if (!isPremium) {
+      setLoading(false);
+      return;
+    }
+
     let mounted = true;
     const load = async () => {
       try {
         setLoading(true);
         const data = await getMaintenanceRequests();
-        if (mounted) setRequests(Array.isArray(data) ? data : []);
+        if (mounted) {
+          const list = Array.isArray(data) ? data : data?.results || data?.data || [];
+          setRequests(list);
+        }
       } catch (err) {
-        console.error("getMaintenanceRequests:", err);
-        if (mounted) setError(err.message || "Failed to load maintenance requests");
+        console.error(err);
+        if (mounted) setRequests([]);
       } finally {
         if (mounted) setLoading(false);
       }
     };
     load();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+    return () => (mounted = false);
+  }, [isPremium]);
 
+  // Handle Upgrade with Paystack (using universal upgrade service)
+  const handleUpgrade = async () => {
+    if (!user?.email) {
+      setMessage({ text: "Please log in to upgrade", type: "error" });
+      return;
+    }
+
+    setPaymentLoading(true);
+    setMessage({ text: "", type: "" });
+
+    try {
+      await initiatePremiumUpgrade({
+        email: user.email,
+        amount: pricing.monthly,
+        currency: pricing.currency,
+        plan: "monthly",
+      });
+      // The paystack service handles the payment flow
+      // Premium status will be updated via the subscription callback
+    } catch (err) {
+      console.error("Upgrade error:", err);
+      setMessage({ 
+        text: err.message || "Failed to initiate upgrade. Please try again.", 
+        type: "error" 
+      });
+      setPaymentLoading(false);
+    }
+  };
+
+  // Freemium → upgrade prompt with real payment
   if (!isPremium) {
     return (
-      <FeatureProtectedRoute feature="TENANT_MAINTENANCE">
-        <div className="p-6">
-          <UpgradePrompt />
+      <div className="min-h-[70vh] flex items-center justify-center p-6">
+        <div className="text-center max-w-md">
+          <div className="mx-auto w-16 h-16 bg-[#0b6e4f] rounded-full flex items-center justify-center mb-4">
+            <Crown className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-xl font-semibold mb-2">Maintenance Requests</h1>
+          <p className="text-sm text-gray-500 mb-6">
+            Available on Premium plans only
+          </p>
+
+          {message.text && (
+            <div
+              className={`p-3 rounded-xl text-sm mb-4 border ${
+                message.type === "success"
+                  ? "bg-green-50 text-green-700 border-green-200"
+                  : "bg-red-50 text-red-700 border-red-200"
+              }`}
+            >
+              {message.text}
+            </div>
+          )}
+
+          <button
+            onClick={handleUpgrade}
+            disabled={paymentLoading || pricingLoading}
+            className="px-6 py-2 text-sm bg-[#0b6e4f] text-white rounded-xl flex items-center gap-2 mx-auto disabled:opacity-70"
+          >
+            {paymentLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {pricingLoading ? "Loading..." : `Upgrade to Premium — ${pricing.currency} ${pricing.monthly}/month`}
+          </button>
+
+          <p className="text-xs text-gray-400 mt-4">
+            {pricingLoading ? "Loading pricing..." : `Cancel anytime • Secure payment via Paystack`}
+          </p>
         </div>
-      </FeatureProtectedRoute>
+      </div>
     );
   }
 
+  // Loading state for premium users
   if (loading) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-10 h-10 animate-spin text-[#0b6e4f]" />
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#0b6e4f]" />
       </div>
     );
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 max-w-6xl mx-auto space-y-6">
       {/* Header */}
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <header className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-2xl font-semibold flex items-center gap-2">
+            <Wrench className="w-6 h-6 text-[#0b6e4f]" />
             Maintenance Requests
           </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Track and manage your maintenance requests
-          </p>
+          <p className="text-sm text-gray-500">Report and track repair issues</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="px-5 py-3 bg-[#0b6e4f] text-white rounded-xl hover:bg-[#095c42] transition-colors flex items-center justify-center gap-2 font-medium shadow-md"
+          className="px-4 py-2 bg-[#0b6e4f] text-white text-sm rounded-xl flex items-center gap-2"
         >
-          <Plus size={20} />
-          <span className="hidden sm:inline">New Request</span>
-          <span className="sm:hidden">New</span>
+          <Plus size={14} /> New Request
         </button>
       </header>
 
-      {/* Error Message */}
-      {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl">
-          {error}
-        </div>
-      )}
-
-      {/* New Request Form Modal/Overlay */}
+      {/* Form Modal */}
       <AnimatePresence>
         {showForm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowForm(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700"
-            >
-              <MaintenanceRequestForm
-                onClose={() => setShowForm(false)}
-                onSuccess={(newRequest) => {
-                  setRequests((prev) => [newRequest, ...prev]);
-                  setShowForm(false);
-                }}
-              />
-            </motion.div>
-          </motion.div>
+          <MaintenanceRequestForm
+            onClose={() => setShowForm(false)}
+            onSuccess={(req) => {
+              setRequests((prev) => [req, ...prev]);
+              setShowForm(false);
+            }}
+          />
         )}
       </AnimatePresence>
 
-      {/* Content */}
+      {/* List or Empty */}
       {requests.length === 0 ? (
         <EmptyState onNewRequest={() => setShowForm(true)} />
       ) : (
-        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1">
-          <AnimatePresence>
-            {requests.map((request) => (
-              <MaintenanceRequestCard key={request.id} request={request} />
-            ))}
-          </AnimatePresence>
+        <div className="space-y-4">
+          {requests.map((req) => (
+            <MaintenanceRequestCard key={req.id} request={req} />
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-// Maintenance Request Form
+// ========================
+// FORM - SIMPLE & COMPACT
+// ========================
 function MaintenanceRequestForm({ onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     priority: "medium",
-    propertyId: "",
     images: [],
   });
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.title.trim() || !formData.description.trim()) {
-      setError("Title and description are required");
-      return;
-    }
+    if (!formData.title.trim() || !formData.description.trim()) return;
 
     setSubmitting(true);
-    setError("");
-
     try {
       const payload = new FormData();
       payload.append("title", formData.title);
       payload.append("description", formData.description);
       payload.append("priority", formData.priority);
-      if (formData.propertyId) payload.append("propertyId", formData.propertyId);
-
       formData.images.forEach((img) => {
-        if (img instanceof File) {
-          payload.append("images", img);
-        }
+        if (img instanceof File) payload.append("images", img);
       });
 
-      const result = await createMaintenanceRequest(payload);
-      onSuccess(result.request || result);
+      const res = await createMaintenanceRequest(payload);
+      onSuccess(res.request || res.data || res);
     } catch (err) {
-      console.error("createMaintenanceRequest:", err);
-      setError(err.message || "Failed to create maintenance request");
+      console.error(err);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="p-6 sm:p-8">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-          New Maintenance Request
-        </h3>
-        <button
-          onClick={onClose}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-          aria-label="Close"
-        >
-          <X size={24} className="text-gray-500 dark:text-gray-400" />
-        </button>
-      </div>
-
-      {error && (
-        <div className="p-4 mb-6 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl text-sm">
-          {error}
+    <motion.div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
+      <motion.div
+        onClick={(e) => e.stopPropagation()}
+        initial={{ scale: 0.95 }}
+        animate={{ scale: 1 }}
+        exit={{ scale: 0.95 }}
+        className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-5"
+      >
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-base font-semibold">New Request</h3>
+          <button onClick={onClose}>
+            <X size={18} className="text-gray-500" />
+          </button>
         </div>
-      )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Title <span className="text-red-500">*</span>
-          </label>
+        <form onSubmit={handleSubmit} className="space-y-3">
           <input
             type="text"
+            placeholder="Title"
+            required
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[#0b6e4f] focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-            placeholder="e.g., Leaking faucet in kitchen"
-            required
+            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0b6e4f]"
           />
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Description <span className="text-red-500">*</span>
-          </label>
           <textarea
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            rows={5}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[#0b6e4f] focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-none"
-            placeholder="Describe the issue in detail..."
+            rows={4}
+            placeholder="Describe the issue"
             required
+            value={formData.description}
+            onChange={(e) =>
+              setFormData({ ...formData, description: e.target.value })
+            }
+            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0b6e4f] resize-none"
           />
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Priority
-          </label>
           <select
             value={formData.priority}
-            onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[#0b6e4f] bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            onChange={(e) =>
+              setFormData({ ...formData, priority: e.target.value })
+            }
+            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0b6e4f]"
           >
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
             <option value="urgent">Urgent</option>
           </select>
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Photos (Optional - up to 5)
-          </label>
-          <ImageUploader
-            value={formData.images}
-            onChange={(images) => setFormData({ ...formData, images })}
-            multiple
-            maxFiles={5}
-          />
-        </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Photos (optional)</label>
+            <ImageUploader
+              value={formData.images}
+              onChange={(images) => setFormData({ ...formData, images })}
+              multiple
+              maxFiles={5}
+            />
+          </div>
 
-        <div className="flex flex-col sm:flex-row items-center gap-4 pt-6 border-t border-gray-200 dark:border-gray-700">
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full sm:w-auto px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full sm:w-auto px-6 py-3 bg-[#0b6e4f] text-white rounded-xl hover:bg-[#095c42] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Submitting...
-              </>
-            ) : (
-              <>
-                <Plus size={20} />
-                Submit Request
-              </>
-            )}
-          </button>
-        </div>
-      </form>
-    </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-4 py-2 text-sm bg-[#0b6e4f] text-white rounded-xl flex items-center gap-2 disabled:opacity-70"
+            >
+              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              Submit
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </motion.div>
   );
 }
 
-// Maintenance Request Card
+// ========================
+// CARD - SIMPLE
+// ========================
 function MaintenanceRequestCard({ request }) {
-  const statusConfig = {
-    pending: { color: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400", icon: Clock },
-    in_progress: { color: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400", icon: AlertCircle },
-    completed: { color: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400", icon: CheckCircle },
-    cancelled: { color: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400", icon: XCircle },
+  const statusMap = {
+    pending: { icon: Clock, color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300" },
+    in_progress: { icon: AlertCircle, color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
+    completed: { icon: CheckCircle, color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
+    cancelled: { icon: XCircle, color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" },
   };
 
-  const status = request.status || "pending";
-  const config = statusConfig[status] || statusConfig.pending;
-  const StatusIcon = config.icon;
+  const status = (request.status || "pending").toLowerCase();
+  const { icon: Icon, color } = statusMap[status] || statusMap.pending;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg dark:hover:shadow-xl transition-all"
+      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4"
     >
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
+      <div className="flex justify-between items-start gap-4">
         <div className="flex-1">
-          <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-2">
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
             {request.title}
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+          </h4>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
             {request.description}
           </p>
+          <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+            <span className="capitalize">{request.priority || "medium"}</span>
+            {request.createdAt && (
+              <span>{new Date(request.createdAt).toLocaleDateString()}</span>
+            )}
+          </div>
         </div>
-        <span className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 ${config.color}`}>
-          <StatusIcon size={16} />
-          {status.replace("_", " ").charAt(0).toUpperCase() + status.replace("_", " ").slice(1)}
+        <span className={`px-3 py-1 text-xs rounded-full flex items-center gap-1 ${color}`}>
+          <Icon size={14} />
+          {status.replace("_", " ")}
         </span>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-6">
-        <span className="flex items-center gap-1.5">
-          <Wrench size={16} />
-          Priority:{" "}
-          <span className="font-medium capitalize">{request.priority || "medium"}</span>
-        </span>
-        {request.createdAt && (
-          <span className="text-gray-500 dark:text-gray-500">
-            • {new Date(request.createdAt).toLocaleDateString(undefined, {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
-          </span>
-        )}
       </div>
 
       {request.images && request.images.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-6">
-          {request.images.slice(0, 8).map((img, idx) => (
+        <div className="grid grid-cols-3 gap-2 mt-3">
+          {request.images.slice(0, 3).map((img, i) => (
             <img
-              key={idx}
-              src={typeof img === "string" ? img : img.url || URL.createObjectURL(img)}
-              alt={`Issue ${idx + 1}`}
-              className="w-full h-32 object-cover rounded-xl border border-gray-200 dark:border-gray-700"
+              key={i}
+              src={typeof img === "string" ? img : img.url || img.preview}
+              alt="issue"
+              className="w-full h-20 object-cover rounded-lg"
             />
           ))}
-          {request.images.length > 8 && (
-            <div className="h-32 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center text-gray-500 dark:text-gray-400 font-medium">
-              +{request.images.length - 8} more
-            </div>
-          )}
-        </div>
-      )}
-
-      {request.landlordResponse && (
-        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
-          <p className="font-medium text-blue-900 dark:text-blue-300 mb-1">
-            Landlord Response:
-          </p>
-          <p className="text-blue-800 dark:text-blue-400 text-sm">
-            {request.landlordResponse}
-          </p>
         </div>
       )}
     </motion.div>
   );
 }
 
-// Empty State
+// ========================
+// EMPTY STATE - SIMPLE
+// ========================
 function EmptyState({ onNewRequest }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-10 sm:p-16 text-center border border-gray-200 dark:border-gray-700">
-      <div className="mx-auto w-28 h-28 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-8">
-        <Wrench className="w-14 h-14 text-gray-400 dark:text-gray-500" />
-      </div>
-      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-        No Maintenance Requests Yet
+    <div className="text-center py-20 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl">
+      <Wrench className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+      <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">
+        No requests yet
       </h3>
-      <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto text-base">
-        Submit a request if you need repairs or assistance with your rental property.
-      </p>
+      <p className="text-sm text-gray-500 mb-4">Everything is working fine</p>
       <button
         onClick={onNewRequest}
-        className="inline-flex items-center gap-3 px-8 py-4 bg-[#0b6e4f] text-white rounded-xl hover:bg-[#095c42] transition-all font-medium shadow-lg text-lg"
+        className="px-5 py-2 text-sm bg-[#0b6e4f] text-white rounded-xl flex items-center gap-2 mx-auto"
       >
-        <Plus size={22} />
-        Create Your First Request
-      </button>
-    </div>
-  );
-}
-
-// Upgrade Prompt
-function UpgradePrompt() {
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-10 sm:p-16 text-center border border-gray-200 dark:border-gray-700">
-      <div className="mx-auto w-28 h-28 bg-[#0b6e4f]/10 dark:bg-[#0b6e4f]/20 rounded-full flex items-center justify-center mb-8">
-        <Wrench className="w-14 h-14 text-[#0b6e4f]" />
-      </div>
-      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-        Premium Feature
-      </h3>
-      <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto text-base">
-        Maintenance request tracking is available with a Premium subscription. Upgrade to access this powerful tool.
-      </p>
-      <button className="px-8 py-4 bg-[#0b6e4f] text-white rounded-xl hover:bg-[#095c42] transition-all font-medium shadow-lg text-lg">
-        Upgrade to Premium
+        <Plus size={14} /> New Request
       </button>
     </div>
   );

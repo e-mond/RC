@@ -1,142 +1,382 @@
-import { useState, useEffect } from "react";
+// src/pages/Dashboards/SuperAdmin/AnnouncementsPage.jsx
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Megaphone, Plus, Trash2 } from "lucide-react";
+import { Megaphone, Plus, Trash2, AlertCircle, Loader2, Mail, Info } from "lucide-react";
 import { toast } from "react-hot-toast";
 import PageHeader from "@/modules/dashboard/PageHeader";
 import SectionCard from "@/modules/dashboard/SectionCard";
-import { getNotifications } from "@/services/notificationService";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import {
+  getAllAnnouncementsAdmin as getAnnouncements,
+  createAnnouncement,
+  deleteAnnouncement,
+} from "@/services/adminAnnouncementService";
+import { triggerEmailNotification } from "@/services/notificationService";
 
-/**
- * SA_AnnouncementsPage
- * - Super Admin workspace to manage global announcements/notifications.
- * - Uses the existing notification service; backend is expected to treat
- *   "system" or "announcement" type notifications as global.
- */
+const MAX_TITLE = 120;
+const MAX_MESSAGE = 600;
+
+const SEVERITY_OPTIONS = [
+  { value: "info", label: "Info (Blue)" },
+  { value: "warning", label: "Warning (Amber)" },
+  { value: "critical", label: "Critical (Red)" },
+];
+
+const getSeverityBadge = (severity) => {
+  const safeSeverity = (severity || "info").toLowerCase();
+  const styles = {
+    info: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+    warning: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+    critical: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+  };
+  const labels = {
+    info: "Info",
+    warning: "Warning",
+    critical: "Critical",
+  };
+  return {
+    className: styles[safeSeverity] || styles.info,
+    label: labels[safeSeverity] || labels.info,
+  };
+};
+
 export default function SA_AnnouncementsPage() {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ title: "", message: "" });
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [form, setForm] = useState({
+    title: "",
+    message: "",
+    severity: "info",
+    expires_at: "", // ISO date string or empty (null means no expiration)
+    sendEmail: false, // Whether to send email notification
+  });
+  const [error, setError] = useState(null);
+  const [sendingEmails, setSendingEmails] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        // Re-use notification endpoint; filter for announcement/system types if present.
-        const data = await getNotifications({ notification_type: "announcement" });
-        const list = data.results || data || [];
-        setAnnouncements(list);
-      } catch (err) {
-        console.error("Failed to load announcements:", err);
-        toast.error(err.message || "Failed to load announcements");
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+  const loadAnnouncements = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getAnnouncements();
+      setAnnouncements(Array.isArray(data) ? data : []);
+    } catch (err) {
+      const msg = err?.message || "Could not load announcements";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const handleCreate = async (e) => {
+  useEffect(() => {
+    loadAnnouncements();
+  }, [loadAnnouncements]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.title.trim() || !form.message.trim()) {
-      toast.error("Title and message are required");
-      return;
+    const title = form.title.trim();
+    const message = form.message.trim();
+
+    if (!title) return toast.error("Title is required");
+    if (!message) return toast.error("Message is required");
+    if (title.length > MAX_TITLE) return toast.error(`Title too long (max ${MAX_TITLE} chars)`);
+    if (message.length > MAX_MESSAGE) return toast.error(`Message too long (max ${MAX_MESSAGE} chars)`);
+
+    try {
+      setSubmitting(true);
+      const newAnnouncement = await createAnnouncement({
+        title,
+        message,
+        severity: form.severity,
+        expires_at: form.expires_at || null, // null = never expire
+      });
+      
+      // Trigger email notifications if checkbox is checked
+      if (form.sendEmail) {
+        setSendingEmails(true);
+        try {
+          // Send email notification via backend (non-blocking)
+          await triggerEmailNotification({
+            type: 'announcement',
+            recipientId: 'all', // Special value indicating all users
+            data: {
+              title,
+              message,
+              severity: form.severity,
+              expires_at: form.expires_at || null,
+              announcement_id: newAnnouncement?.id,
+            },
+            metadata: {
+              send_to_all: true,
+              severity: form.severity,
+            },
+          });
+          toast.success("Announcement published and email notifications triggered!");
+        } catch (emailErr) {
+          console.warn("Email notification failed:", emailErr);
+          toast.success("Announcement published! (Email notification may be delayed)");
+        } finally {
+          setSendingEmails(false);
+        }
+      } else {
+        toast.success("Announcement published successfully!");
+      }
+      
+      setForm({
+        title: "",
+        message: "",
+        severity: "info",
+        expires_at: "",
+        sendEmail: false,
+      });
+      await loadAnnouncements();
+    } catch (err) {
+      const msg = err?.message || "Failed to publish announcement";
+      toast.error(msg);
+      setError(msg);
+    } finally {
+      setSubmitting(false);
     }
-    // NOTE: In a real backend we would POST to /notifications/ or /admin/announcements/.
-    // Here we just surface a toast and reset the form; Super Admin can still
-    // seed announcements via mocks.
-    toast.success("Announcement submitted. Backend will broadcast to all roles.");
-    setForm({ title: "", message: "" });
+  };
+
+  const handleDeleteRequest = (id) => {
+    setConfirmDelete(id);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return;
+
+    try {
+      setDeletingId(confirmDelete);
+      await deleteAnnouncement(confirmDelete);
+      toast.success("Announcement deleted successfully");
+      setAnnouncements((prev) => prev.filter((item) => item.id !== confirmDelete));
+    } catch (err) {
+      toast.error(err?.message || "Failed to delete announcement");
+    } finally {
+      setDeletingId(null);
+      setConfirmDelete(null);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 space-y-10">
         <PageHeader
           title="Global Announcements"
-          subtitle="Post important messages that every user will see across their account."
+          subtitle="Broadcast important messages to all users"
           badge="Super Admin"
-          align="between"
         />
 
-        <SectionCard
-          title="Create Announcement"
-          description="Draft a short, clear message that will appear in the global banner and notifications center."
-          className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm dark:shadow-none"
-        >
-          <form onSubmit={handleCreate} className="space-y-4">
+        {/* Create Form */}
+        <SectionCard title="Create New Announcement">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Title */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Title
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Title <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
+                maxLength={MAX_TITLE}
                 value={form.title}
                 onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
-                placeholder="e.g. Scheduled maintenance on Sunday"
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-600 focus:border-transparent transition"
+                placeholder="e.g. Scheduled Maintenance - January 20, 2026"
+                required
               />
+              <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 text-right">
+                {form.title.length} / {MAX_TITLE}
+              </div>
             </div>
+
+            {/* Message */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Message
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Message <span className="text-red-500">*</span>
               </label>
               <textarea
-                rows={3}
+                rows={5}
+                maxLength={MAX_MESSAGE}
                 value={form.message}
                 onChange={(e) => setForm((prev) => ({ ...prev, message: e.target.value }))}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
-                placeholder="Keep it concise. All roles will see this in their accounts."
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-600 focus:border-transparent transition resize-none"
+                placeholder="Detailed information for all users..."
+                required
+              />
+              <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 text-right">
+                {form.message.length} / {MAX_MESSAGE}
+              </div>
+            </div>
+
+            {/* Severity Dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Severity
+              </label>
+              <select
+                value={form.severity}
+                onChange={(e) => setForm((prev) => ({ ...prev, severity: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-600 focus:border-transparent transition"
+              >
+                {SEVERITY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Expiration Date (optional) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Expires At (optional - leave blank for never expire)
+              </label>
+              <input
+                type="date"
+                value={form.expires_at}
+                min={new Date().toISOString().split("T")[0]} // Prevent past dates
+                onChange={(e) => setForm((prev) => ({ ...prev, expires_at: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-600 focus:border-transparent transition"
               />
             </div>
+
+            {/* Email Notification Option */}
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.sendEmail}
+                  onChange={(e) => setForm((prev) => ({ ...prev, sendEmail: e.target.checked }))}
+                  className="mt-1 w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 focus:ring-2"
+                />
+                <div>
+                  <span className="flex items-center gap-2 font-medium text-gray-900 dark:text-white">
+                    <Mail size={16} className="text-blue-600 dark:text-blue-400" />
+                    Send Email Notification
+                  </span>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    Send this announcement via email to all users. Recommended for critical announcements.
+                  </p>
+                </div>
+              </label>
+              {form.sendEmail && form.severity === "info" && (
+                <div className="mt-3 flex items-start gap-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 p-2 rounded">
+                  <Info size={14} className="mt-0.5 shrink-0" />
+                  <span>Tip: Consider using "Warning" or "Critical" severity for email notifications to ensure users pay attention.</span>
+                </div>
+              )}
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 rounded-lg text-sm">
+                <AlertCircle size={18} />
+                {error}
+              </div>
+            )}
+
             <button
               type="submit"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#0b6e4f] text-white text-sm font-medium hover:bg-[#095c42] transition"
+              disabled={submitting || loading || sendingEmails}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition disabled:opacity-60"
             >
-              <Plus className="w-4 h-4" />
-              Post Announcement
+              {submitting || sendingEmails ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  {sendingEmails ? "Sending notifications..." : "Publishing..."}
+                </>
+              ) : (
+                <>
+                  <Plus size={18} />
+                  {form.sendEmail ? "Publish & Notify" : "Publish Announcement"}
+                </>
+              )}
             </button>
           </form>
         </SectionCard>
 
-        <SectionCard
-          title="Recent Announcements"
-          description="Previously broadcast messages fetched from the notifications API."
-          className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm dark:shadow-none"
-        >
+        {/* Announcements List */}
+        <SectionCard title="Published Announcements" description="Newest first • Visible to everyone">
           {loading ? (
-            <div className="p-8 flex items-center justify-center text-gray-500 dark:text-gray-400 text-sm">
-              Loading announcements...
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
             </div>
           ) : announcements.length === 0 ? (
-            <div className="p-8 text-center text-gray-500 dark:text-gray-400 text-sm">
-              No announcements found yet.
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              No announcements published yet.
             </div>
           ) : (
-            <ul className="divide-y divide-gray-100 dark:divide-gray-800">
-              {announcements.map((a) => (
-                <li key={a.id} className="px-4 py-3 flex items-start gap-3">
-                  <div className="mt-1">
-                    <Megaphone className="w-5 h-5 text-amber-500" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900 dark:text-white">{a.title}</p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{a.message}</p>
-                  </div>
-                  <button
-                    type="button"
-                    className="p-1.5 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition"
-                    aria-label="Delete announcement (backend)"
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              {announcements.map((item) => {
+                const severityBadge = getSeverityBadge(item.severity);
+
+                return (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="px-5 py-4 flex items-start gap-4 group hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors"
                   >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </li>
-              ))}
-            </ul>
+                    <div className="mt-1">
+                      <Megaphone className="w-6 h-6 text-amber-500" />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 dark:text-white">
+                        {item.title}
+                      </div>
+                      <p className="mt-1 text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
+                        {item.message}
+                      </p>
+                      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-3">
+                        <span>{new Date(item.created_at).toLocaleString()}</span>
+                        {item.created_by_name && <span>• {item.created_by_name}</span>}
+
+                        {/* Severity Badge */}
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${severityBadge.className}`}>
+                          {severityBadge.label}
+                        </span>
+
+                        {/* Expiration Date */}
+                        {item.expires_at && (
+                          <span className="text-gray-500 dark:text-gray-400">
+                            Expires: {new Date(item.expires_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleDeleteRequest(item.id)}
+                      disabled={deletingId === item.id}
+                      className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 opacity-0 group-hover:opacity-100 transition disabled:opacity-40"
+                      title="Delete this announcement"
+                    >
+                      {deletingId === item.id ? (
+                        <Loader2 className="w-5 h-5 animate-spin text-red-600" />
+                      ) : (
+                        <Trash2 className="w-5 h-5" />
+                      )}
+                    </button>
+                  </motion.div>
+                );
+              })}
+            </div>
           )}
         </SectionCard>
       </div>
+
+      {/* Delete Confirmation */}
+      <ConfirmModal
+        open={!!confirmDelete}
+        title="Delete Announcement"
+        message="This will permanently remove the announcement for all users. This action cannot be undone."
+        onClose={() => setConfirmDelete(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }
-
-

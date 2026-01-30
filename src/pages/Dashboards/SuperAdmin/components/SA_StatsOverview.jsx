@@ -20,7 +20,7 @@ export default function SA_StatsOverview({ stats }) {
       label: "Total Users",
       value: stats.totalUsers.toLocaleString(),
       icon: <FiUsers className="w-5 h-5" />,
-      trend: "+12%",
+      trend: stats.trends?.users || null,
       color: "text-blue-600",
     },
     {
@@ -28,7 +28,7 @@ export default function SA_StatsOverview({ stats }) {
       label: "Active Properties",
       value: stats.activeProperties.toLocaleString(),
       icon: <FiHome className="w-5 h-5" />,
-      trend: "+8%",
+      trend: stats.trends?.properties || null,
       color: "text-green-600",
     },
     {
@@ -36,7 +36,7 @@ export default function SA_StatsOverview({ stats }) {
       label: "Revenue (30d)",
       value: formatGHS(stats.revenueThisMonth),
       icon: <FiDollarSign className="w-5 h-5" />,
-      trend: "+15%",
+      trend: stats.trends?.revenue || null,
       color: "text-purple-600",
     },
     {
@@ -44,7 +44,7 @@ export default function SA_StatsOverview({ stats }) {
       label: "Pending Requests",
       value: stats.pendingRequests,
       icon: <FiAlertCircle className="w-5 h-5" />,
-      trend: stats.pendingRequests > 30 ? "-5%" : "+2%",
+      trend: stats.trends?.pending || null,
       color: stats.pendingRequests > 30 ? "text-red-600" : "text-yellow-600",
     },
   ];
@@ -64,9 +64,11 @@ export default function SA_StatsOverview({ stats }) {
             <div className={`p-2 rounded-lg ${card.color.replace("text-", "bg-").replace("600", "100")}`}>
               <div className={card.color}>{card.icon}</div>
             </div>
-            <span className={`text-sm font-medium ${card.trend.startsWith("+") ? "text-green-600" : "text-red-600"}`}>
-              {card.trend}
-            </span>
+            {card.trend && (
+              <span className={`text-sm font-medium ${card.trend.toString().startsWith("+") ? "text-green-600" : card.trend.toString().startsWith("-") ? "text-red-600" : "text-gray-600"}`}>
+                {card.trend}
+              </span>
+            )}
           </div>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">{card.value}</p>
           <p className="text-sm text-gray-600 dark:text-gray-400">{card.label}</p>

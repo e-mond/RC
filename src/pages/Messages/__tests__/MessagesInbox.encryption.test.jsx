@@ -1,17 +1,25 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+// src/pages/Messages/__tests__/MessagesInbox.encryption.test.jsx
+
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import MessagesInbox from "../MessagesInbox";
 import { useAuthStore } from "@/stores/authStore";
 import * as featureAccess from "@/context/FeatureAccessContext";
 import * as messagesService from "@/services/messagesService";
 import * as encryption from "@/utils/encryption";
+import { renderWithProviders } from "@/testing/renderWithProviders";
 
+// ────────────────────────────────────────────────
+// Mocks
+// ────────────────────────────────────────────────
 vi.mock("@/stores/authStore", () => ({
   useAuthStore: vi.fn(),
 }));
 
-vi.mock("@/context/FeatureAccessContext", () => {
+vi.mock("@/context/FeatureAccessContext", async () => {
+  const actual = await vi.importActual("@/context/FeatureAccessContext");
   return {
+    ...actual,
     useFeatureAccess: vi.fn(),
   };
 });
@@ -24,9 +32,7 @@ vi.mock("@/services/messagesService", () => ({
 }));
 
 vi.mock("@/utils/encryption", async () => {
-  const actual = await vi.importActual<typeof import("@/utils/encryption")>(
-    "@/utils/encryption"
-  );
+  const actual = await vi.importActual("@/utils/encryption");
   return {
     ...actual,
     encryptMessage: vi.fn(actual.encryptMessage),
@@ -34,16 +40,26 @@ vi.mock("@/utils/encryption", async () => {
   };
 });
 
-describe("MessagesInbox encryption behaviour", () => {
+describe("MessagesInbox encryption behavior", () => {
+  let promptSpy;
+  let confirmSpy;
+
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Auth: pretend we have a tenant user
+    // Mock window.prompt and window.confirm
+    promptSpy = vi.spyOn(window, "prompt").mockReturnValue("test-passphrase");
+    confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    // Mock scrollIntoView
+    Element.prototype.scrollIntoView = vi.fn();
+
+    // Mock authenticated tenant user
     useAuthStore.mockReturnValue({
       user: { id: 1, full_name: "Test User", role: "tenant" },
     });
 
-    // Feature access: premium tenant with direct messaging
+    // Premium tenant with messaging access
     vi.spyOn(featureAccess, "useFeatureAccess").mockReturnValue({
       role: "tenant",
       plan: "premium",
@@ -51,7 +67,7 @@ describe("MessagesInbox encryption behaviour", () => {
       can: () => true,
     });
 
-    // Base mocks for service
+    // Default successful mocks
     messagesService.getConversations.mockResolvedValue([
       {
         id: 123,
@@ -75,42 +91,58 @@ describe("MessagesInbox encryption behaviour", () => {
     });
   });
 
+  afterEach(() => {
+    promptSpy.mockRestore();
+    confirmSpy.mockRestore();
+  });
+
   it("sends encrypted content when passphrase is set", async () => {
-    const spyEncrypt = encryption.encryptMessage as unknown as vi.Mock;
+    const spyEncrypt = encryption.encryptMessage;
 
-    render(<MessagesInbox />);
+    renderWithProviders(<MessagesInbox />);
 
-    // Wait for conversations
+    // Wait until conversation list appears
     await screen.findByText("Landlord One");
 
-    // Open conversation
-    fireEvent.click(screen.getByRole("button", { name: /chat with landlord one/i }));
+    // Open the conversation (button has aria-label "Chat with Landlord One")
+    const conversationButton = screen.getByRole("button", { name: /chat with landlord one/i });
+    fireEvent.click(conversationButton);
 
-    // Toggle encryption and set a passphrase
+    // Wait for conversation header to appear (indicates conversation is selected)
+    await waitFor(() => {
+      const header = screen.getByRole("heading", { name: "Landlord One" });
+      expect(header).toBeInTheDocument();
+    }, { timeout: 3000 });
+
+    // Enable encryption (click the encryption toggle button)
     const encButton = await screen.findByRole("button", { name: /encryption: off/i });
+    
     fireEvent.click(encButton);
 
-    // jsdom prompt shim
-    const promptSpy = vi.spyOn(window, "prompt").mockReturnValue("test-passphrase");
-    // Click again to trigger prompt handler
-    fireEvent.click(encButton);
-    promptSpy.mockRestore();
+    // Wait for encryption to be enabled (button text changes)
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /encryption: on/i })).toBeInTheDocument();
+    }, { timeout: 3000 });
 
-    const input = await screen.findByRole("textbox", { name: /type message/i });
+    // Find the message input by placeholder or aria-label
+    const input = await screen.findByPlaceholderText(/type a message/i);
     fireEvent.change(input, { target: { value: "Hello landlord" } });
 
-    fireEvent.click(screen.getByRole("button", { name: /send message/i }));
+    // Find and click send button
+    const sendButton = await screen.findByRole("button", { name: /send/i });
+    fireEvent.click(sendButton);
 
     await waitFor(() => {
       expect(messagesService.sendMessage).toHaveBeenCalled();
-    });
+    }, { timeout: 3000 });
 
     const [, payload] = messagesService.sendMessage.mock.calls[0];
 
-    // The payload should not equal the plain text when encryption is enabled
+    // Verify the sent payload is NOT plain text
     expect(payload).not.toBe("Hello landlord");
-    expect(spyEncrypt).toHaveBeenCalled();
+
+    // Most important: encryption was actually called
+    expect(spyEncrypt).toHaveBeenCalledTimes(1);
+    expect(spyEncrypt).toHaveBeenCalledWith("Hello landlord", "test-passphrase");
   });
 });
-
-

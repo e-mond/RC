@@ -269,9 +269,23 @@ function EmptyHistoryState() {
       <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
         No Rental History
       </h3>
-      <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
-        Your rental history will appear here once you have active or completed rental agreements.
+      <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-6">
+        You don't have any rental history yet. Your rental history will appear here once you have active or completed rental agreements.
       </p>
+      <div className="flex items-center justify-center gap-3">
+        <a
+          href="/tenant/properties"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-[#0b6e4f] text-white rounded-lg hover:bg-[#095c42] transition-colors font-medium"
+        >
+          Browse Properties
+        </a>
+        <a
+          href="/tenant/bookings"
+          className="inline-flex items-center gap-2 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+        >
+          Book a Viewing
+        </a>
+      </div>
     </div>
   );
 }

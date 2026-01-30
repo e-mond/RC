@@ -252,4 +252,3 @@ function MessageBubble({ message, isOwn }) {
     </motion.div>
   );
 }
-

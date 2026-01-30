@@ -90,7 +90,7 @@ export default function TrustSection() {
             Trust
           </motion.h4>
           <motion.h2
-            className="text-4xl font-semibold text-gray-900 mb-3"
+             className="text-3xl md:text-4xl font-bold text-[#0f1724] mb-4 leading-snug"
             variants={item}
           >
             Secure rental ecosystem
@@ -104,11 +104,6 @@ export default function TrustSection() {
               className="px-5 py-2 text-sm border border-gray-300 rounded-full hover:bg-gray-100 transition"
             >
               Learn
-            </Link>
-            <Link
-              to="/role-selection"
-              className="px-5 py-2 text-sm bg-black text-white rounded-full hover:bg-gray-800 transition flex items-center gap-1"
-            >
             </Link>
             <Link
               to="/role-selection"

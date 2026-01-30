@@ -8,16 +8,21 @@ import apiClient from "./apiClient";
 import { isMockMode } from "@/mocks/mockManager";
 
 /**
- * Default preferences used in mock/demo mode
+ * Default preferences for new users
+ * These should match backend defaults - all notifications enabled by default
  */
-const DEFAULT_PREFERENCES = {
-  emailNotifications: true,
-  smsNotifications: false,
-  twoFactorAuth: false,
-  profileVisibility: "public",
-  marketingEmails: true,
-  dataSharing: false,
-  language: "en",
+export const DEFAULT_PREFERENCES = {
+  emailNotifications: true,      // Enabled by default
+  smsNotifications: true,         // Enabled by default
+  twoFactorAuth: false,           // Disabled by default (user can enable)
+  profileVisibility: "public",    // Public by default
+  marketingEmails: true,          // Enabled by default
+  dataSharing: false,            // Disabled by default
+  language: "en",                 // English by default
+  // Message preferences
+  messageNotifications: true,     // Enabled by default
+  // Announcement preferences
+  announcementNotifications: true, // Enabled by default
 };
 
 const MOCK_STORAGE_KEY = "demo.preferences";
@@ -47,6 +52,18 @@ export const getPreferences = async () => {
     const { data } = await apiClient.get("/auth/preferences/");
     return data;
   } catch (err) {
+    // Handle connection refused gracefully - return defaults
+    if (err.code === "ERR_NETWORK" || err.message?.includes("Network Error") || err.message?.includes("CONNECTION_REFUSED")) {
+      console.warn("Backend not available, using default preferences");
+      return { ...DEFAULT_PREFERENCES };
+    }
+    
+    // Handle 404 - user preferences don't exist yet, return defaults
+    if (err.response?.status === 404) {
+      console.warn("User preferences not found, using defaults");
+      return { ...DEFAULT_PREFERENCES };
+    }
+    
     console.error("Failed to fetch preferences:", err);
     const errorMessage =
       err.response?.data?.detail ||

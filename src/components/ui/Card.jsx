@@ -1,9 +1,10 @@
+// src/components/ui/Card.jsx
 import * as React from "react";
 import { motion } from "framer-motion";
 import clsx from "clsx";
 
 /**
- * Main Card – your custom reusable card
+ * Main Card – Custom animated card component with dark mode support
  */
 export const Card = React.forwardRef(
   (
@@ -41,14 +42,13 @@ export const Card = React.forwardRef(
       <motion.div
         ref={ref}
         className={clsx(
-          // ←←← ONLY THESE LINES CHANGED → dark mode support
+          // Base styles + dark mode support
           "bg-white dark:bg-gray-900",
           "text-gray-900 dark:text-gray-100",
           "shadow-sm dark:shadow-none",
           "border border-gray-100 dark:border-gray-800",
-          // ←←← end of changes
-          "rounded-2xl overflow-hidden transition-all",
-          hoverLift && "hover:shadow-lg hover:-translate-y-1",
+          "rounded-2xl overflow-hidden transition-all duration-300",
+          hoverLift && "hover:shadow-lg hover:-translate-y-1 hover:shadow-gray-200/50 dark:hover:shadow-black/30",
           "p-5 sm:p-6",
           className
         )}
@@ -60,7 +60,7 @@ export const Card = React.forwardRef(
           <div className="mb-5 -mx-5 -mt-5 sm:-mx-6 sm:-mt-6">
             <img
               src={imageSrc}
-              alt={imageAlt ?? ""}
+              alt={imageAlt ?? title ?? "Card image"}
               className="w-full h-48 object-cover rounded-t-2xl"
               loading="lazy"
             />
@@ -73,9 +73,13 @@ export const Card = React.forwardRef(
               {title}
             </h3>
           )}
+
           {description && (
-            <p className="text-sm text-gray-600 dark:text-gray-400">{description}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+              {description}
+            </p>
           )}
+
           {children && <div className="mt-4">{children}</div>}
         </div>
       </motion.div>
@@ -85,11 +89,18 @@ export const Card = React.forwardRef(
 
 Card.displayName = "Card";
 
-// ---------- Shadcn-style sub-components (also dark-mode ready) ----------
+// ────────────────────────────────────────────────
+// Shadcn-style sub-components (dark mode ready)
+// ────────────────────────────────────────────────
+
 export function CardHeader({ className, ...props }) {
   return (
     <div
-      className={clsx("flex flex-col space-y-1.5 p-6", className)}
+      className={clsx(
+        "flex flex-col space-y-1.5 p-6",
+        "text-gray-900 dark:text-gray-100",
+        className
+      )}
       {...props}
     />
   );
@@ -100,6 +111,7 @@ export function CardTitle({ className, ...props }) {
     <h3
       className={clsx(
         "text-2xl font-semibold leading-none tracking-tight",
+        "text-gray-900 dark:text-white",
         className
       )}
       {...props}
@@ -108,5 +120,14 @@ export function CardTitle({ className, ...props }) {
 }
 
 export function CardContent({ className, ...props }) {
-  return <div className={clsx("p-6 pt-0", className)} {...props} />;
+  return (
+    <div
+      className={clsx(
+        "p-6 pt-0",
+        "text-gray-700 dark:text-gray-300",
+        className
+      )}
+      {...props}
+    />
+  );
 }

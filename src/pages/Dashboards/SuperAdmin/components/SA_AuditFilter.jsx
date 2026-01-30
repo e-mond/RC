@@ -24,6 +24,11 @@ export default function SA_AuditFilter({ logs = [], setFiltered }) {
   // Stable filter function — memoized to prevent recreating on every render
   const applyFilters = useCallback(
     (searchVal, actionVal) => {
+      // Ensure logs is an array
+      if (!Array.isArray(logs)) {
+        setFiltered([]);
+        return;
+      }
       let filtered = logs;
 
       // Search by username (case-insensitive)
@@ -69,7 +74,7 @@ export default function SA_AuditFilter({ logs = [], setFiltered }) {
   const resetFilters = () => {
     setSearch("");
     setAction("");
-    setFiltered(logs);
+    setFiltered(Array.isArray(logs) ? logs : []);
     toast.success("Filters cleared", { duration: 1500 });
   };
 
@@ -151,16 +156,16 @@ export default function SA_AuditFilter({ logs = [], setFiltered }) {
 
       {/* Live Result Counter */}
       <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
-        Showing: <strong>{logs.length}</strong> total →{" "}
+        Showing: <strong>{Array.isArray(logs) ? logs.length : 0}</strong> total →{" "}
         <strong className="text-[#0b6e4f]">
-          {logs.filter(
+          {Array.isArray(logs) ? logs.filter(
             (log) =>
               (!search ||
                 (log.userName || log.user || "")
                   .toLowerCase()
                   .includes(search.toLowerCase())) &&
               (!action || log.action === action)
-          ).length}
+          ).length : 0}
         </strong>{" "}
         filtered
       </div>

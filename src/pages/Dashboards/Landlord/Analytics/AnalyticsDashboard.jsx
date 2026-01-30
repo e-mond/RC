@@ -1,6 +1,7 @@
 // src/pages/Dashboards/Landlord/Analytics/AnalyticsDashboard.jsx
 import React, { useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/authStore";
+import { useFeatureAccess } from "@/context/FeatureAccessContext";
 import { getLandlordAnalyticsDashboard } from "@/services/analyticsService";
 import {
   LineChart,
@@ -21,12 +22,17 @@ import {
 } from "recharts";
 import { TrendingUp, TrendingDown, DollarSign, Users, MessageSquare, Shield, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import PremiumGate from "@/components/common/PremiumGate";
 
 export default function AnalyticsDashboard() {
   const user = useAuthStore((state) => state.user);
+  const { can } = useFeatureAccess();
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState(null);
   const [error, setError] = useState("");
+
+  // Check if user has access to landlord analytics (premium feature)
+  const hasAccess = can("LANDLORD_ANALYTICS");
 
   useEffect(() => {
     let mounted = true;
@@ -87,7 +93,16 @@ export default function AnalyticsDashboard() {
     };
     load();
     return () => { mounted = false; };
-  }, [user?.id]);
+  }, [user?.id, hasAccess]);
+
+  // Show premium gate if user doesn't have access
+  if (!hasAccess) {
+    return (
+      <PremiumGate feature="LANDLORD_ANALYTICS">
+        {/* This won't render if no access */}
+      </PremiumGate>
+    );
+  }
 
   if (loading) {
     return (

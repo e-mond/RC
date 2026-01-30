@@ -7,12 +7,14 @@ import AD_PropertyApprovals from "./components/AD_PropertyApprovals";
 import AD_SystemInsights from "./components/AD_SystemInsights";
 import AD_MaintenanceOverview from "./components/AD_MaintenanceOverview";
 import AD_ReportsPanel from "./components/AD_ReportsPanel";
+import AD_ReviewModeration from "./components/AD_ReviewModeration";
 import { Users, Home, Wrench, FileText, TrendingUp, CheckCircle, AlertCircle } from "lucide-react";
 import PageHeader from "@/modules/dashboard/PageHeader";
 import MetricGrid from "@/modules/dashboard/MetricGrid";
 import ActionGrid from "@/modules/dashboard/ActionGrid";
 import SectionCard from "@/modules/dashboard/SectionCard";
 import MockModeCard from "@/components/admin/MockModeCard";
+import { isMockMode } from "@/mocks/mockManager";
 
 /**
  * AdminDashboard - Enhanced with stats and quick actions
@@ -73,7 +75,7 @@ export default function AdminDashboard() {
       value: loading ? null : stats.pendingProperties,
       icon: Home,
       accent: "blue",
-      href: "/admin/approvals",
+      href: "/admin/approvals/properties",
       isLoading: loading,
     },
     {
@@ -92,12 +94,14 @@ export default function AdminDashboard() {
     },
   ];
 
-  const actions = [
+  // Filter actions based on permissions
+  const allActions = [
     {
       title: "Approvals",
       description: "Review pending submissions",
       icon: CheckCircle,
       href: "/admin/approvals",
+      requiredPermission: "canApproveUsers", // Show if can approve users or listings
       tone: "blue",
     },
     {
@@ -105,6 +109,7 @@ export default function AdminDashboard() {
       description: "Generate compliance reports",
       icon: FileText,
       href: "/admin/reports",
+      requiredPermission: "canViewReports",
       tone: "emerald",
     },
     {
@@ -112,17 +117,25 @@ export default function AdminDashboard() {
       description: "Monitor performance",
       icon: TrendingUp,
       href: "/admin/overview",
+      requiredPermission: "canViewInsights",
       tone: "purple",
     },
   ];
 
+  // Filter actions based on user permissions
+  const actions = allActions.filter((action) => {
+    if (!action.requiredPermission) return true;
+    return permissions[action.requiredPermission] === true;
+  });
+
   return (
     <div className="space-y-8">
-      <PageHeader title="Admin Dashboard" subtitle="Moderate users, listings, and platform health" badge="Operations" />
+      <PageHeader title="Welcome Back" subtitle="Moderate users, listings, and platform health" badge="Operations" />
 
       <MetricGrid items={metricItems} />
       <ActionGrid items={actions} />
-      {(user?.role === "admin" || user?.role === "super-admin") && <MockModeCard />}
+      {/* Mock Mode Card - Only show in mock mode */}
+      {isMockMode() && (user?.role === "admin" || user?.role === "super-admin") && <MockModeCard />}
 
       <div className="space-y-6">
         {permissions.canViewInsights && (
@@ -152,6 +165,12 @@ export default function AdminDashboard() {
         {permissions.canViewReports && (
           <SectionCard title="Reports Panel" description="System level reporting">
             <AD_ReportsPanel />
+          </SectionCard>
+        )}
+
+        {permissions.canModerateAds && (
+          <SectionCard title="Review Moderation" description="Approve or reject user reviews">
+            <AD_ReviewModeration />
           </SectionCard>
         )}
       </div>

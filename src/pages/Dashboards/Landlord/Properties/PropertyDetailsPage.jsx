@@ -2,10 +2,14 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { fetchProperty, deleteProperty } from "@/services/propertyService";
+import { useAuthStore } from "@/stores/authStore";
 import Button from "@/components/ui/Button";
 import ImageLightbox from "@/components/common/ImageLightbox";
-import { ArrowLeft, Edit, Trash2, MapPin, Bed, Bath, Square, Loader2 } from "lucide-react";
-import { motion } from "framer-motion";
+import PropertyApprovalBanner from "@/components/common/PropertyApprovalBanner";
+import { ArrowLeft, Edit, Trash2, MapPin, Bed, Bath, Square, Loader2, AlertTriangle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-hot-toast";
+import { getAmenityName, getAmenityId } from "@/utils/amenityUtils";
 
 /**
  * PropertyDetailsPage
@@ -19,6 +23,7 @@ export default function PropertyDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
@@ -43,17 +48,14 @@ export default function PropertyDetailsPage() {
   }, [id]);
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this property? This action cannot be undone.")) {
-      return;
-    }
-
     setDeleting(true);
     try {
       await deleteProperty(id);
+      toast.success("Property deleted successfully");
       navigate("/landlord/properties", { replace: true });
     } catch (err) {
       console.error("deleteProperty:", err);
-      setError(err.message || "Failed to delete property");
+      toast.error(err.message || "Failed to delete property");
       setDeleting(false);
     }
   };
@@ -85,14 +87,36 @@ export default function PropertyDetailsPage() {
   }
 
   if (error || !property) {
+    const isNotFound = error?.includes("not found") || error?.includes("404");
+    
     return (
-      <div className="p-6">
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
-          {error || "Property not found"}
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 text-center">
+          <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            {isNotFound ? "Property Not Found" : "Error Loading Property"}
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            {isNotFound 
+              ? `The property with ID "${id}" could not be found. It may have been deleted or doesn't exist.`
+              : error || "An error occurred while loading the property."
+            }
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Button 
+              onClick={() => navigate("/landlord/properties")} 
+              variant="outline"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Properties
+            </Button>
+            {!isNotFound && (
+              <Button onClick={() => window.location.reload()}>
+                Retry
+              </Button>
+            )}
+          </div>
         </div>
-        <Button onClick={() => navigate("/landlord/properties")} className="mt-4">
-          Back to Properties
-        </Button>
       </div>
     );
   }
@@ -119,27 +143,21 @@ export default function PropertyDetailsPage() {
           </Button>
           <Button
             variant="outline"
-            onClick={handleDelete}
+            onClick={() => setShowDeleteModal(true)}
             disabled={deleting}
             className="flex items-center gap-2 text-red-600 hover:text-red-700 disabled:opacity-50"
           >
-            {deleting ? (
-              <>
-                <Loader2 size={18} className="animate-spin" />
-                Deleting...
-              </>
-            ) : (
-              <>
-                <Trash2 size={18} />
-                Delete
-              </>
-            )}
+            <Trash2 size={18} />
+            Delete
           </Button>
         </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm p-6">
-        <h1 className="text-3xl font-bold text-[#0f1724] mb-2">{property.title}</h1>
+        {property.status && property.status !== "published" && property.status !== "active" && property.status !== "available" && (
+          <PropertyApprovalBanner status={property.status} isLandlord={true} />
+        )}
+        <h1 className="text-3xl font-bold text-[#0f1724] mb-2 mt-4">{property.title}</h1>
         <p className="text-gray-600 flex items-center gap-2">
           <MapPin size={16} />
           {property.address || "Address not specified"}
@@ -191,14 +209,19 @@ export default function PropertyDetailsPage() {
           <div className="mt-6">
             <h3 className="text-lg font-semibold mb-2">Amenities</h3>
             <div className="flex flex-wrap gap-2">
-              {property.amenities.map((amenity, idx) => (
-                <span
-                  key={idx}
-                  className="px-3 py-1 bg-[#0b6e4f]/10 text-[#0b6e4f] rounded-full text-sm"
-                >
-                  {amenity.name || amenity}
-                </span>
-              ))}
+              {property.amenities.map((amenity, idx) => {
+                const amenityName = getAmenityName(amenity, idx);
+                const amenityId = getAmenityId(amenity);
+                
+                return (
+                  <span
+                    key={amenityId || idx}
+                    className="px-3 py-1 bg-[#0b6e4f]/10 text-[#0b6e4f] rounded-full text-sm"
+                  >
+                    {amenityName}
+                  </span>
+                );
+              })}
             </div>
           </div>
         )}
@@ -222,6 +245,10 @@ export default function PropertyDetailsPage() {
                       src={url}
                       alt={`${property.title} - Image ${idx + 1}`}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        console.error(`Failed to load image: ${url}`);
+                        e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect fill='%23e5e7eb' width='400' height='400'/%3E%3Ctext fill='%239ca3af' font-family='sans-serif' font-size='18' x='50%25' y='50%25' text-anchor='middle' dy='.3em'%3EImage not found%3C/text%3E%3C/svg%3E";
+                      }}
                     />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
                     {idx === 0 && (
@@ -258,7 +285,73 @@ export default function PropertyDetailsPage() {
           onNavigate={setLightboxIndex}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 dark:bg-black/70 flex items-center justify-center z-50 p-4"
+            onClick={() => !deleting && setShowDeleteModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                    Delete Property
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    This action cannot be undone
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-gray-700 dark:text-gray-300 mb-6">
+                Are you sure you want to delete this property? All associated data, including images, bookings, and reviews, will be permanently removed. This action will be logged in the audit trail.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deleting}
+                  className="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium text-gray-700 dark:text-gray-300 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex-1 px-6 py-3 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-800 transition-colors font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {deleting ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={18} />
+                      Delete Property
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
-

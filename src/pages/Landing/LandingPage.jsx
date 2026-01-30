@@ -9,8 +9,9 @@ import AdsSection from "./components/AdsSection";
 import HowItWorksSection from "./components/HowItWorksSection";
 import TrustSection from "./components/TrustSection";
 import JoinBanner from "./components/JoinBanner";
-import Footer from "../../components/layout/Footer";
+import Footer from "@/components/layout/Footer";
 import ArticlesSection from "./components/ArticlesSection";
+import EfieAISection from "./components/EfieAISection";
 
 // --- Animation variants ---
 const fadeInUp = {
@@ -99,6 +100,16 @@ export default function LandingPage() {
         variants={fadeInUp}
       >
         <TrustSection />
+      </Motion.section>
+
+      {/* Efie AI */}
+      <Motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        variants={fadeInUp}
+      >
+        <EfieAISection />
       </Motion.section>
 
       {/* Ads */}
