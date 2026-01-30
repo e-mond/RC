@@ -190,7 +190,7 @@ export const sendArtisanMessage = async (conversationId, message, files = []) =>
  */
 export const submitProfessionChangeRequest = async (formData) => {
   try {
-    const { data } = await apiClient.post("/artisan/profession-change-request/", formData, {
+    const { data } = await apiClient.post("/artisan/profession-change/", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return data;
@@ -206,7 +206,7 @@ export const submitProfessionChangeRequest = async (formData) => {
  */
 export const getProfessionChangeRequestStatus = async () => {
   try {
-    const { data } = await apiClient.get("/artisan/profession-change-request/");
+    const { data } = await apiClient.get("/artisan/profession-change/my/");
     return data;
   } catch (err) {
     if (err.response?.status === 404) return null;
@@ -221,7 +221,7 @@ export const getProfessionChangeRequestStatus = async () => {
  */
 export const cancelProfessionChangeRequest = async () => {
   try {
-    const { data } = await apiClient.delete("/artisan/profession-change-request/");
+    const { data } = await apiClient.delete("/artisan/profession-change/my/");
     return data;
   } catch (err) {
     const error = normalizeApiError(err);
@@ -240,7 +240,7 @@ export const cancelProfessionChangeRequest = async () => {
  */
 export const getProfessionChangeRequests = async (filters = {}) => {
   try {
-    const { data } = await apiClient.get("/admin/profession-change-requests/", { params: filters });
+    const { data } = await apiClient.get("/super-admin/artisan/profession-change-requests/", { params: filters });
     return data.requests || data.data || data || [];
   } catch (err) {
     const error = normalizeApiError(err);
@@ -255,7 +255,7 @@ export const getProfessionChangeRequests = async (filters = {}) => {
  */
 export const getProfessionChangeRequest = async (id) => {
   try {
-    const { data } = await apiClient.get(`/admin/profession-change-requests/${id}/`);
+    const { data } = await apiClient.get(`/super-admin/artisan/profession-change-requests/${id}/`);
     return data;
   } catch (err) {
     const error = normalizeApiError(err);
@@ -271,7 +271,7 @@ export const getProfessionChangeRequest = async (id) => {
  */
 export const approveProfessionChangeRequest = async (id, notes = "") => {
   try {
-    const { data } = await apiClient.patch(`/admin/profession-change-requests/${id}/approve/`, { notes });
+    const { data } = await apiClient.patch(`/super-admin/artisan/profession-change-requests/${id}/approve/`, { notes });
     return data;
   } catch (err) {
     const error = normalizeApiError(err);
@@ -287,7 +287,7 @@ export const approveProfessionChangeRequest = async (id, notes = "") => {
  */
 export const rejectProfessionChangeRequest = async (id, reason) => {
   try {
-    const { data } = await apiClient.patch(`/admin/profession-change-requests/${id}/reject/`, { reason });
+    const { data } = await apiClient.patch(`/super-admin/artisan/profession-change-requests/${id}/reject/`, { reason });
     return data;
   } catch (err) {
     const error = normalizeApiError(err);
