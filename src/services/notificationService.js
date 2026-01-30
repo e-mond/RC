@@ -13,7 +13,7 @@ import apiClient from "./apiClient";
 export const getNotifications = async (filters = {}) => {
   try {
     const params = new URLSearchParams();
-    
+
     // Map frontend-friendly field names to backend field names
     Object.keys(filters).forEach((key) => {
       if (filters[key] !== null && filters[key] !== undefined && filters[key] !== "") {
@@ -345,13 +345,13 @@ export const getArchivedNotifications = async (filters = {}) => {
   try {
     const params = new URLSearchParams();
     params.append("is_archived", "true");
-    
+
     Object.keys(filters).forEach((key) => {
       if (filters[key] !== null && filters[key] !== undefined && filters[key] !== "") {
         params.append(key, filters[key]);
       }
     });
-    
+
     const { data } = await apiClient.get(`/notifications/?${params.toString()}`);
     return data;
   } catch (err) {
@@ -408,7 +408,7 @@ export const triggerNotifications = async (notificationData, emailData = null) =
   try {
     // Create in-system notification
     const notification = await createNotification(notificationData);
-    
+
     // Trigger email in parallel (non-blocking)
     let emailResult = null;
     if (emailData) {
@@ -424,7 +424,7 @@ export const triggerNotifications = async (notificationData, emailData = null) =
         emailResult = { success: false, error: err };
       });
     }
-    
+
     return {
       notification,
       email: emailResult,
@@ -434,64 +434,6 @@ export const triggerNotifications = async (notificationData, emailData = null) =
       console.error("Failed to trigger notifications:", err);
     }
     throw err;
-  }
-};
-
-/**
- * Delete a notification (soft delete)
- * @param {number} id - Notification ID
- * @returns {Promise}
- */
-export const deleteNotification = async (id) => {
-  try {
-    await apiClient.delete(`/notifications/${id}/`);
-  } catch (err) {
-    console.error("Delete notification error:", err);
-    throw err.response?.data || { message: "Failed to delete notification" };
-  }
-};
-
-/**
- * Archive a notification
- * @param {number} id - Notification ID
- * @returns {Promise} Updated notification
- */
-export const archiveNotification = async (id) => {
-  try {
-    const { data } = await apiClient.patch(`/notifications/${id}/`, { status: "archived" });
-    return data;
-  } catch (err) {
-    console.error("Archive notification error:", err);
-    throw err.response?.data || { message: "Failed to archive notification" };
-  }
-};
-
-/**
- * Pin a notification
- * @param {number} id - Notification ID
- * @returns {Promise} Updated notification
- */
-export const pinNotification = async (id) => {
-  try {
-    const { data } = await apiClient.patch(`/notifications/${id}/`, { status: "pinned" });
-    return data;
-  } catch (err) {
-    console.error("Pin notification error:", err);
-    throw err.response?.data || { message: "Failed to pin notification" };
-  }
-};
-
-/**
- * Get archived notifications
- * @returns {Promise} Archived notification list
- */
-export const getArchivedNotifications = async () => {
-  try {
-    const { data } = await apiClient.get("/notifications/?is_archived=true");
-    return data;
-  } catch (err) {
-    console.error("Get archived notifications error:", err);
-    throw err.response?.data || { message: "Failed to fetch archived notifications" };
   }
 };
 
