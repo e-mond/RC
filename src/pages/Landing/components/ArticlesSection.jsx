@@ -1,7 +1,7 @@
 import { Newspaper, Radio } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import mapPlaceholder from "@/assets/images/map-placeholder.jpg";
+import rentalImage from "@/assets/images/rental.jpeg";
 
 export default function ArticlesSection() {
 
@@ -73,7 +73,7 @@ export default function ArticlesSection() {
               variants={imageVariant}
             >
               <img
-                src={mapPlaceholder}
+                src={rentalImage}
                 alt="Modern apartment building in Ghana"
                 className="w-full h-56 object-cover transition-transform duration-500 hover:scale-105"
               />
@@ -115,7 +115,7 @@ export default function ArticlesSection() {
                   className="flex items-center gap-2"
                   variants={item}
                 >
-                <li.icon className="text-teal-600 w-5 h-5 shrink-0" />
+                  <li.icon className="text-teal-600 w-5 h-5 shrink-0" />
                   <Link
                     to={`/blog/${li.slug}`}
                     className="hover:text-teal-600 hover:underline transition"
