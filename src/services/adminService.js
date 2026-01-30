@@ -320,6 +320,53 @@ export const assignRole = async (userId, role) => {
 };
 
 /* ========================================
+   PROFESSION CHANGE MANAGEMENT
+   ======================================== */
+
+export const getProfessionChangeRequests = async () => {
+  const useMock = USE_MOCK;
+
+  if (useMock) {
+    return withDelay({ requests: [] }, 700);
+  }
+
+  try {
+    const { data } = await apiClient.get("/super-admin/profession-changes/");
+    return data.requests || data.data || data || [];
+  } catch (err) {
+    throw extractError(err, "Failed to fetch profession change requests");
+  }
+};
+
+export const approveProfessionChange = async (id) => {
+  if (!id) throw new Error("approveProfessionChange: id is required");
+  const useMock = USE_MOCK;
+
+  if (useMock) return withDelay({ success: true }, 500);
+
+  try {
+    const { data } = await apiClient.patch(`/super-admin/profession-changes/${encodeURIComponent(id)}/`, { action: "approve" });
+    return data;
+  } catch (err) {
+    throw extractError(err, "Failed to approve profession change");
+  }
+};
+
+export const rejectProfessionChange = async (id, reason = "") => {
+  if (!id) throw new Error("rejectProfessionChange: id is required");
+  const useMock = USE_MOCK;
+
+  if (useMock) return withDelay({ success: true }, 500);
+
+  try {
+    const { data } = await apiClient.patch(`/super-admin/profession-changes/${encodeURIComponent(id)}/`, { action: "reject", rejectionReason: reason });
+    return data;
+  } catch (err) {
+    throw extractError(err, "Failed to reject profession change");
+  }
+};
+
+/* ========================================
    DEFAULT EXPORT
    ======================================== */
 export default {
@@ -342,4 +389,9 @@ export default {
   deleteUser,
   fetchAuditLogs,
   assignRole,
+
+  // Profession Changes
+  getProfessionChangeRequests,
+  approveProfessionChange,
+  rejectProfessionChange,
 };

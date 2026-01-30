@@ -254,3 +254,66 @@ export const generateRentalReference = async (rentalId) => {
     throw new Error(message);
   }
 };
+
+/**
+ * ============ ARTISAN BROWSE, BOOK & REVIEW ============
+ */
+
+/**
+ * Browse artisans with optional filters
+ * @param {Object} filters - { profession, location, rating, available }
+ */
+export const browseArtisans = async (filters = {}) => {
+  try {
+    const { data } = await apiClient.get("/tenant/artisans/", { params: filters });
+    return data.artisans || data.data || data || [];
+  } catch (err) {
+    if (err.response?.status === 404) return [];
+    const message = err.response?.data?.message || "Unable to fetch artisans";
+    throw new Error(message);
+  }
+};
+
+/**
+ * Get artisan profile details
+ * @param {number} artisanId - Artisan user ID
+ */
+export const getArtisanProfile = async (artisanId) => {
+  try {
+    const { data } = await apiClient.get(`/tenant/artisans/${artisanId}/`);
+    return data.artisan || data.data || data;
+  } catch (err) {
+    const message = err.response?.data?.message || "Unable to load artisan profile";
+    throw new Error(message);
+  }
+};
+
+/**
+ * Book an artisan for a job
+ * @param {number} artisanId - Artisan user ID
+ * @param {Object} payload - { service_type, description, preferred_date, location }
+ */
+export const bookArtisan = async (artisanId, payload) => {
+  try {
+    const { data } = await apiClient.post(`/tenant/artisans/${artisanId}/book/`, payload);
+    return data;
+  } catch (err) {
+    const message = err.response?.data?.message || "Failed to book artisan";
+    throw new Error(message);
+  }
+};
+
+/**
+ * Submit a review for an artisan
+ * @param {number} artisanId - Artisan user ID
+ * @param {Object} payload - { rating, comment, job_id }
+ */
+export const reviewArtisan = async (artisanId, payload) => {
+  try {
+    const { data } = await apiClient.post(`/tenant/artisans/${artisanId}/review/`, payload);
+    return data;
+  } catch (err) {
+    const message = err.response?.data?.message || "Failed to submit review";
+    throw new Error(message);
+  }
+};

@@ -24,9 +24,7 @@ vi.mock("@/services/messagesService", () => ({
 }));
 
 vi.mock("@/utils/encryption", async () => {
-  const actual = await vi.importActual<typeof import("@/utils/encryption")>(
-    "@/utils/encryption"
-  );
+  const actual = await vi.importActual("@/utils/encryption");
   return {
     ...actual,
     encryptMessage: vi.fn(actual.encryptMessage),
@@ -76,7 +74,7 @@ describe("MessagesInbox encryption behaviour", () => {
   });
 
   it("sends encrypted content when passphrase is set", async () => {
-    const spyEncrypt = encryption.encryptMessage as unknown as vi.Mock;
+    const spyEncrypt = encryption.encryptMessage;
 
     render(<MessagesInbox />);
 

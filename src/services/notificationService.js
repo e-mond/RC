@@ -18,7 +18,7 @@ export const getNotifications = async (filters = {}) => {
         params.append(key, filters[key]);
       }
     });
-    
+
     const { data } = await apiClient.get(`/notifications/?${params.toString()}`);
     return data;
   } catch (err) {
@@ -81,5 +81,77 @@ export const getUnreadCount = async () => {
   } catch (err) {
     console.error("Get unread count error:", err);
     throw err.response?.data || { message: "Failed to fetch unread count" };
+  }
+};
+
+/**
+ * Delete a notification (soft delete)
+ * @param {number} id - Notification ID
+ * @returns {Promise}
+ */
+export const deleteNotification = async (id) => {
+  try {
+    await apiClient.delete(`/notifications/${id}/`);
+  } catch (err) {
+    console.error("Delete notification error:", err);
+    throw err.response?.data || { message: "Failed to delete notification" };
+  }
+};
+
+/**
+ * Archive a notification
+ * @param {number} id - Notification ID
+ * @returns {Promise} Updated notification
+ */
+export const archiveNotification = async (id) => {
+  try {
+    const { data } = await apiClient.patch(`/notifications/${id}/`, { status: "archived" });
+    return data;
+  } catch (err) {
+    console.error("Archive notification error:", err);
+    throw err.response?.data || { message: "Failed to archive notification" };
+  }
+};
+
+/**
+ * Pin a notification
+ * @param {number} id - Notification ID
+ * @returns {Promise} Updated notification
+ */
+export const pinNotification = async (id) => {
+  try {
+    const { data } = await apiClient.patch(`/notifications/${id}/`, { status: "pinned" });
+    return data;
+  } catch (err) {
+    console.error("Pin notification error:", err);
+    throw err.response?.data || { message: "Failed to pin notification" };
+  }
+};
+
+/**
+ * Get archived notifications
+ * @returns {Promise} Archived notification list
+ */
+export const getArchivedNotifications = async () => {
+  try {
+    const { data } = await apiClient.get("/notifications/?is_archived=true");
+    return data;
+  } catch (err) {
+    console.error("Get archived notifications error:", err);
+    throw err.response?.data || { message: "Failed to fetch archived notifications" };
+  }
+};
+
+/**
+ * Get pinned notifications
+ * @returns {Promise} Pinned notification list
+ */
+export const getPinnedNotifications = async () => {
+  try {
+    const { data } = await apiClient.get("/notifications/?is_pinned=true");
+    return data;
+  } catch (err) {
+    console.error("Get pinned notifications error:", err);
+    throw err.response?.data || { message: "Failed to fetch pinned notifications" };
   }
 };

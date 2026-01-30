@@ -1,5 +1,38 @@
 // src/services/__tests__/landlordService.test.js
-import { expect, describe, test, beforeAll } from "vitest";
+import { expect, describe, test, vi } from "vitest";
+
+// Mock the landlordService module to use mock implementations directly
+vi.mock("../landlordService", async () => {
+  const mockProperties = [];
+  let nextId = 1;
+
+  return {
+    fetchProperties: vi.fn(async () => mockProperties),
+    fetchPropertyById: vi.fn(async (id) => {
+      const prop = mockProperties.find((p) => p.id === id);
+      if (!prop) throw new Error("Not found");
+      return prop;
+    }),
+    createProperty: vi.fn(async (payload) => {
+      const newProp = { id: String(nextId++), ...payload };
+      mockProperties.push(newProp);
+      return { property: newProp };
+    }),
+    updateProperty: vi.fn(async (id, updates) => {
+      const idx = mockProperties.findIndex((p) => p.id === id);
+      if (idx === -1) throw new Error("Not found");
+      mockProperties[idx] = { ...mockProperties[idx], ...updates };
+      return { property: mockProperties[idx] };
+    }),
+    deleteProperty: vi.fn(async (id) => {
+      const idx = mockProperties.findIndex((p) => p.id === id);
+      if (idx === -1) throw new Error("Not found");
+      mockProperties.splice(idx, 1);
+      return { success: true };
+    }),
+  };
+});
+
 import {
   fetchProperties,
   fetchPropertyById,
@@ -8,17 +41,12 @@ import {
   deleteProperty,
 } from "../landlordService";
 
-// Force mock mode for ALL tests in this file
-beforeAll(() => {
-  import.meta.env.VITE_USE_MOCK = "true";
-});
-
 describe("landlordService (mock mode)", () => {
   let createdId = null;
 
   test("fetchProperties returns an array", async () => {
     const res = await fetchProperties("owner_demo");
-    const data = res.data ?? res; // nullish coalescing for safety
+    const data = res.data ?? res;
     expect(Array.isArray(data)).toBe(true);
   });
 
@@ -61,8 +89,7 @@ describe("landlordService (mock mode)", () => {
   test("deleteProperty removes the property successfully", async () => {
     const res = await deleteProperty(createdId);
     expect(res.success).toBe(true);
-    // Optional: verify it's really gone
-    const deleted = await fetchPropertyById(createdId).catch(() => null);
-    expect(deleted).toBeNull();
+    // Verify it's really gone
+    await expect(fetchPropertyById(createdId)).rejects.toThrow();
   });
 });

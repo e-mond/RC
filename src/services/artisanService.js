@@ -174,3 +174,35 @@ export const sendArtisanMessage = async (conversationId, message, files = []) =>
     throw new Error(error.message);
   }
 };
+
+/**
+ * ============ PROFESSION CHANGE ============
+ */
+
+/**
+ * Submit a profession change request
+ * @param {Object} payload - { current_profession, requested_profession, reason, supporting_documents }
+ */
+export const submitProfessionChange = async (payload) => {
+  try {
+    const { data } = await apiClient.post("/artisan/profession-change/", payload);
+    return data;
+  } catch (err) {
+    const error = normalizeApiError(err);
+    throw new Error(error.message);
+  }
+};
+
+/**
+ * Get my profession change requests
+ */
+export const getMyProfessionRequests = async () => {
+  try {
+    const { data } = await apiClient.get("/artisan/profession-change/my/");
+    return data.requests || data.data || data || [];
+  } catch (err) {
+    if (err.response?.status === 404) return [];
+    const error = normalizeApiError(err);
+    throw new Error(error.message);
+  }
+};

@@ -20,7 +20,7 @@ export const getBookings = async (filters = {}) => {
         params.append(key, filters[key]);
       }
     });
-    
+
     const { data } = await apiClient.get(`/bookings/?${params.toString()}`);
     return data;
   } catch (err) {
@@ -104,6 +104,53 @@ export const approveBooking = async (id) => {
   }
 };
 
+/**
+ * Reject a booking (landlord only)
+ * @param {number} id - Booking ID
+ * @param {string} reason - Rejection reason
+ * @returns {Promise} Rejected booking
+ */
+export const rejectBooking = async (id, reason = "") => {
+  try {
+    const { data } = await apiClient.post(`/bookings/${id}/reject/`, { reason });
+    return data;
+  } catch (err) {
+    console.error("Reject booking error:", err);
+    throw err.response?.data || { message: "Failed to reject booking" };
+  }
+};
+
+/**
+ * Cancel a booking (tenant only)
+ * @param {number} id - Booking ID
+ * @returns {Promise} Cancelled booking
+ */
+export const cancelBooking = async (id) => {
+  try {
+    const { data } = await apiClient.post(`/bookings/${id}/cancel/`);
+    return data;
+  } catch (err) {
+    console.error("Cancel booking error:", err);
+    throw err.response?.data || { message: "Failed to cancel booking" };
+  }
+};
+
+/**
+ * Reschedule a booking (tenant only)
+ * @param {number} id - Booking ID
+ * @param {string} newDate - New preferred date
+ * @returns {Promise} Rescheduled booking
+ */
+export const rescheduleBooking = async (id, newDate) => {
+  try {
+    const { data } = await apiClient.post(`/bookings/${id}/reschedule/`, { date: newDate });
+    return data;
+  } catch (err) {
+    console.error("Reschedule booking error:", err);
+    throw err.response?.data || { message: "Failed to reschedule booking" };
+  }
+};
+
 // ============ SERVICE REQUEST METHODS ============
 
 /**
@@ -119,7 +166,7 @@ export const getServiceRequests = async (filters = {}) => {
         params.append(key, filters[key]);
       }
     });
-    
+
     const { data } = await apiClient.get(`/bookings/service-requests/?${params.toString()}`);
     return data;
   } catch (err) {
