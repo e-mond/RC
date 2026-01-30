@@ -6,18 +6,31 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import LandingNavbar from "./components/LandingNavbar";
 import Footer from "@/components/layout/Footer";
+import { getFirstValidImage, getPlaceholderImage } from "@/utils/imageValidation";
+import AdPlacement from "@/components/ads/AdPlacement";
 
 /* ======================================================
    PROPERTY CARD COMPONENT
 ====================================================== */
 function PropertyCard({ property, index, onSignUpClick }) {
-  const imageUrl =
-    property.images?.[0] ||
-    property.image ||
-    "https://placehold.co/400x300?text=Property";
+  // Use image validation utilities for robust image handling
+  const imageUrl = getFirstValidImage(
+    property.images || [property.image],
+    getPlaceholderImage("Property", 400, 300)
+  );
+  const [imgSrc, setImgSrc] = useState(imageUrl);
+  const [imgError, setImgError] = useState(false);
 
   const price = property.price || property.priceGhs || property.rent || 0;
   const currency = property.currency || "GHS";
+
+  // Handle image load error
+  const handleImageError = () => {
+    if (!imgError) {
+      setImgError(true);
+      setImgSrc(getPlaceholderImage("Property", 400, 300));
+    }
+  };
 
   return (
     <motion.div
@@ -30,9 +43,11 @@ function PropertyCard({ property, index, onSignUpClick }) {
       {/* Image */}
       <div className="relative h-56 overflow-hidden bg-gray-200">
         <img
-          src={imageUrl}
+          src={imgSrc}
           alt={property.title || "Property"}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+          onError={handleImageError}
+          loading="lazy"
         />
       </div>
 
@@ -182,7 +197,7 @@ export default function PublicProperties() {
     <div className="min-h-screen bg-gray-50">
       <LandingNavbar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
 
-      {/* Page Header  */}
+      {/* Page Header */}
       <div className="bg-linear-to-br from-[#0b6e4f] to-[#095c42] pt-28 pb-14 text-white">
         <div className="mx-auto max-w-7xl px-6 text-center">
           <motion.div
@@ -198,6 +213,16 @@ export default function PublicProperties() {
             </p>
           </motion.div>
         </div>
+      </div>
+
+      {/* Top Ad Placement (public-facing) */}
+      <div className="mx-auto max-w-7xl px-6 mt-8">
+        <AdPlacement
+          placement="banner"
+          limit={1}
+          className="rounded-xl overflow-hidden"
+          showIfEmpty={false}
+        />
       </div>
 
       {/* Content */}
@@ -216,23 +241,35 @@ export default function PublicProperties() {
         {filteredProperties.length === 0 ? (
           <EmptyState hasSearchTerm={!!searchTerm} />
         ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6 }}
-            className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
-          >
-            <AnimatePresence>
-              {filteredProperties.map((property, index) => (
-                <PropertyCard
-                  key={property.id}
-                  property={property}
-                  index={index}
-                  onSignUpClick={() => navigate("/signup?role=tenant")}
-                />
-              ))}
-            </AnimatePresence>
-          </motion.div>
+          <>
+            {/* Inline Ad between header and grid */}
+            <div className="mb-6">
+              <AdPlacement
+                placement="inline"
+                limit={1}
+                className="rounded-xl"
+                showIfEmpty={false}
+              />
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6 }}
+              className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
+            >
+              <AnimatePresence>
+                {filteredProperties.map((property, index) => (
+                  <PropertyCard
+                    key={property.id}
+                    property={property}
+                    index={index}
+                    onSignUpClick={() => navigate("/role-selection")}
+                  />
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          </>
         )}
 
         {/* CTA */}
@@ -248,7 +285,7 @@ export default function PublicProperties() {
             </h2>
             <p className="mx-auto mb-6 max-w-2xl text-lg text-green-50">
               Create an account to save favorites, book viewings, and get
-              personalized recommendations
+              personalised recommendations
             </p>
             <Link
               to="/signup?role=tenant"

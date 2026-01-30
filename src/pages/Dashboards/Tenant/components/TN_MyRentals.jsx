@@ -3,8 +3,12 @@
 
 import { useEffect, useState } from "react";
 import { fetchTenantRentals, fetchRentalDetails, payRent } from "@/services/tenantService";
+import { getSignedLeases } from "@/services/leaseService";
 import RentPaymentModal from "@/components/tenant/RentPaymentModal";
 import { motion, AnimatePresence } from "framer-motion";
+import { FileText, Download, Eye } from "lucide-react";
+import { Link } from "react-router-dom";
+import LeaseViewerModal from "@/components/lease/LeaseViewerModal";
 
 export default function TN_MyRentals() {
   const [rentals, setRentals] = useState([]);
@@ -13,6 +17,8 @@ export default function TN_MyRentals() {
   const [activeRental, setActiveRental] = useState(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [signedLeases, setSignedLeases] = useState([]);
+  const [viewingLease, setViewingLease] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -21,8 +27,14 @@ export default function TN_MyRentals() {
       try {
         setLoading(true);
         setError("");
-        const data = await fetchTenantRentals();
-        if (isMounted) setRentals(Array.isArray(data) ? data : []);
+        const [rentalsData, leasesData] = await Promise.all([
+          fetchTenantRentals(),
+          getSignedLeases(null), // Get all signed leases for current tenant
+        ]);
+        if (isMounted) {
+          setRentals(Array.isArray(rentalsData) ? rentalsData : []);
+          setSignedLeases(leasesData.leases || []);
+        }
       } catch (err) {
         if (isMounted) setError(err.message || "Failed to load your rentals");
       } finally {
@@ -85,7 +97,14 @@ export default function TN_MyRentals() {
           transition={{ staggerChildren: 0.1 }}
         >
           {rentals.map((r) => (
-            <RentalCard key={r.id || r.rentalId} rental={r} onPay={openPayment} onView={loadDetails} />
+            <RentalCard
+              key={r.id || r.rentalId}
+              rental={r}
+              onPay={openPayment}
+              onView={loadDetails}
+              signedLeases={signedLeases}
+              onViewLease={(lease) => setViewingLease(lease)}
+            />
           ))}
         </motion.div>
       )}
@@ -120,6 +139,16 @@ export default function TN_MyRentals() {
         onPay={handleMakePayment}
         loading={processingPayment}
       />
+
+      {/* Lease Viewer Modal */}
+      {viewingLease && (
+        <LeaseViewerModal
+          isOpen={!!viewingLease}
+          onClose={() => setViewingLease(null)}
+          lease={viewingLease}
+          isSystem={false}
+        />
+      )}
     </div>
   );
 }
@@ -164,7 +193,12 @@ function NoRentalsState() {
   );
 }
 
-function RentalCard({ rental, onPay, onView }) {
+function RentalCard({ rental, onPay, onView, signedLeases = [], onViewLease }) {
+  // Find associated lease for this rental
+  const associatedLease = signedLeases.find(
+    (lease) => lease.property_id === rental.propertyId || lease.property_id === rental.id
+  );
+
   return (
     <motion.div
       layout
@@ -174,7 +208,7 @@ function RentalCard({ rental, onPay, onView }) {
       className="border border-gray-200 dark:border-gray-700 rounded-2xl p-6 bg-white dark:bg-gray-800/70 backdrop-blur-sm shadow-sm hover:shadow-xl dark:hover:shadow-2xl transition-all duration-300"
     >
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-2">
+        <div className="space-y-2 flex-1">
           <h3 className="font-bold text-xl text-gray-900 dark:text-white">
             {rental.title || rental.propertyName || "Unnamed Property"}
           </h3>
@@ -189,6 +223,21 @@ function RentalCard({ rental, onPay, onView }) {
               due on {rental.nextDueDate || rental.dueDate || "N/A"}
             </span>
           </p>
+          {associatedLease && (
+            <div className="flex items-center gap-2 mt-2">
+              <FileText className="w-4 h-4 text-[#0b6e4f]" />
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                Lease signed on {new Date(associatedLease.signed_at).toLocaleDateString()}
+              </span>
+              <button
+                onClick={() => onViewLease(associatedLease)}
+                className="text-sm text-[#0b6e4f] hover:underline flex items-center gap-1"
+              >
+                <Eye className="w-3 h-3" />
+                View Lease
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3">

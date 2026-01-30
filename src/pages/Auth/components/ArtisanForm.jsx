@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { signupArtisan } from "@/services/authService";
 import ProgressIndicator from "@/components/onboarding/ProgressIndicator";
 import { PrimaryButton, SecondaryButton } from "@/components/ui/Button";
+import FormInput from "@/components/ui/FormInput";
 import artisan_onboarding from "@/assets/images/artisan_onboarding.jpeg";
+import TermsPrivacyModal from "@/components/legal/TermsPrivacyModal";
+import { Camera, X, Image as ImageIcon, Plus, AlertCircle } from "lucide-react";
 
 export default function ArtisanForm() {
   const navigate = useNavigate();
@@ -24,20 +27,100 @@ export default function ArtisanForm() {
     experience: "",
     region: "",
     idUpload: null,
+    profilePhoto: null,
+    workSamples: [], // Array of work sample images
     agree: false,
   });
+  
+  // Profile photo preview
+  const [profilePreview, setProfilePreview] = useState(null);
+  // Work sample previews
+  const [workSamplePreviews, setWorkSamplePreviews] = useState([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [termsAgreed, setTermsAgreed] = useState(false);
+  const [privacyAgreed, setPrivacyAgreed] = useState(false);
+  const [modalOpen, setModalOpen] = useState(null);
 
   /** Handle field changes */
   const handleChange = (e) => {
     const { name, value, type, checked, files } = e.target;
+    
+    // Handle profile photo separately
+    if (name === "profilePhoto" && files && files[0]) {
+      const file = files[0];
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        setError("Please select a valid image file for your profile photo.");
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError("Profile photo must be less than 5MB.");
+        return;
+      }
+      setForm((prev) => ({ ...prev, profilePhoto: file }));
+      setProfilePreview(URL.createObjectURL(file));
+      setError("");
+      return;
+    }
+    
+    // Handle work samples separately (multiple files)
+    if (name === "workSamples" && files) {
+      const newFiles = Array.from(files);
+      const validFiles = [];
+      
+      for (const file of newFiles) {
+        if (!file.type.startsWith("image/")) {
+          setError("Work samples must be image files.");
+          return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          setError("Each work sample must be less than 10MB.");
+          return;
+        }
+        validFiles.push(file);
+      }
+      
+      // Max 5 work samples
+      if (form.workSamples.length + validFiles.length > 5) {
+        setError("You can upload a maximum of 5 work samples.");
+        return;
+      }
+      
+      setForm((prev) => ({ 
+        ...prev, 
+        workSamples: [...prev.workSamples, ...validFiles] 
+      }));
+      setWorkSamplePreviews((prev) => [
+        ...prev, 
+        ...validFiles.map(f => URL.createObjectURL(f))
+      ]);
+      setError("");
+      return;
+    }
+    
     setForm((prev) => ({
       ...prev,
       [name]:
         type === "checkbox" ? checked : type === "file" ? files[0] : value,
     }));
+  };
+  
+  /** Remove a work sample */
+  const removeWorkSample = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      workSamples: prev.workSamples.filter((_, i) => i !== index),
+    }));
+    setWorkSamplePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+  
+  /** Remove profile photo */
+  const removeProfilePhoto = () => {
+    setForm((prev) => ({ ...prev, profilePhoto: null }));
+    setProfilePreview(null);
   };
 
   /** Proceed to next step */
@@ -71,9 +154,31 @@ export default function ArtisanForm() {
     setStep(1);
   };
 
+  const handleModalAgree = (type) => {
+    if (type === "terms") {
+      setTermsAgreed(true);
+    } else if (type === "privacy") {
+      setPrivacyAgreed(true);
+    }
+    if ((type === "terms" && privacyAgreed) || (type === "privacy" && termsAgreed)) {
+      setForm((prev) => ({ ...prev, agree: true }));
+    }
+  };
+
   /** Submit to API */
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate profile photo
+    if (!form.profilePhoto) {
+      setError("Profile photo is required. Please upload a clear photo of yourself.");
+      return;
+    }
+    
+    if (!termsAgreed || !privacyAgreed) {
+      setError("Please read and agree to both Terms & Conditions and Privacy Policy.");
+      return;
+    }
     setError("");
     setLoading(true);
 
@@ -81,28 +186,64 @@ export default function ArtisanForm() {
       const finalProfession =
         form.profession === "other" ? form.otherProfession : form.profession;
 
+      // Map frontend field names to backend expected field names
+      // Backend expects camelCase based on API reference
       const formData = new FormData();
-      formData.append("fullName", form.fullName);
-      formData.append("email", form.email);
-      formData.append("phone", form.phone);
+      
+      // Required fields - backend expects camelCase
+      formData.append("email", form.email.trim());
       formData.append("password", form.password);
-      formData.append("confirmPassword", form.confirmPassword);
-      formData.append("profession", finalProfession);
-      formData.append("experience", form.experience);
-      formData.append("region", form.region);
-      if (form.idUpload) {
-        formData.append("idUpload", form.idUpload);
+      formData.append("fullName", form.fullName.trim()); // Backend expects camelCase: fullName
+      formData.append("phone", form.phone.trim());
+      formData.append("confirmPassword", form.confirmPassword); // Backend expects confirmPassword
+      formData.append("profession", finalProfession); // Keep camelCase: profession
+      
+      // Profile photo - required for artisans
+      formData.append("profilePhoto", form.profilePhoto);
+      
+      // Optional fields
+      if (form.experience) {
+        formData.append("experience", form.experience); // Keep camelCase: experience
       }
-      formData.append("agree", String(form.agree));
+      if (form.region) {
+        formData.append("region", form.region.trim()); // Keep camelCase: region
+      }
+      if (form.idUpload) {
+        formData.append("idUpload", form.idUpload); // Keep camelCase: idUpload
+      }
+      
+      // Work samples - optional
+      if (form.workSamples.length > 0) {
+        form.workSamples.forEach((sample, index) => {
+          formData.append("workSamples", sample);
+        });
+      }
+      
+      // Debug logging
+      if (import.meta.env.DEV) {
+        console.log("Artisan signup data:", {
+          email: form.email,
+          fullName: form.fullName,
+          phone: form.phone,
+          profession: finalProfession,
+          experience: form.experience,
+          region: form.region,
+          has_idUpload: !!form.idUpload,
+          has_profilePhoto: !!form.profilePhoto,
+          workSamplesCount: form.workSamples.length,
+        });
+      }
+      
+      // Note: agree is frontend-only and not sent to backend
 
       await signupArtisan(formData);
 
-      // After successful signup, send artisan to login so they authenticate
-      navigate("/login");
+      // Redirect to success page with role and email
+      navigate(`/signup-success?role=artisan&email=${encodeURIComponent(form.email)}`);
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Signup failed. Please try again."
-      );
+      // Extract user-friendly error message (handles field-specific errors like password validation)
+      const errorMessage = err?.message || err?.response?.data?.message || "Signup failed. Please check your information and try again.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -155,42 +296,54 @@ export default function ArtisanForm() {
           >
             {step === 1 ? (
               <>
-                <input
+                <FormInput
+                  id="fullName"
+                  label="Full Name"
+                  type="text"
                   name="fullName"
-                  placeholder="Full Name"
+                  value={form.fullName}
+                  placeholder="Full Name (e.g., John Doe)"
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
                   required
                 />
-                <input
+                <FormInput
+                  id="email"
+                  label="Email Address"
                   type="email"
                   name="email"
+                  value={form.email}
                   placeholder="Email Address"
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
                   required
                 />
-                <input
+                <FormInput
+                  id="phone"
+                  label="Phone Number"
+                  type="tel"
                   name="phone"
-                  placeholder="Phone Number"
+                  value={form.phone}
+                  placeholder="Phone Number (e.g., +233241234567)"
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
                   required
                 />
-                <input
+                <FormInput
+                  id="password"
+                  label="Password"
                   type="password"
                   name="password"
-                  placeholder="Password"
+                  value={form.password}
+                  placeholder="Password (min. 8 characters)"
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
                   required
                 />
-                <input
+                <FormInput
+                  id="confirmPassword"
+                  label="Confirm Password"
                   type="password"
                   name="confirmPassword"
+                  value={form.confirmPassword}
                   placeholder="Confirm Password"
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
                   required
                 />
 
@@ -205,69 +358,223 @@ export default function ArtisanForm() {
             ) : (
               <>
                 {/* Profession Selector */}
-                <select
-                  name="profession"
-                  onChange={handleChange}
-                  value={form.profession}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
-                  required
-                >
-                  <option value="">Select Profession</option>
-                  <option value="plumber">Plumber</option>
-                  <option value="electrician">Electrician</option>
-                  <option value="carpenter">Carpenter</option>
-                  <option value="mason">Mason</option>
-                  <option value="painter">Painter</option>
-                  <option value="other">Other (Specify Below)</option>
-                </select>
+                <div className="w-full">
+                  <label htmlFor="profession" className="block text-sm font-medium text-[#0f1724] mb-1">
+                    Profession <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="profession"
+                    name="profession"
+                    onChange={handleChange}
+                    value={form.profession}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base transition bg-gray-100 text-gray-900 focus:ring-2 focus:outline-none focus:bg-white focus:ring-[#0b6e4f]"
+                    required
+                  >
+                    <option value="">Select Profession</option>
+                    <option value="plumber">Plumber</option>
+                    <option value="electrician">Electrician</option>
+                    <option value="carpenter">Carpenter</option>
+                    <option value="mason">Mason</option>
+                    <option value="painter">Painter</option>
+                    <option value="other">Other (Specify Below)</option>
+                  </select>
+                </div>
 
                 {/* Show this only if user selects "Other" */}
                 {form.profession === "other" && (
-                  <motion.input
-                    type="text"
-                    name="otherProfession"
-                    placeholder="Please specify your profession"
-                    value={form.otherProfession}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
-                    required
+                  <motion.div
                     initial={{ opacity: 0, y: -5 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.25 }}
-                  />
+                  >
+                    <FormInput
+                      id="otherProfession"
+                      label="Specify Your Profession"
+                      type="text"
+                      name="otherProfession"
+                      value={form.otherProfession}
+                      placeholder="Please specify your profession"
+                      onChange={handleChange}
+                      required
+                    />
+                  </motion.div>
                 )}
 
-                <input
+                <FormInput
+                  id="experience"
+                  label="Years of Experience"
+                  type="number"
                   name="experience"
-                  placeholder="Years of Experience"
+                  value={form.experience}
+                  placeholder="Years of Experience (e.g., 5)"
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
                   required
                 />
-                <input
+                <FormInput
+                  id="region"
+                  label="Service Region / City"
+                  type="text"
                   name="region"
-                  placeholder="Service Region / City"
+                  value={form.region}
+                  placeholder="Service Region / City (e.g., Accra, Kumasi)"
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#0b6e4f] focus:outline-none"
-                  required
-                />
-                <input
-                  type="file"
-                  name="idUpload"
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 file:mr-3 file:px-4 file:py-2 file:border-0 file:bg-[#0b6e4f] file:text-white file:rounded-lg hover:file:bg-[#095b40]"
-                  required
+                  required={false}
                 />
 
-                <label className="flex items-center gap-2 text-sm">
+                {/* Profile Photo - Required */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Profile Photo <span className="text-red-500">*</span>
+                  </label>
+                  <p className="text-xs text-gray-500">
+                    A clear photo of yourself helps build trust with clients.
+                  </p>
+                  <div className="flex items-center gap-4">
+                    {profilePreview ? (
+                      <div className="relative">
+                        <img
+                          src={profilePreview}
+                          alt="Profile preview"
+                          className="w-24 h-24 rounded-full object-cover border-2 border-[#0b6e4f]"
+                        />
+                        <button
+                          type="button"
+                          onClick={removeProfilePhoto}
+                          className="absolute -top-1 -right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-[#0b6e4f] hover:bg-[#0b6e4f]/5 transition">
+                        <Camera className="w-6 h-6 text-gray-400" />
+                        <span className="text-xs text-gray-500 mt-1">Upload</span>
+                        <input
+                          type="file"
+                          name="profilePhoto"
+                          onChange={handleChange}
+                          accept="image/*"
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                    {!form.profilePhoto && (
+                      <div className="flex items-start gap-2 text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
+                        <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+                        <span className="text-xs">Profile photo is required to create your artisan profile.</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Work Samples - Optional but Recommended */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Work Samples <span className="text-gray-400">(Optional - Recommended)</span>
+                  </label>
+                  <p className="text-xs text-gray-500">
+                    Upload photos of your past work to showcase your skills. Max 5 images.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    {workSamplePreviews.map((preview, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={preview}
+                          alt={`Work sample ${index + 1}`}
+                          className="w-20 h-20 rounded-lg object-cover border border-gray-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeWorkSample(index)}
+                          className="absolute -top-1 -right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                    {form.workSamples.length < 5 && (
+                      <label className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-[#0b6e4f] hover:bg-[#0b6e4f]/5 transition">
+                        <Plus className="w-5 h-5 text-gray-400" />
+                        <span className="text-xs text-gray-500">Add</span>
+                        <input
+                          type="file"
+                          name="workSamples"
+                          onChange={handleChange}
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                  </div>
+                  {form.workSamples.length > 0 && (
+                    <p className="text-xs text-gray-500">
+                      {form.workSamples.length} of 5 work samples added
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-gray-700">Upload ID Document (Optional)</label>
                   <input
-                    type="checkbox"
-                    name="agree"
+                    type="file"
+                    name="idUpload"
                     onChange={handleChange}
-                    required
-                  />{" "}
-                  I agree to the Terms & Conditions
-                </label>
+                    accept="image/*,.pdf"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 file:mr-3 file:px-4 file:py-2 file:border-0 file:bg-[#0b6e4f] file:text-white file:rounded-lg hover:file:bg-[#095b40]"
+                  />
+                  {form.idUpload && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      Selected: <span className="font-medium">{form.idUpload.name}</span>
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      name="agree"
+                      checked={form.agree && termsAgreed && privacyAgreed}
+                      onChange={(e) => {
+                        if (!termsAgreed || !privacyAgreed) {
+                          setError("Please read both Terms & Conditions and Privacy Policy first.");
+                          return;
+                        }
+                        handleChange(e);
+                      }}
+                      className="w-5 h-5 text-[#0b6e4f] border-gray-300 rounded focus:ring-[#0b6e4f]"
+                      required
+                    />{" "}
+                    <span>
+                      I have read and agree to the{" "}
+                      <button
+                        type="button"
+                        onClick={() => setModalOpen("terms")}
+                        className="text-[#0b6e4f] underline hover:text-[#0a5d3f] font-medium"
+                      >
+                        Terms & Conditions
+                      </button>
+                      {" "}and{" "}
+                      <button
+                        type="button"
+                        onClick={() => setModalOpen("privacy")}
+                        className="text-[#0b6e4f] underline hover:text-[#0a5d3f] font-medium"
+                      >
+                        Privacy Policy
+                      </button>
+                    </span>
+                  </label>
+                  {(!termsAgreed || !privacyAgreed) && (
+                    <p className="text-xs text-amber-600">
+                      {!termsAgreed && !privacyAgreed 
+                        ? "Please read both Terms & Conditions and Privacy Policy" 
+                        : !termsAgreed 
+                        ? "Please read Terms & Conditions" 
+                        : "Please read Privacy Policy"}
+                    </p>
+                  )}
+                </div>
 
                 <div className="flex gap-3">
                   <SecondaryButton onClick={handleBack} className="w-1/2">
@@ -275,12 +582,49 @@ export default function ArtisanForm() {
                   </SecondaryButton>
                   <PrimaryButton
                     type="submit"
-                    disabled={loading}
-                    className="w-1/2 bg-[#0b6e4f] hover:bg-[#095c42] text-white text-base py-2.5 rounded-lg font-medium transition-colors"
+                    disabled={loading || !form.agree || !termsAgreed || !privacyAgreed || !form.profilePhoto}
+                    className="w-1/2 bg-[#0b6e4f] hover:bg-[#095c42] text-white text-base py-2.5 text-nowrap rounded-lg font-medium transition-colors"
                   >
                     {loading ? "Creating..." : "Create Account"}
                   </PrimaryButton>
                 </div>
+
+                {/* Google Signup Button (Disabled) */}
+                <div className="relative mt-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white text-gray-500">Or sign up with</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={true}
+                  className="w-full bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 text-base py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 mt-4"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path
+                      fill="currentColor"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="currentColor"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="currentColor"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    />
+                    <path
+                      fill="currentColor"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    />
+                  </svg>
+                  Sign up with Google
+                  <span className="ml-auto text-xs bg-gray-200 px-2 py-0.5 rounded">Coming Soon</span>
+                </button>
 
                 <p className="text-center text-sm text-gray-600 mt-4">
                   Connect with verified clients and grow your business.
@@ -298,6 +642,20 @@ export default function ArtisanForm() {
             )}
           </motion.form>
         </AnimatePresence>
+
+        {/* Terms & Privacy Modals */}
+        <TermsPrivacyModal
+          type="terms"
+          isOpen={modalOpen === "terms"}
+          onClose={() => setModalOpen(null)}
+          onAgree={handleModalAgree}
+        />
+        <TermsPrivacyModal
+          type="privacy"
+          isOpen={modalOpen === "privacy"}
+          onClose={() => setModalOpen(null)}
+          onAgree={handleModalAgree}
+        />
       </div>
     </div>
   );

@@ -2,8 +2,9 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { fetchAllUsers } from "@/services/adminService";
-import SA_RoleTable from "../components/SA_RoleTable";           // ← FIXED
-import SA_AssignRoleModal from "../components/SA_AssignRoleModal"; // ← FIXED
+import SA_RoleTable from "@/pages/Dashboards/SuperAdmin/components/SA_RoleTable";
+import SA_AssignRoleModal from "@/pages/Dashboards/SuperAdmin/components/SA_AssignRoleModal";
+import SA_AssignRoleWithPermissionsModal from "@/pages/Dashboards/SuperAdmin/components/SA_AssignRoleWithPermissionsModal";
 import { Shield } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -49,12 +50,13 @@ export default function SA_RolesPage() {
         onAssign={setTargetUser}
       />
 
-      <SA_AssignRoleModal
+      {/* Use enhanced modal with permissions for admin role assignment */}
+      <SA_AssignRoleWithPermissionsModal
         user={targetUser}
         onClose={() => setTargetUser(null)}
         onSuccess={() => {
           loadUsers();
-          toast.success("Role updated");
+          toast.success("Role and permissions updated");
         }}
       />
     </motion.div>

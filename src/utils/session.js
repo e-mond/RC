@@ -3,6 +3,7 @@ import { isMockMode } from "@/mocks/mockManager";
 
 const KEY_MAP = {
   token: "token",
+  refreshToken: "refreshToken",
   user: "user",
   role: "userRole",
 };
@@ -20,11 +21,27 @@ const safeJSONParse = (value, fallback = null) => {
 
 export const session = {
   getToken: () => localStorage.getItem(prefix(KEY_MAP.token)),
-  setToken: (token) => localStorage.setItem(prefix(KEY_MAP.token), token),
+  setToken: (token) => {
+    if (token) {
+      localStorage.setItem(prefix(KEY_MAP.token), token);
+    }
+  },
   clearToken: () => localStorage.removeItem(prefix(KEY_MAP.token)),
 
+  getRefreshToken: () => localStorage.getItem(prefix(KEY_MAP.refreshToken)),
+  setRefreshToken: (token) => {
+    if (token) {
+      localStorage.setItem(prefix(KEY_MAP.refreshToken), token);
+    }
+  },
+  clearRefreshToken: () => localStorage.removeItem(prefix(KEY_MAP.refreshToken)),
+
   getUser: () => safeJSONParse(localStorage.getItem(prefix(KEY_MAP.user))),
-  setUser: (user) => localStorage.setItem(prefix(KEY_MAP.user), JSON.stringify(user)),
+  setUser: (user) => {
+    if (user) {
+      localStorage.setItem(prefix(KEY_MAP.user), JSON.stringify(user));
+    }
+  },
   clearUser: () => localStorage.removeItem(prefix(KEY_MAP.user)),
 
   getRole: () => localStorage.getItem(prefix(KEY_MAP.role)),
@@ -37,6 +54,7 @@ export const session = {
 
   clearAll: () => {
     session.clearToken();
+    session.clearRefreshToken();
     session.clearUser();
     session.clearRole();
   },

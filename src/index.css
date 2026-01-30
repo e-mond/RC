@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* OpenLayers CSS - Required for map components (MapPicker) */
+@import "ol/ol.css";
+
 /* ===================================
    Tailwind CSS v4 Dark Mode Support
    ===================================
@@ -61,4 +64,12 @@ body {
 .animate-pulse,
 .animate-bounce {
   transition: none;
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+.animate-pulse-slow {
+  animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

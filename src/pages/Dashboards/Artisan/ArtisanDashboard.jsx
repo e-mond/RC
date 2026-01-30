@@ -104,7 +104,7 @@ export default function ArtisanDashboard() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-10">
         {/* Hero Header */}
         <PageHeader
-          title="Artisan Dashboard"
+          title="Welcome Back"
           subtitle="Manage jobs, track earnings, and stay connected with clients"
           badge="Service Partner"
           align="start"

@@ -1,6 +1,7 @@
 import { User, Building2, Wrench } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { PrimaryButton, SecondaryButton } from "@/components/ui/Button";
 
 /**
  * JoinBanner
@@ -50,31 +51,31 @@ export default function JoinBanner() {
           transition={{ delay: 0.2, duration: 0.5 }}
         >
           {/* Tenant */}
-          <button
+          <PrimaryButton
             onClick={() => handleJoin("tenant")}
-            className="flex items-center gap-2 px-5 py-2.5 bg-teal-500 text-white rounded-lg text-sm font-medium hover:bg-teal-600 transition"
+            className="flex items-center gap-2"
           >
-            <User size={16} />
+            <User size={18} />
             Join as Tenant
-          </button>
+          </PrimaryButton>
 
           {/* Landlord */}
-          <button
+          <SecondaryButton
             onClick={() => handleJoin("landlord")}
-            className="flex items-center gap-2 px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-100 transition"
+            className="flex items-center gap-2"
           >
-            <Building2 size={16} />
+            <Building2 size={18} />
             List as Landlord
-          </button>
+          </SecondaryButton>
 
           {/* Artisan */}
-          <button
+          <SecondaryButton
             onClick={() => handleJoin("artisan")}
-            className="flex items-center gap-2 px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-100 transition"
+            className="flex items-center gap-2"
           >
-            <Wrench size={16} />
+            <Wrench size={18} />
             Offer Services as Artisan
-          </button>
+          </SecondaryButton>
         </motion.div>
       </div>
     </section>

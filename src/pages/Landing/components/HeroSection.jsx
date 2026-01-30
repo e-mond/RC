@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 void motion; 
 import { PrimaryButton, SecondaryButton } from "@/components/ui/Button"; 
-import heroImage from "../../../assets/images/hero2.jpg";
+import heroImage from "@/assets/images/hero2.jpg";
 
 export default function HeroSection() {
   // Animation variants for parent and children
@@ -68,11 +68,11 @@ export default function HeroSection() {
           <motion.div 
           className="flex flex-wrap gap-4 pt-2 sm:flex-row sm:gap-4" variants={item}>
             
-            <PrimaryButton  className="px-6  bg-[#0b6e4f] hover:bg-[#095c42] text-white text-base py-2.5 rounded-lg font-medium transition-colors" as={Link} to="/role-selection">
+            <PrimaryButton as={Link} to="/role-selection">
               Get Started
             </PrimaryButton>
 
-            <SecondaryButton  variant="outline" className="px-6  border text-base py-2.5 rounded-lg font-medium transition-colors" as={Link} to="/learn-more">
+            <SecondaryButton as={Link} to="/learn-more">
               Learn More
             </SecondaryButton>
           </motion.div>

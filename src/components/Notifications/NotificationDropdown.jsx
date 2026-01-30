@@ -1,13 +1,21 @@
 // src/components/NotificationDropdown.jsx
 import { useState, useEffect, useRef } from "react";
-import { Bell, CheckCircle } from "lucide-react";
+import { Bell, CheckCircle, Pin, Archive, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { Link } from "react-router-dom";
 import {
   getNotifications,
   getUnreadCount,
   markNotificationAsRead,
+  pinNotification,
+  unpinNotification,
+  archiveNotification,
+  deleteNotification,
 } from "@/services/notificationService";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "react-hot-toast";
+import { formatNotification } from "@/utils/notificationHelpers";
+import DeleteNotificationModal from "./DeleteNotificationModal";
 
 export default function NotificationDropdown() {
   const { user } = useAuth();
@@ -15,6 +23,7 @@ export default function NotificationDropdown() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const dropdownRef = useRef(null);
 
   // Load unread count on mount and when user changes
@@ -72,6 +81,47 @@ export default function NotificationDropdown() {
     }
   };
 
+  const handlePin = async (e, id, isPinned) => {
+    e.stopPropagation();
+    try {
+      if (isPinned) {
+        await unpinNotification(id);
+      } else {
+        await pinNotification(id);
+      }
+      loadNotifications();
+    } catch (err) {
+      console.error("Failed to pin/unpin:", err);
+      toast.error("Failed to update notification");
+    }
+  };
+
+  const handleArchive = async (e, id) => {
+    e.stopPropagation();
+    try {
+      await archiveNotification(id);
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+      toast.success("Notification archived");
+    } catch (err) {
+      console.error("Failed to archive:", err);
+      toast.error("Failed to archive notification");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await deleteNotification(id);
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+      toast.success("Notification deleted");
+      setDeleteTarget(null);
+    } catch (err) {
+      console.error("Failed to delete:", err);
+      toast.error("Failed to delete notification");
+    }
+  };
+
   if (!user) return null;
 
   return (
@@ -120,31 +170,91 @@ export default function NotificationDropdown() {
                 <p>No new notifications</p>
               </div>
             ) : (
-              notifications.map((notif) => (
-                <button
-                  key={notif.id}
-                  onClick={() => handleMarkAsRead(notif.id)}
-                  className="w-full text-left p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Bell size={18} className="text-primary" />
+              notifications.map((notif) => {
+                const formatted = formatNotification(notif);
+                const Icon = formatted.Icon || Bell;
+                return (
+                  <div
+                    key={notif.id}
+                    className={`w-full p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0 ${
+                      notif.is_pinned
+                        ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+                        : ""
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                        formatted.colors.bg || "bg-primary/10"
+                      }`}>
+                        <Icon size={18} className={formatted.colors.icon || "text-primary"} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium text-gray-900 dark:text-white truncate">
+                            {notif.title}
+                          </p>
+                          {notif.is_pinned && (
+                            <Pin size={12} className="text-blue-500 fill-blue-500 shrink-0" />
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                          {notif.message}
+                        </p>
+                        <div className="flex items-center gap-3 mt-2">
+                          <p className="text-xs text-gray-500 dark:text-gray-500">
+                            {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
+                          </p>
+                          {formatted.showViewDetails && (
+                            <Link
+                              to={notif.action_url}
+                              onClick={() => setIsOpen(false)}
+                              className="text-xs text-[#0b6e4f] hover:underline font-medium"
+                            >
+                              View Details →
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1 shrink-0">
+                        <button
+                          onClick={() => handleMarkAsRead(notif.id)}
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                          title="Mark as read"
+                        >
+                          <CheckCircle size={16} className="text-blue-500" />
+                        </button>
+                        <button
+                          onClick={(e) => handlePin(e, notif.id, notif.is_pinned)}
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                          title={notif.is_pinned ? "Unpin" : "Pin"}
+                        >
+                          <Pin
+                            size={16}
+                            className={notif.is_pinned ? "text-blue-500 fill-blue-500" : "text-gray-400"}
+                          />
+                        </button>
+                        <button
+                          onClick={(e) => handleArchive(e, notif.id)}
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                          title="Archive"
+                        >
+                          <Archive size={16} className="text-gray-400" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget(notif);
+                          }}
+                          className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
+                          title="Delete"
+                        >
+                          <Trash2 size={16} className="text-red-500" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 dark:text-white truncate">
-                        {notif.title}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                        {notif.message}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                        {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
-                      </p>
-                    </div>
-                    <CheckCircle size={18} className="text-blue-500 shrink-0" />
                   </div>
-                </button>
-              ))
+                );
+              })
             )}
           </div>
 
@@ -159,6 +269,14 @@ export default function NotificationDropdown() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteNotificationModal
+        notification={deleteTarget}
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

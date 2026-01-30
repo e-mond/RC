@@ -1,4 +1,4 @@
-import OnboardingHeader from "../../components/onboarding/OnboardingHeader";
+import OnboardingHeader from "@/components/onboarding/OnboardingHeader";
 import HeroLearn from "./components/HeroLearn";
 import IntroArticle from "./components/IntroArticle";
 import FeaturesShowcase from "./components/FeaturesShowcase";

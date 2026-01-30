@@ -1,11 +1,4 @@
-import {
-  FaCheckCircle,
-  FaMoneyBillWave,
-  FaTools,
-  FaComments,
-  FaMapMarkedAlt,
-  FaBell,
-} from "react-icons/fa";
+import { CheckCircle, DollarSign, Wrench, MessageSquare, MapPin, Bell } from "lucide-react";
 import { motion } from "framer-motion";
 
 /* ============================================================= */
@@ -65,24 +58,24 @@ export default function FeaturesSection() {
           viewport={{ once: true, amount: 0.3 }}
         >
           <FeatureCard
-            icon={<FaCheckCircle className="text-[#0b6e4f] text-2xl" />}
+            icon={<CheckCircle size={24} className="text-[#0b6e4f]" />}
             title="Verified Listings"
             description="Every listing is checked for accuracy with badges that build trust."
           />
           <FeatureCard
-            icon={<FaMoneyBillWave className="text-[#0b6e4f] text-2xl" />}
+            icon={<DollarSign size={24} className="text-[#0b6e4f]" />}
             title="Digital Rent Payments"
             description="Pay with secure digital channels and get instant receipts."
           />
           <FeatureCard
-            icon={<FaTools className="text-[#0b6e4f] text-2xl" />}
+            icon={<Wrench size={24} className="text-[#0b6e4f]" />}
             title="Maintenance Tracking"
             description="Log issues, assign artisans, and follow progress to resolution."
           />
           <FeatureCard
-            icon={<FaComments className="text-[#0b6e4f] text-2xl" />}
+            icon={<MessageSquare size={24} className="text-[#0b6e4f]" />}
             title="In-App Messaging"
-            description="Keep conversations and documents organized in one thread."
+            description="Keep conversations and documents organised in one thread."
           />
         </motion.div>
 
@@ -104,7 +97,7 @@ export default function FeaturesSection() {
             className="bg-[#ffffff] border border-[#e6e8ea] rounded-2xl p-6 shadow-sm hover:shadow-lg transition flex flex-col"
           >
             <div className="flex items-center gap-3 mb-3">
-              <FaMapMarkedAlt className="text-[#0b6e4f] text-2xl" />
+              <MapPin size={24} className="text-[#0b6e4f]" />
               <h3 className="text-lg font-semibold text-[#0f1724]">
                 Map-Based Search
               </h3>
@@ -131,7 +124,7 @@ export default function FeaturesSection() {
             className="bg-[#ffffff] border border-[#e6e8ea] rounded-2xl p-6 shadow-sm hover:shadow-lg transition flex flex-col"
           >
             <div className="flex items-center gap-3 mb-3">
-              <FaBell className="text-[#0b6e4f] text-2xl" />
+              <Bell size={24} className="text-[#0b6e4f]" />
               <h3 className="text-lg font-semibold text-[#0f1724]">
                 Smart Alerts
               </h3>

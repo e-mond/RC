@@ -1,6 +1,51 @@
+/**
+ * MapPicker.jsx - Interactive Location Selector Component
+ * 
+ * Professional map component for selecting property locations using OpenLayers.
+ * 
+ * Features:
+ * - Address autocomplete (Nominatim, Ghana-biased)
+ * - Current location button with high-accuracy GPS
+ * - Click/drag marker with reverse geocoding
+ * - Dark/light map tiles based on system preference
+ * - Audio feedback when location is detected
+ * - Full two-way sync with parent form
+ * 
+ * Dependencies:
+ * - OpenLayers (ol) - Map library
+ * - Nominatim API - Geocoding service
+ * 
+ * @module MapPicker
+ * @requires react
+ * @requires ol
+ */
+
+/**
+ * MapPicker.jsx - Interactive Location Selector Component
+ * 
+ * Professional map component for selecting property locations using OpenLayers.
+ * 
+ * Features:
+ * - Address autocomplete (Nominatim, Ghana-biased)
+ * - Current location button with high-accuracy GPS
+ * - Click/drag marker with reverse geocoding
+ * - Dark/light map tiles based on system preference
+ * - Audio feedback when location is detected
+ * - Full two-way sync with parent form
+ * - Automatic city and region extraction
+ * 
+ * Dependencies:
+ * - OpenLayers (ol) - Map library
+ * - Nominatim API - Geocoding service (external)
+ * 
+ * @module MapPicker
+ * @requires react
+ * @requires ol
+ */
+
 // src/components/landlord/MapPicker.jsx
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import "ol/ol.css";
+// OpenLayers CSS is imported globally in index.css
 
 import Map from "ol/Map";
 import View from "ol/View";
@@ -16,6 +61,7 @@ import { Style, Icon } from "ol/style";
 import Modify from "ol/interaction/Modify";
 import { defaults as defaultInteractions } from "ol/interaction";
 import { Loader2, Navigation } from "lucide-react";
+import { EXTERNAL_ENDPOINTS } from "@/config/apiEndpoints";
 
 /**
  * MapPicker – Professional interactive location selector with audio feedback
@@ -76,6 +122,10 @@ export default function MapPicker({ value = {}, onChange = () => {} }) {
   /**
    * Forward geocoding: autocomplete address search
    */
+  /**
+   * Forward geocoding: autocomplete address search
+   * Uses Nominatim API for address suggestions
+   */
   const searchAddress = useCallback(async (input) => {
     if (!input.trim()) {
       setSuggestions([]);
@@ -83,11 +133,11 @@ export default function MapPicker({ value = {}, onChange = () => {} }) {
     }
 
     try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-          input + ", Ghana"
-        )}&limit=6&countrycodes=gh&addressdetails=1`
-      );
+      const searchUrl = `${EXTERNAL_ENDPOINTS.GEOCODING.NOMINATIM_SEARCH}?format=json&q=${encodeURIComponent(
+        input + ", Ghana"
+      )}&limit=6&countrycodes=gh&addressdetails=1`;
+      
+      const res = await fetch(searchUrl);
       const data = await res.json();
 
       const formatted = data.map((item) => ({
@@ -105,18 +155,34 @@ export default function MapPicker({ value = {}, onChange = () => {} }) {
   }, []);
 
   /**
-   * Reverse geocoding: coordinates → readable address
+   * Reverse geocoding: coordinates → readable address, city, region
+   */
+  /**
+   * Reverse geocoding: coordinates → readable address, city, region
+   * Uses Nominatim API to convert coordinates to address
    */
   const reverseGeocode = async (lat, lng) => {
     try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
-      );
+      const reverseUrl = `${EXTERNAL_ENDPOINTS.GEOCODING.NOMINATIM_REVERSE}?format=json&lat=${lat}&lon=${lng}&addressdetails=1`;
+      
+      const res = await fetch(reverseUrl);
       const data = await res.json();
 
       if (data?.display_name) {
         const cleanAddress = data.display_name.split(", Ghana")[0].trim();
-        onChange({ lat, lng, address: cleanAddress });
+        
+        // Extract city and region from address details
+        const address = data.address || {};
+        const city = address.city || address.town || address.municipality || address.county || "";
+        const region = address.state || address.region || "";
+        
+        onChange({ 
+          lat, 
+          lng, 
+          address: cleanAddress,
+          city: city,
+          region: region
+        });
         setQuery(cleanAddress);
       }
     } catch {
@@ -127,7 +193,7 @@ export default function MapPicker({ value = {}, onChange = () => {} }) {
   /**
    * Handle selection from autocomplete suggestions
    */
-  const selectSuggestion = (suggestion) => {
+  const selectSuggestion = async (suggestion) => {
     onChange({
       lat: suggestion.lat,
       lng: suggestion.lng,
@@ -145,6 +211,9 @@ export default function MapPicker({ value = {}, onChange = () => {} }) {
       zoom: 16,
       duration: 600,
     });
+    
+    // Also reverse geocode to get city and region
+    await reverseGeocode(suggestion.lat, suggestion.lng);
   };
 
   /**

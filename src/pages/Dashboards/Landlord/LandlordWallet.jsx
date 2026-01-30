@@ -48,7 +48,7 @@ export default function LandlordWallet() {
 
   if (loading) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-[260px]">
+      <div className="p-6 flex items-center justify-center min-h-65">
         <Loader2 className="w-8 h-8 animate-spin text-[#0b6e4f]" />
       </div>
     );

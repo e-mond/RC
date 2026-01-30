@@ -51,7 +51,7 @@ export default function AD_SystemInsights() {
       </div>
 
       <div className="mt-4 flex gap-4">
-        <small className="text-sm text-gray-600">
+        <small className="text-sm text-gray-600 over ">
           Revenue (30d): ₵{Number(insights.revenueLast30d).toLocaleString()}
         </small>
         <small className="text-sm text-gray-600">

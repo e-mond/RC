@@ -247,4 +247,3 @@ function TaskScheduleItem({ task }) {
     </motion.div>
   );
 }
-

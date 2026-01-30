@@ -158,9 +158,9 @@ export default function AD_ReportsPanel() {
 
           <Button
             onClick={load}
-            className="w-full sm:w-auto px-6 py-2.5 bg-[#0b6e4f] hover:bg-[#095c42] text-white font-medium rounded-xl transition shadow-md"
+            className="w-full sm:w-auto px-6 py-2.5 bg-[#0b6e4f] hover:bg-[#095c42] text-white font-medium rounded-xl transition shadow-md text-nowrap"
           >
-            <Filter className="w-4 h-4" />
+            <Filter className="w-4 h-4 text-nowrap" />
             Apply Filters
           </Button>
         </div>
