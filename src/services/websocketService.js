@@ -13,7 +13,7 @@ import { encryptMessage, decryptMessage } from "@/utils/encryption";
 const USE_MOCK = String(import.meta.env.VITE_USE_MOCK || "").toLowerCase() === "true";
 // Socket.IO uses HTTP/HTTPS URLs, not ws:// or wss://
 // Socket.IO automatically handles WebSocket protocol
-const WS_URL = import.meta.env.VITE_WS_URL || "http://localhost:8000";
+const WS_URL = import.meta.env.VITE_WS_URL || "https://rc-backend-658461237694.europe-west1.run.app";
 
 let socket = null;
 let reconnectAttempts = 0;
@@ -139,7 +139,7 @@ export const sendRealtimeMessage = (conversationId, message) => {
  * @returns {Function} Unsubscribe function
  */
 export const onNewMessage = (callback) => {
-  if (!socket) return () => {};
+  if (!socket) return () => { };
 
   const handler = (data) => {
     // Auto-decrypt incoming messages
@@ -168,7 +168,7 @@ export const onNewMessage = (callback) => {
  * @returns {Function} Unsubscribe function
  */
 export const onTyping = (callback) => {
-  if (!socket) return () => {};
+  if (!socket) return () => { };
 
   socket.on("typing", callback);
 
@@ -197,7 +197,7 @@ export const sendTyping = (conversationId, isTyping) => {
  * @returns {Function} Unsubscribe function
  */
 export const onMessageRead = (callback) => {
-  if (!socket) return () => {};
+  if (!socket) return () => { };
 
   socket.on("message_read", callback);
 
@@ -244,7 +244,7 @@ const generateEncryptionKey = () => {
  */
 const createMockSocket = (userId, key) => {
   encryptionKey = key || generateEncryptionKey();
-  
+
   const mockSocket = {
     connected: true,
     emit: (event, data, callback) => {
@@ -262,7 +262,7 @@ const createMockSocket = (userId, key) => {
             },
           };
           if (callback) callback(mockResponse);
-          
+
           // Simulate receiving message
           setTimeout(() => {
             if (mockSocket.listeners["new_message"]) {
