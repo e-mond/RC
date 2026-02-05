@@ -21,7 +21,7 @@
  * Unified API Endpoints Configuration
  * 
  * All endpoints are relative to the base URL (configured in apiClient.js).
- * Base URL: VITE_API_BASE_URL or http://localhost:8000/api
+ * Base URL: VITE_API_BASE_URL or https://rc-backend-658461237694.europe-west1.run.app/api
  */
 export const API_ENDPOINTS = {
   // ───────────────────────────────────────────────────────────────
@@ -143,7 +143,7 @@ export const API_ENDPOINTS = {
   // Lease Endpoints
   // ───────────────────────────────────────────────────────────────
   // Note: All endpoints are relative to baseURL configured in apiClient.js
-  // Base URL includes /api (e.g., http://localhost:8000/api)
+  // Base URL includes /api (e.g., https://rc-backend-658461237694.europe-west1.run.app/api)
   // Endpoints should NOT include /api prefix to avoid duplication
   // Example: DOWNLOAD_SYSTEM_LEASE("standard-residential") 
   //   -> /leases/system/standard-residential/download/

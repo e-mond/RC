@@ -243,7 +243,7 @@ Create a `.env` file in the root directory:
 
 ```env
 # API Configuration
-VITE_API_BASE_URL=http://localhost:8000/api
+VITE_API_BASE_URL=https://rc-backend-658461237694.europe-west1.run.app/api
 VITE_USE_MOCK=true                    # Set to false for production
 
 # Paystack (for payments)

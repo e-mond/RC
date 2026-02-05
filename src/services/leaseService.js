@@ -71,7 +71,7 @@ export const getSystemLeases = async () => {
  * Download system lease template
  * 
  * Endpoint: GET /api/leases/system/{lease_id}/download/?format={format}
- * - Base URL: Configured in apiClient.js (VITE_API_BASE_URL or http://localhost:8000/api)
+ * - Base URL: Configured in apiClient.js (VITE_API_BASE_URL or https://rc-backend-658461237694.europe-west1.run.app/api)
  * - Full URL: {baseURL}/leases/system/{lease_id}/download/?format={format}
  * - No /api duplication: apiClient baseURL already includes /api
  * 
@@ -85,22 +85,22 @@ export const downloadSystemLease = async (leaseId, format = "pdf", leaseData = n
   if (!leaseId || typeof leaseId !== "string") {
     throw new Error("Invalid lease ID: must be a non-empty string");
   }
-  
+
   // Validate format
   const validFormats = ["pdf", "docx", "doc"];
   if (!validFormats.includes(format.toLowerCase())) {
     throw new Error(`Invalid format: must be one of ${validFormats.join(", ")}`);
   }
-  
+
   const normalizedFormat = format.toLowerCase();
   if (USE_MOCK) {
     // In mock mode, create a proper file blob with correct MIME type
     // For PDF, we'll create a simple text-based content that can be opened
     // For DOCX, we'll create a minimal valid structure
-    
+
     let mockContent;
     let mimeType;
-    
+
     if (normalizedFormat === "docx") {
       // Create a minimal DOCX structure (ZIP-based format)
       // For mock, we'll create a simple text file that can be opened
@@ -115,15 +115,15 @@ export const downloadSystemLease = async (leaseId, format = "pdf", leaseData = n
       mockContent = `Lease Agreement: ${leaseId}\n\nThis is a mock lease agreement file.\n\nIn production, this would be a real PDF file.\n\nGenerated: ${new Date().toISOString()}`;
       mimeType = "application/pdf";
     }
-    
+
     // Create blob with proper MIME type
     const blob = new Blob([mockContent], { type: mimeType });
-    
+
     // Verify blob is not empty
     if (blob.size === 0) {
       throw new Error("Failed to create lease file - blob is empty");
     }
-    
+
     return blob;
   }
 
@@ -135,25 +135,25 @@ export const downloadSystemLease = async (leaseId, format = "pdf", leaseData = n
     // Full URL: {baseURL}/leases/system/{leaseId}/download/?format={format}
     // Note: leaseId is used as-is without any transformation (no numeric casting, no encoding)
     const endpoint = API_ENDPOINTS.LEASES.DOWNLOAD_SYSTEM_LEASE(leaseId);
-    
+
     const response = await apiClient.get(endpoint, {
       params: { format: normalizedFormat },
       responseType: "blob",
       // Ensure proper headers for file download
       headers: {
-        Accept: normalizedFormat === "pdf" 
-          ? "application/pdf" 
+        Accept: normalizedFormat === "pdf"
+          ? "application/pdf"
           : normalizedFormat === "docx"
-          ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          : "application/msword",
+            ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            : "application/msword",
       },
     });
-    
+
     // Verify response is a valid blob
     if (!response.data || response.data.size === 0) {
       throw new Error("Downloaded file is empty or corrupted");
     }
-    
+
     // Verify blob type matches expected format
     const blobType = response.data.type || "";
     const expectedTypes = {
@@ -161,11 +161,11 @@ export const downloadSystemLease = async (leaseId, format = "pdf", leaseData = n
       docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       doc: "application/msword",
     };
-    
+
     if (expectedTypes[normalizedFormat] && !blobType.includes(normalizedFormat === "pdf" ? "pdf" : normalizedFormat === "docx" ? "wordprocessingml" : "msword")) {
       console.warn(`Blob type mismatch: expected ${expectedTypes[normalizedFormat]}, got ${blobType}`);
     }
-    
+
     return response.data;
   } catch (err) {
     // If 404, try fallback to file_url if available (only for relative URLs)
@@ -174,13 +174,13 @@ export const downloadSystemLease = async (leaseId, format = "pdf", leaseData = n
         endpoint: API_ENDPOINTS.LEASES.DOWNLOAD_SYSTEM_LEASE(leaseId),
         file_url: leaseData.file_url,
       });
-      
+
       try {
         // Try to fetch from file_url (relative URL)
         const response = await apiClient.get(leaseData.file_url, {
           responseType: "blob",
         });
-        
+
         if (response.data && response.data.size > 0) {
           return response.data;
         }
@@ -188,14 +188,14 @@ export const downloadSystemLease = async (leaseId, format = "pdf", leaseData = n
         console.error("[downloadSystemLease] Fallback to file_url also failed:", fallbackErr);
       }
     }
-    
+
     console.error("Download system lease error:", {
       leaseId,
       format: normalizedFormat,
       status: err.response?.status,
       endpoint: API_ENDPOINTS.LEASES.DOWNLOAD_SYSTEM_LEASE(leaseId),
     });
-    
+
     // Provide a more helpful error message
     let errorMessage = "Failed to download lease";
     if (err.response?.status === 404) {
@@ -205,7 +205,7 @@ export const downloadSystemLease = async (leaseId, format = "pdf", leaseData = n
     } else if (err.message) {
       errorMessage = err.message;
     }
-    
+
     throw new Error(errorMessage);
   }
 };
@@ -237,10 +237,10 @@ export const getLandlordLeases = async (landlordId = null) => {
   try {
     // Use unified API endpoint configuration
     const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
-    const endpoint = landlordId 
+    const endpoint = landlordId
       ? `/leases/custom/?landlord_id=${encodeURIComponent(landlordId)}`
       : API_ENDPOINTS.LEASES.CUSTOM_LEASES;
-    
+
     const { data } = await apiClient.get(endpoint);
     return data;
   } catch (err) {
@@ -412,13 +412,13 @@ export const getSignedLeases = async (propertyId = null) => {
   try {
     // Use unified API endpoint configuration
     const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
-    
+
     // If propertyId is null, get all signed leases for current tenant
     if (propertyId === null) {
       const { data } = await apiClient.get(API_ENDPOINTS.LEASES.SIGNED_LEASES_TENANT);
       return data;
     }
-    
+
     // Otherwise, get signed leases for specific property
     const { data } = await apiClient.get(API_ENDPOINTS.LEASES.SIGNED_LEASES_BY_PROPERTY(propertyId));
     return data;

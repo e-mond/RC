@@ -17,7 +17,7 @@
  * - Network timeout handling (12 seconds)
  * 
  * Environment Variables:
- * - VITE_API_BASE_URL: Backend API base URL (default: http://localhost:8000/api)
+ * - VITE_API_BASE_URL: Backend API base URL (default: https://rc-backend-658461237694.europe-west1.run.app/api)
  * 
  * @module apiClient
  * @requires axios
@@ -37,7 +37,7 @@ const isDev = import.meta.env.DEV;
  * This instance is used only for refresh token requests
  */
 const refreshAxios = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "https://rc-backend-658461237694.europe-west1.run.app/api",
   withCredentials: true,
   timeout: 12000
 });
@@ -48,7 +48,7 @@ const refreshAxios = axios.create({
  * Use this for public endpoints that should work without authentication
  */
 export const publicApiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "https://rc-backend-658461237694.europe-west1.run.app/api",
   headers: {
     "Content-Type": "application/json",
   },
@@ -93,7 +93,7 @@ publicApiClient.interceptors.response.use(
         method: error.config?.method?.toUpperCase(),
       });
     }
-    
+
     // Always reject so .catch() handlers work, but don't trigger auth flows
     return Promise.reject(error);
   }
@@ -109,7 +109,7 @@ publicApiClient.interceptors.response.use(
  * - 12 second timeout for all requests
  */
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "https://rc-backend-658461237694.europe-west1.run.app/api",
   headers: {
     "Content-Type": "application/json",
   },
@@ -180,14 +180,14 @@ apiClient.interceptors.response.use(
     // Handle 401 Unauthorized - Attempt token refresh before logout
     if (status === 401) {
       const refreshToken = session.getRefreshToken();
-      
+
       // Check if refresh token exists and is not expired
       const isRefreshTokenValid = refreshToken && refreshToken.length > 0;
-      
+
       // If we have a refresh token and this isn't a refresh request, try to refresh
       if (isRefreshTokenValid && originalRequest && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh/')) {
         originalRequest._retry = true; // Prevent infinite loop
-        
+
         try {
           // Attempt to refresh the token
           const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
@@ -199,21 +199,21 @@ apiClient.interceptors.response.use(
               validateStatus: (status) => status < 500 // Don't throw on 400/401
             }
           );
-          
+
           // Check if refresh was successful
           if (refreshResponse.status === 200 && refreshResponse.data?.access) {
             const newAccessToken = refreshResponse.data.access;
             const newRefreshToken = refreshResponse.data.refresh;
-            
+
             // Store new tokens
             session.setToken(newAccessToken);
             if (newRefreshToken) {
               session.setRefreshToken(newRefreshToken);
             }
-            
+
             // Update the original request with new token
             originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-            
+
             // Retry the original request
             return apiClient(originalRequest);
           } else {
@@ -224,22 +224,22 @@ apiClient.interceptors.response.use(
           // Refresh failed - clear session and logout
           console.warn("[Token Refresh] Failed to refresh token:", refreshError);
           session.clearAll();
-          
+
           // Logout in both dev and production
           const redirectUrl = new URL("/login", window.location.origin);
           redirectUrl.searchParams.set("session", "expired");
           window.location.replace(redirectUrl.toString());
-          return new Promise(() => {}); // stop propagation
+          return new Promise(() => { }); // stop propagation
         }
       } else {
         // No refresh token or refresh failed - logout
         session.clearAll();
-        
+
         // Logout in both dev and production
         const redirectUrl = new URL("/login", window.location.origin);
         redirectUrl.searchParams.set("session", "expired");
         window.location.replace(redirectUrl.toString());
-        return new Promise(() => {}); // stop propagation
+        return new Promise(() => { }); // stop propagation
       }
     }
 

@@ -25,7 +25,7 @@
 This document provides complete specifications for all backend API endpoints, services, and integrations required by the RentalConnects frontend application.
 
 ### Base URL
-- **Development:** `http://localhost:8000/api`
+- **Development:** `https://rc-backend-658461237694.europe-west1.run.app/api`
 - **Production:** Configure via `VITE_API_BASE_URL` environment variable
 
 ### Authentication
