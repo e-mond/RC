@@ -110,11 +110,12 @@ export default function WalletTopUpModal({ isOpen, onClose, onSuccess, user, cur
         onSuccess: async (reference) => {
           try {
             // Verify payment on backend
-            const verification = await verifyPaystackPayment(reference);
+            const verification = await verifyPaystackPayment(reference, amountValue);
 
-            if (verification.success) {
+            // Backend returns { status: 'success' } or mock mode returns { success: true }
+            if (verification.success || verification.status === 'success') {
               setSuccess(true);
-              
+
               // Email confirmation with receipt is sent by backend
               // Call onSuccess callback after a short delay
               setTimeout(() => {
@@ -232,11 +233,10 @@ export default function WalletTopUpModal({ isOpen, onClose, onSuccess, user, cur
                     type="button"
                     onClick={() => handlePresetAmount(preset)}
                     disabled={loading}
-                    className={`px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
-                      amount === preset.toString()
-                        ? "bg-[#0b6e4f] text-white border-[#0b6e4f]"
-                        : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-[#0b6e4f]"
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${amount === preset.toString()
+                      ? "bg-[#0b6e4f] text-white border-[#0b6e4f]"
+                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-[#0b6e4f]"
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     ₵{preset}
                   </button>

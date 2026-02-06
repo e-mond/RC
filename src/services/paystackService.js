@@ -136,10 +136,10 @@ export const initiatePayment = async ({
     }
 
     const reference = generateReference(type);
-    
+
     // Simulate payment delay (1-2 seconds)
     await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 1000));
-    
+
     // Simulate success (in mock mode, always succeeds)
     if (onSuccess) {
       onSuccess(reference, {
@@ -148,7 +148,7 @@ export const initiatePayment = async ({
         message: "Payment successful (mock mode)",
       });
     }
-    
+
     return;
   }
 
@@ -209,9 +209,10 @@ export const initiatePayment = async ({
 /**
  * Verify Paystack payment on backend
  * @param {string} reference - Payment reference from Paystack
+ * @param {number} [amount] - Optional amount in GHS for mock mode
  * @returns {Promise<Object>} Verification result
  */
-export const verifyPaystackPayment = async (reference) => {
+export const verifyPaystackPayment = async (reference, amount = null) => {
   if (USE_MOCK) {
     // In mock mode, always return success
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -219,7 +220,7 @@ export const verifyPaystackPayment = async (reference) => {
       success: true,
       message: "Payment verified successfully (mock mode)",
       reference,
-      amount: 0, // Amount would be stored in metadata
+      amount: amount || 0,
       status: "success",
     };
   }
@@ -230,9 +231,11 @@ export const verifyPaystackPayment = async (reference) => {
     }
 
     const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
-    const { data } = await apiClient.post(API_ENDPOINTS.PAYMENTS.VERIFY_PAYSTACK, {
-      reference,
-    });
+    const payload = { reference };
+    if (amount) {
+      payload.amount = amount;
+    }
+    const { data } = await apiClient.post(API_ENDPOINTS.PAYMENTS.VERIFY_PAYSTACK, payload);
 
     return data;
   } catch (err) {
