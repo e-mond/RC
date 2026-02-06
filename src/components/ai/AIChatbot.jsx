@@ -50,7 +50,7 @@ export default function AIChatbot({ defaultOpen = false, position = "bottom-righ
     const handleOpenChatbot = () => {
       setIsOpen(true);
     };
-    
+
     window.addEventListener('openAIChatbot', handleOpenChatbot);
     return () => {
       window.removeEventListener('openAIChatbot', handleOpenChatbot);
@@ -97,7 +97,7 @@ export default function AIChatbot({ defaultOpen = false, position = "bottom-righ
 
   const setWelcomeMessage = () => {
     const role = getUserRole();
-    
+
     const welcomeMessages = {
       public: "Hello! I'm Efie AI. I can help you learn about RentalConnects, browse properties, and answer questions about our platform. How can I assist you today?",
       tenant: "Hello! I'm Efie AI — Helping You Feel at Home. I can help you find properties, discover artisans, and answer questions. How can I assist you today?",
@@ -142,11 +142,11 @@ export default function AIChatbot({ defaultOpen = false, position = "bottom-righ
           latitude: pos.coords.latitude,
           longitude: pos.coords.longitude,
         };
-      } catch {} // silent fail
+      } catch { } // silent fail
 
       // Determine user role (public if not authenticated)
       const userRole = user?.role?.toLowerCase() || "public";
-      
+
       // Only include conversation_id for authenticated users
       const conversationIdForRequest = user ? conversationId : null;
 
@@ -179,8 +179,8 @@ export default function AIChatbot({ defaultOpen = false, position = "bottom-righ
             "https://assets.mixkit.co/sfx/preview/mixkit-quick-positive-notification-2044.mp3"
           );
           audio.volume = 0.18;
-          audio.play().catch(() => {});
-        } catch {}
+          audio.play().catch(() => { });
+        } catch { }
       }
     } catch (err) {
       console.error("AI Chat error:", err);
@@ -327,26 +327,57 @@ export default function AIChatbot({ defaultOpen = false, position = "bottom-righ
                   )}
 
                   <div
-                    className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
-                      msg.role === "user"
+                    className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${msg.role === "user"
                         ? "bg-[#0b6e4f] text-white"
                         : msg.isError
-                        ? "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800/50"
-                        : "bg-gray-100/90 dark:bg-gray-800/90 text-gray-900 dark:text-gray-100"
-                    }`}
+                          ? "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800/50"
+                          : "bg-gray-100/90 dark:bg-gray-800/90 text-gray-900 dark:text-gray-100"
+                      }`}
                   >
                     {msg.content}
                     {msg.suggested_actions?.length > 0 && (
-                      <div className="mt-3 pt-2 border-t border-white/20 dark:border-gray-700 space-y-1.5">
-                        {msg.suggested_actions.map((act, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => handleQuickAction(act)}
-                            className="block w-full text-left text-xs px-3 py-1.5 rounded-lg bg-white/30 dark:bg-gray-700/40 hover:bg-white/50 dark:hover:bg-gray-700/60 transition"
-                          >
-                            {act.label}
-                          </button>
-                        ))}
+                      <div className="mt-3 pt-2 border-t border-white/20 dark:border-gray-700 space-y-2">
+                        {msg.suggested_actions.map((act, idx) => {
+                          if (act.type === 'property_card') {
+                            return (
+                              <div key={idx} className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700 w-full mb-2">
+                                {act.data.image && (
+                                  <img src={act.data.image} alt={act.data.title} className="w-full h-32 object-cover" />
+                                )}
+                                <div className="p-3">
+                                  <h4 className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate" title={act.data.title}>{act.data.title}</h4>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
+                                    <span>📍</span> {act.data.location}
+                                  </p>
+                                  <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                                    <span>🛏️ {act.data.bedrooms} bdr</span>
+                                    <span>•</span>
+                                    <span className="capitalize">{act.data.type}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center mt-3">
+                                    <span className="font-bold text-emerald-600 text-sm">₵{act.data.price?.toLocaleString()}</span>
+                                    <a
+                                      href={`/tenant/properties/${act.data.id}`}
+                                      className="text-[10px] font-medium px-2.5 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-md hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition"
+                                    >
+                                      View Details
+                                    </a>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => handleQuickAction(act)}
+                              className="block w-full text-left text-xs px-3 py-1.5 rounded-lg bg-white/30 dark:bg-gray-700/40 hover:bg-white/50 dark:hover:bg-gray-700/60 transition"
+                            >
+                              {act.label}
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
