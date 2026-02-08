@@ -32,12 +32,26 @@ import { session } from "@/utils/session";
 
 const isDev = import.meta.env.DEV;
 
+// Helper to ensure base URL ends with /api without trailing slash
+const getBaseUrl = () => {
+  let url = import.meta.env.VITE_API_BASE_URL || "https://rc-backend-658461237694.europe-west1.run.app/api";
+  // Remove trailing slash if present
+  if (url.endsWith('/')) {
+    url = url.slice(0, -1);
+  }
+  // Ensure it ends with /api
+  if (!url.endsWith('/api')) {
+    url = `${url}/api`;
+  }
+  return url;
+};
+
 /**
- * Separate axios instance for token refresh to avoid circular dependencies
+ * Refresh Token Axios Instance
  * This instance is used only for refresh token requests
  */
 const refreshAxios = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "https://rc-backend-658461237694.europe-west1.run.app/api",
+  baseURL: getBaseUrl(),
   withCredentials: true,
   timeout: 12000
 });
@@ -48,7 +62,7 @@ const refreshAxios = axios.create({
  * Use this for public endpoints that should work without authentication
  */
 export const publicApiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "https://rc-backend-658461237694.europe-west1.run.app/api",
+  baseURL: getBaseUrl(),
   headers: {
     "Content-Type": "application/json",
   },
@@ -109,7 +123,7 @@ publicApiClient.interceptors.response.use(
  * - 12 second timeout for all requests
  */
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "https://rc-backend-658461237694.europe-west1.run.app/api",
+  baseURL: getBaseUrl(),
   headers: {
     "Content-Type": "application/json",
   },

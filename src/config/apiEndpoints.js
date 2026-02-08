@@ -21,7 +21,7 @@
  * Unified API Endpoints Configuration
  * 
  * All endpoints are relative to the base URL (configured in apiClient.js).
- * Base URL: VITE_API_BASE_URL or https://rc-backend-658461237694.europe-west1.run.app/api
+ * Base URL: Configured in apiClient.js (automatically appends /api)
  */
 export const API_ENDPOINTS = {
   // ───────────────────────────────────────────────────────────────
