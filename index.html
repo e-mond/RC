@@ -19,10 +19,10 @@
       script-src-elem 'self' 'unsafe-inline' https://js.paystack.co https://*.paystack.com https://js.paystack.co/v1/ https://cdn.tiny.cloud;
       style-src 'self' 'unsafe-inline' https://paystack.com https://*.paystack.com;
       style-src-elem 'self' 'unsafe-inline' https://paystack.com https://*.paystack.com;
-      img-src 'self' data: https: blob: https://rc-backend-658461237694.europe-west1.run.app;
+      img-src 'self' data: https: blob: https://rc-backend-658461237694.europe-west1.run.app http://127.0.0.1:8000 http://localhost:8000;
       font-src 'self' data:;
-      connect-src 'self' https://api.paystack.com https://*.paystack.com https://rc-backend-658461237694.europe-west1.run.app https://api.rentalconnects.com wss://rc-backend-658461237694.europe-west1.run.app https://nominatim.openstreetmap.org;
-      media-src 'self' https: https://rc-backend-658461237694.europe-west1.run.app;
+      connect-src 'self' https://api.paystack.com https://*.paystack.com https://rc-backend-658461237694.europe-west1.run.app https://api.rentalconnects.com wss://rc-backend-658461237694.europe-west1.run.app https://nominatim.openstreetmap.org http://127.0.0.1:8000 ws://127.0.0.1:8000 http://localhost:8000 ws://localhost:8000;
+      media-src 'self' https: https://rc-backend-658461237694.europe-west1.run.app http://127.0.0.1:8000 http://localhost:8000;
       frame-src https://js.paystack.co https://*.paystack.com;
       worker-src 'self' blob:;
     ">

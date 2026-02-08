@@ -49,7 +49,8 @@ if (!container) {
  * Loads user session from localStorage before initial render to prevent
  * authentication flicker and ensure user state is available immediately
  */
-await useAuthStore.getState().loadSession();
+// Start session loading (non-blocking) - App will show loading state via authStore
+useAuthStore.getState().loadSession();
 
 /**
  * Mock Mode Initialization

@@ -1,54 +1,67 @@
 import React, { useEffect, useState } from "react";
 import { getPaymentHistory } from "@/services/paymentService";
-import { Wallet, ArrowDownCircle, ArrowUpCircle, Loader2, AlertTriangle } from "lucide-react";
+import { getWallet, getWalletTransactions } from "@/services/walletService";
+import { Wallet, ArrowDownCircle, ArrowUpCircle, Loader2, AlertTriangle, Download, Filter } from "lucide-react";
 import { motion } from "framer-motion";
+import WalletDisplay from "@/components/common/WalletDisplay";
+import WalletTopUpModal from "@/components/common/WalletTopUpModal";
+import WithdrawalModal from "@/components/common/WithdrawalModal";
+import { useAuth } from "@/context/AuthContext";
 
 /**
  * LandlordWallet
- * - Simple wallet-style overview for landlord payments.
- * - Computes total received vs pending from payment history.
- * - Works in both real and mock modes as long as /payments/history/ is wired.
+ * - Full wallet management for landlords.
+ * - Supports Top-up, Withdrawal, and Transaction History.
  */
 export default function LandlordWallet() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [payments, setPayments] = useState([]);
+  const [wallet, setWallet] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [showTopUp, setShowTopUp] = useState(false);
+  const [showWithdraw, setShowWithdraw] = useState(false);
+  const [filter, setFilter] = useState("all"); // 'all', 'credit', 'debit'
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const [walletData, txnsData] = await Promise.all([
+        getWallet(),
+        getWalletTransactions()
+      ]);
+
+      setWallet(walletData);
+      setTransactions(Array.isArray(txnsData?.results || txnsData) ? txnsData.results || txnsData : []);
+
+    } catch (err) {
+      console.error("LandlordWallet.loadData:", err);
+      setError(err.message || "Failed to load wallet data");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const data = await getPaymentHistory();
-        const history = Array.isArray(data?.results || data) ? data.results || data : [];
-        if (mounted) setPayments(history);
-      } catch (err) {
-        console.error("LandlordWallet.getPaymentHistory:", err);
-        if (mounted) {
-          setError(err.message || "Failed to load wallet history");
-        }
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    load();
-    return () => {
-      mounted = false;
-    };
+    loadData();
   }, []);
 
-  const totalReceived = payments
-    .filter((p) => p.status === "completed")
-    .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  const handleTransactionSuccess = () => {
+    loadData(); // Refresh data after successful transaction
+  };
 
-  const totalPending = payments
-    .filter((p) => p.status === "pending")
-    .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  const filteredTransactions = transactions.filter(t => {
+    if (filter === "all") return true;
+    if (filter === "credit") return t.type === "credit" || t.type === "top_up" || t.type === "payment_received";
+    if (filter === "debit") return t.type === "debit" || t.type === "withdrawal" || t.type === "subscription" || t.type === "ad_promotion";
+    return true;
+  });
 
-  if (loading) {
+  if (loading && !wallet) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-65">
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-[#0b6e4f]" />
       </div>
     );
@@ -56,15 +69,31 @@ export default function LandlordWallet() {
 
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
-      <header className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-[#0b6e4f]/10 flex items-center justify-center">
-          <Wallet className="w-5 h-5 text-[#0b6e4f]" />
+      <header className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-[#0b6e4f]/10 flex items-center justify-center">
+            <Wallet className="w-5 h-5 text-[#0b6e4f]" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">My Wallet</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Manage your funds, payouts, and earnings.
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Wallet Overview</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Track rent collections and upcoming payouts in one place.
-          </p>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowWithdraw(true)}
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            Withdraw
+          </button>
+          <button
+            onClick={() => setShowTopUp(true)}
+            className="px-4 py-2 text-sm font-medium text-white bg-[#0b6e4f] rounded-lg hover:bg-[#095c42]"
+          >
+            Top Up
+          </button>
         </div>
       </header>
 
@@ -75,78 +104,118 @@ export default function LandlordWallet() {
         </div>
       )}
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <SummaryCard
-          label="Available Balance"
-          amount={totalReceived - totalPending}
-          tone="emerald"
-        />
-        <SummaryCard label="Received" amount={totalReceived} tone="blue" />
-        <SummaryCard label="Pending" amount={totalPending} tone="amber" />
-      </section>
-
-      <section className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-          <p className="font-semibold text-gray-900 dark:text-white">Recent Transactions</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Wallet Balance Card */}
+        <div className="md:col-span-2">
+          <WalletDisplay
+            wallet={wallet}
+            showSetupButton={true}
+            onTopUpClick={() => setShowTopUp(true)}
+            onSetupClick={() => {/* Navigate to setup or open setup modal */ }}
+          />
         </div>
-        {payments.length === 0 ? (
-          <div className="p-8 text-center text-gray-500 dark:text-gray-400 text-sm">
-            No payments have been recorded yet.
+
+        {/* Quick Stats */}
+        <div className="space-y-4">
+          <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800">
+            <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">Total Earnings</p>
+            <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100 mt-1">
+              ₵{transactions
+                .filter(t => t.type === 'payment_received')
+                .reduce((acc, curr) => acc + Number(curr.amount), 0)
+                .toLocaleString()}
+            </p>
+          </div>
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
+            <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Pending Withdrawals</p>
+            <p className="text-2xl font-bold text-blue-900 dark:text-blue-100 mt-1">
+              ₵{transactions
+                .filter(t => t.type === 'withdrawal' && t.status === 'pending')
+                .reduce((acc, curr) => acc + Number(curr.amount), 0)
+                .toLocaleString()}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <h3 className="font-semibold text-gray-900 dark:text-white">Transaction History</h3>
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-gray-400" />
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="text-sm border-none bg-transparent text-gray-600 dark:text-gray-300 focus:ring-0 cursor-pointer"
+            >
+              <option value="all">All Transactions</option>
+              <option value="credit">Money In</option>
+              <option value="debit">Money Out</option>
+            </select>
+          </div>
+        </div>
+
+        {filteredTransactions.length === 0 ? (
+          <div className="p-12 text-center text-gray-500 dark:text-gray-400">
+            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Wallet className="w-8 h-8 text-gray-400" />
+            </div>
+            <p>No transactions found.</p>
           </div>
         ) : (
-          <ul className="divide-y divide-gray-100 dark:divide-gray-800">
-            {payments.slice(0, 10).map((p) => (
-              <li key={p.id} className="px-4 py-3 flex items-center justify-between gap-3 text-sm">
-                <div className="flex items-center gap-3">
-                  {p.status === "completed" ? (
-                    <ArrowDownCircle className="w-5 h-5 text-emerald-500" />
-                  ) : (
-                    <ArrowUpCircle className="w-5 h-5 text-amber-500" />
-                  )}
+          <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+            {filteredTransactions.map((t) => (
+              <li key={t.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${['credit', 'top_up', 'payment_received'].includes(t.type)
+                      ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+                      : "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+                    }`}>
+                    {['credit', 'top_up', 'payment_received'].includes(t.type) ? (
+                      <ArrowDownCircle className="w-5 h-5" />
+                    ) : (
+                      <ArrowUpCircle className="w-5 h-5" />
+                    )}
+                  </div>
                   <div>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      ₵{Number(p.amount || 0).toLocaleString()}
+                      {t.description || "Transaction"}
                     </p>
-                    <p className="text-gray-500 dark:text-gray-400">
-                      {p.tenantName || p.description || "Rental payment"}
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {new Date(t.created_at).toLocaleString()} • <span className="capitalize">{t.status}</span>
                     </p>
                   </div>
                 </div>
-                <div className="text-right text-xs text-gray-500 dark:text-gray-400">
-                  <p>
-                    {p.paidAt
-                      ? new Date(p.paidAt).toLocaleDateString()
-                      : new Date(p.createdAt || Date.now()).toLocaleDateString()}
-                  </p>
-                  <p className="capitalize">{p.status || "pending"}</p>
+                <div className={`text-right font-semibold ${['credit', 'top_up', 'payment_received'].includes(t.type)
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-gray-900 dark:text-white"
+                  }`}>
+                  {['credit', 'top_up', 'payment_received'].includes(t.type) ? "+" : "-"}
+                  ₵{Number(t.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </div>
               </li>
             ))}
           </ul>
         )}
       </section>
+
+      {/* Modals */}
+      <WalletTopUpModal
+        isOpen={showTopUp}
+        onClose={() => setShowTopUp(false)}
+        onSuccess={handleTransactionSuccess}
+        user={user}
+        currentBalance={wallet?.balance || 0}
+      />
+
+      <WithdrawalModal
+        isOpen={showWithdraw}
+        onClose={() => setShowWithdraw(false)}
+        onSuccess={handleTransactionSuccess}
+        currentBalance={wallet?.balance || 0}
+        user={user}
+      />
     </div>
-  );
-}
-
-function SummaryCard({ label, amount, tone }) {
-  const toneClasses = {
-    emerald: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300",
-    blue: "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300",
-    amber: "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300",
-  }[tone];
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`rounded-xl px-4 py-3 ${toneClasses}`}
-    >
-      <p className="text-xs font-medium uppercase tracking-wide opacity-80">{label}</p>
-      <p className="mt-2 text-2xl font-bold">
-        ₵{Number(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-      </p>
-    </motion.div>
   );
 }
 

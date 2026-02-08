@@ -147,12 +147,12 @@ export default function AIChatbot({ defaultOpen = false, position = "bottom-righ
       // Determine user role (public if not authenticated)
       const userRole = user?.role?.toLowerCase() || "public";
 
-      // Only include conversation_id for authenticated users
-      const conversationIdForRequest = user ? conversationId : null;
+      // Use existing conversation_id if available (for both auth and guest users)
+      const conversationIdForRequest = conversationId;
 
       const res = await sendChatbotMessage({
         message: userMessage,
-        conversation_id: conversationIdForRequest,
+        conversation_id: conversationIdForRequest || "",
         context: {
           user_role: userRole,
           location: locationData,
@@ -328,10 +328,10 @@ export default function AIChatbot({ defaultOpen = false, position = "bottom-righ
 
                   <div
                     className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${msg.role === "user"
-                        ? "bg-[#0b6e4f] text-white"
-                        : msg.isError
-                          ? "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800/50"
-                          : "bg-gray-100/90 dark:bg-gray-800/90 text-gray-900 dark:text-gray-100"
+                      ? "bg-[#0b6e4f] text-white"
+                      : msg.isError
+                        ? "bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800/50"
+                        : "bg-gray-100/90 dark:bg-gray-800/90 text-gray-900 dark:text-gray-100"
                       }`}
                   >
                     {msg.content}

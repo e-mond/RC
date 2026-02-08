@@ -20,7 +20,8 @@
 import apiClient from "./apiClient";
 import { isMockMode } from "@/mocks/mockManager";
 
-const USE_MOCK = isMockMode();
+// Force real API for AI services for testing
+const USE_MOCK = false; // isMockMode();
 
 /**
  * Simulate Network Delay
@@ -36,12 +37,12 @@ const withDelay = (data, ms = 400) =>
  */
 function extractError(err, fallback = "Server error") {
   if (!err) return new Error(fallback);
-  
+
   // Handle rate limiting (429) with user-friendly message
   if (err.response?.status === 429) {
     return new Error("Too many requests. Please wait a moment before trying again.");
   }
-  
+
   if (err.response?.data?.message) return new Error(err.response.data.message);
   if (err.response?.data?.detail) return new Error(err.response.data.detail);
   if (err.message) return new Error(err.message);
@@ -250,7 +251,7 @@ export const sendChatbotMessage = async (payload) => {
     // Simple mock responses based on message content
     const message = payload.message?.toLowerCase() || "";
     let response = "I'm here to help you find properties and artisans. How can I assist you today?";
-    
+
     if (message.includes("property") || message.includes("apartment") || message.includes("house")) {
       response = "I can help you find properties! Try searching by location, price range, or property type. Would you like me to show you some recommendations?";
     } else if (message.includes("artisan") || message.includes("plumber") || message.includes("electrician")) {
@@ -258,7 +259,7 @@ export const sendChatbotMessage = async (payload) => {
     } else if (message.includes("document") || message.includes("lease")) {
       response = "For renting a property, you typically need: Ghana Card/ID, proof of income, references, and sometimes a guarantor. Would you like more details?";
     }
-    
+
     return withDelay({
       response,
       conversation_id: payload.conversation_id || `conv_${Date.now()}`,

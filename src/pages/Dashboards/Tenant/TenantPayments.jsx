@@ -1,51 +1,68 @@
 // src/pages/Dashboards/Tenant/TenantPayments.jsx
 import React, { useEffect, useState } from "react";
 import { fetchTenantRentals, getPaymentHistory, getPaymentReceipt } from "@/services/tenantService";
+import { getWallet } from "@/services/walletService";
 import RentPaymentModal from "@/components/tenant/RentPaymentModal";
+import WalletDisplay from "@/components/common/WalletDisplay";
+import WalletTopUpModal from "@/components/common/WalletTopUpModal";
 import { motion } from "framer-motion";
-import { Download, Receipt, CreditCard, Smartphone, CheckCircle, Clock, XCircle } from "lucide-react";
+import { Download, Receipt, CreditCard, Smartphone, CheckCircle, Clock, XCircle, Wallet } from "lucide-react";
 import { useFeatureAccess } from "@/context/FeatureAccessContext";
-import PremiumGate from "@/components/common/PremiumGate";
+import { useAuth } from "@/context/AuthContext";
 
 /**
- * TenantPayments Page - Full Dark Mode Support
- * Premium feature: Payment history requires premium subscription
+ * TenantPayments Page
+ * - Displays pending rent and payment history.
+ * - Now includes Wallet Balance and Top-up functionality.
  */
 export default function TenantPayments() {
-  const { isPremium, can } = useFeatureAccess();
-  const hasPaymentAccess = can("TENANT_PAYMENTS");
+  const { user } = useAuth();
+  const { isPremium } = useFeatureAccess();
+
   const [rentals, setRentals] = useState([]);
   const [paymentHistory, setPaymentHistory] = useState([]);
+  const [wallet, setWallet] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Modal states
   const [activeRental, setActiveRental] = useState(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [topUpModalOpen, setTopUpModalOpen] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
-  const [activeTab, setActiveTab] = useState("due");
+
+  const [activeTab, setActiveTab] = useState("due"); // 'due', 'history', 'wallet'
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const [rentalsData, historyData, walletData] = await Promise.all([
+        fetchTenantRentals(),
+        isPremium ? getPaymentHistory().catch(() => []) : Promise.resolve([]),
+        getWallet().catch(() => null)
+      ]);
+
+      setRentals(Array.isArray(rentalsData) ? rentalsData : []);
+      setPaymentHistory(Array.isArray(historyData) ? historyData : []);
+      setWallet(walletData);
+
+    } catch (err) {
+      console.error("TenantPayments.loadData:", err);
+      setError(err.message || "Failed to load payments");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let isMounted = true;
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const [rentalsData, historyData] = await Promise.all([
-          fetchTenantRentals(),
-          isPremium ? getPaymentHistory().catch(() => []) : Promise.resolve([]),
-        ]);
-        if (isMounted) {
-          setRentals(Array.isArray(rentalsData) ? rentalsData : []);
-          setPaymentHistory(Array.isArray(historyData) ? historyData : []);
-        }
-      } catch (err) {
-        if (isMounted) setError(err.message || "Failed to load payments");
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
     loadData();
-    return () => { isMounted = false; };
   }, [isPremium]);
+
+  const handleTransactionSuccess = () => {
+    loadData();
+  };
 
   const openPayment = (rental) => {
     setActiveRental(rental);
@@ -57,8 +74,7 @@ export default function TenantPayments() {
     try {
       setPaymentModalOpen(false);
       setActiveRental(null);
-      const updated = await fetchTenantRentals();
-      setRentals(Array.isArray(updated) ? updated : []);
+      await loadData(); // Refresh data
     } catch (err) {
       setError(err.message || "Payment failed");
     } finally {
@@ -85,39 +101,68 @@ export default function TenantPayments() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <header>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Payments</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">View and manage your rental payments</p>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Payments & Wallet</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">View rent, history, and manage your wallet</p>
+        </div>
+        {wallet && (
+          <div className="flex items-center gap-3 bg-white dark:bg-gray-800 p-2 pr-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="p-2 bg-[#0b6e4f]/10 rounded-full">
+              <Wallet className="w-5 h-5 text-[#0b6e4f]" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Wallet Balance</p>
+              <p className="font-bold text-gray-900 dark:text-white">
+                ₵{(wallet.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+            <button
+              onClick={() => setTopUpModalOpen(true)}
+              className="ml-2 text-xs font-medium text-[#0b6e4f] hover:underline"
+            >
+              Top Up
+            </button>
+          </div>
+        )}
       </header>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
         <button
           onClick={() => setActiveTab("due")}
-          className={`px-4 py-2 font-medium transition-colors border-b-2 ${
-            activeTab === "due"
+          className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "due"
               ? "text-[#0b6e4f] border-[#0b6e4f]"
               : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border-transparent"
-          }`}
+            }`}
         >
           Payments Due
         </button>
         {isPremium && (
           <button
             onClick={() => setActiveTab("history")}
-            className={`px-4 py-2 font-medium transition-colors border-b-2 ${
-              activeTab === "history"
+            className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "history"
                 ? "text-[#0b6e4f] border-[#0b6e4f]"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border-transparent"
-            }`}
+              }`}
           >
             Payment History
           </button>
         )}
+        <button
+          onClick={() => setActiveTab("wallet")}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "wallet"
+              ? "text-[#0b6e4f] border-[#0b6e4f]"
+              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border-transparent"
+            }`}
+        >
+          Wallet Settings
+        </button>
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg text-sm">
+        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg text-sm flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" />
           {error}
         </div>
       )}
@@ -134,12 +179,21 @@ export default function TenantPayments() {
             ))}
           </motion.div>
         )
-      ) : (
+      ) : activeTab === "history" ? (
         <PaymentHistoryTab
           payments={paymentHistory}
           onDownloadReceipt={handleDownloadReceipt}
           isPremium={isPremium}
         />
+      ) : (
+        <div className="max-w-2xl">
+          <WalletDisplay
+            wallet={wallet}
+            showSetupButton={true}
+            onTopUpClick={() => setTopUpModalOpen(true)}
+            onSetupClick={() => { }}
+          />
+        </div>
       )}
 
       <RentPaymentModal
@@ -153,11 +207,19 @@ export default function TenantPayments() {
         onPay={handleMakePayment}
         loading={processingPayment}
       />
+
+      <WalletTopUpModal
+        isOpen={topUpModalOpen}
+        onClose={() => setTopUpModalOpen(false)}
+        onSuccess={handleTransactionSuccess}
+        user={user}
+        currentBalance={wallet?.balance || 0}
+      />
     </div>
   );
 }
 
-// Helper Components - All Dark Mode Ready
+// Helper Components
 function PaymentsSkeleton() {
   return (
     <div className="space-y-4">
@@ -180,9 +242,9 @@ function NoPaymentsState() {
   return (
     <div className="text-center py-20 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600">
       <div className="mx-auto w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full mb-6" />
-      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">No Payment History</h3>
+      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">No Payments Due</h3>
       <p className="text-gray-600 dark:text-gray-400 mt-3 max-w-md mx-auto">
-        Your payment history will appear here once you make your first payment.
+        You're all caught up! No pending rent payments found.
       </p>
     </div>
   );
@@ -248,7 +310,15 @@ function PaymentHistoryTab({ payments, onDownloadReceipt, isPremium }) {
   }
 
   if (payments.length === 0) {
-    return <NoPaymentsState />;
+    return (
+      <div className="text-center py-20 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600">
+        <div className="mx-auto w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full mb-6" />
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">No Payment History</h3>
+        <p className="text-gray-600 dark:text-gray-400 mt-3 max-w-md mx-auto">
+          Any payments you make will appear here.
+        </p>
+      </div>
+    );
   }
 
   return (

@@ -72,6 +72,7 @@ export const API_ENDPOINTS = {
   // ───────────────────────────────────────────────────────────────
   ADMIN: {
     BASE: '/admin/',
+    DASHBOARD_STATS: '/admin/insights/',
     INSIGHTS: '/admin/insights/',
     PENDING_USERS: '/admin/users/pending/',
     USER_DETAILS: (id) => `/admin/users/${id}/`,

@@ -71,7 +71,7 @@ export const getSystemLeases = async () => {
  * Download system lease template
  * 
  * Endpoint: GET /api/leases/system/{lease_id}/download/?format={format}
- * - Base URL: Configured in apiClient.js (VITE_API_BASE_URL or https://rc-backend-658461237694.europe-west1.run.app/api)
+ * - Base URL: Configured in apiClient.js (VITE_API_BASE_URL or http://localhost:8000/api)
  * - Full URL: {baseURL}/leases/system/{lease_id}/download/?format={format}
  * - No /api duplication: apiClient baseURL already includes /api
  * 
