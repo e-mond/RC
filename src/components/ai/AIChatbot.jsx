@@ -211,11 +211,112 @@ export default function AIChatbot({ defaultOpen = false, position = "bottom-righ
   };
 
   const handleQuickAction = (action) => {
-    if (action?.type === "search" && action?.data?.query) {
-      setInput(action.data.query);
-      inputRef.current?.focus();
+    if (action?.type === "search" || action?.type === "quick_reply") {
+      const query = action?.data?.query || action?.label;
+      if (query) {
+        setInput(query);
+        // Optional: auto-submit
+        setTimeout(() => {
+          // We can't easily call handleSend directly due to event object requirement, 
+          // but we can refactor handleSend or just set input and focus.
+          // Better UX for quick reply is often auto-send.
+          // Let's just set input and focus for now to match current behavior, 
+          // OR trigger a send.
+          // To trigger send, we need to bypass the form event.
+          // Let's extract the core sending logic.
+          submitMessage(query);
+        }, 100);
+      }
     }
-    // Can add more action types later (e.g. "navigate", "book")
+  };
+
+  const submitMessage = async (msgText) => {
+    if (!msgText.trim() || loading) return;
+
+    const userMessage = msgText.trim();
+    setInput("");
+
+    const newMsg = {
+      role: "user",
+      content: userMessage,
+      timestamp: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, newMsg]);
+    setLoading(true);
+
+    try {
+      let locationData = null;
+      try {
+        const pos = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 4000 });
+        });
+        locationData = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        };
+      } catch { }
+
+      const userRole = user?.role?.toLowerCase() || "public";
+      const conversationIdForRequest = conversationId;
+
+      const res = await sendChatbotMessage({
+        message: userMessage,
+        conversation_id: conversationIdForRequest || "",
+        context: {
+          user_role: userRole,
+          location: locationData,
+          current_page: location.pathname,
+        },
+      });
+
+      if (res.conversation_id) setConversationId(res.conversation_id);
+
+      const assistantMsg = {
+        role: "assistant",
+        content: res.response,
+        timestamp: new Date().toISOString(),
+        suggested_actions: res.suggested_actions,
+      };
+
+      setMessages((prev) => [...prev, assistantMsg]);
+
+      if (!isOpen) {
+        setHasNewMessage(true);
+        try {
+          const audio = new Audio(
+            "https://assets.mixkit.co/sfx/preview/mixkit-quick-positive-notification-2044.mp3"
+          );
+          audio.volume = 0.18;
+          audio.play().catch(() => { });
+        } catch { }
+      }
+    } catch (err) {
+      console.error("AI Chat error:", err);
+
+      const isRateLimit =
+        err?.response?.status === 429 ||
+        err?.message?.toLowerCase().includes("too many") ||
+        err?.message?.includes("429");
+
+      const errorMsg = {
+        role: "assistant",
+        content: isRateLimit
+          ? "I'm a bit busy right now — too many conversations! Please wait 10–30 seconds and try again. 🙏"
+          : "Sorry, something went wrong on my end. Try again or rephrase your question.",
+        timestamp: new Date().toISOString(),
+        isError: true,
+      };
+
+      setMessages((prev) => [...prev, errorMsg]);
+      if (isRateLimit) {
+        toast.error("Rate limit reached — please wait a moment.");
+      } else {
+        toast.error("Failed to get response.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ────────────────────────────────────────────────
