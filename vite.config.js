@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'), 
+      '@': path.resolve(__dirname, './src'),
     },
   },
   // PWA Configuration
@@ -17,12 +17,22 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
+        // Manual chunks allocation
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['@headlessui/react', '@heroicons/react', 'lucide-react', 'clsx', 'tailwind-merge'],
+          charts: ['recharts', 'chart.js', 'react-chartjs-2'],
+          maps: ['leaflet', 'react-leaflet', 'ol'],
+          framer: ['framer-motion'],
+          forms: ['react-hook-form', 'zod', '@hookform/resolvers'],
+          utils: ['axios', 'date-fns', 'dayjs', 'zustand']
+        },
         // Ensure service worker is copied to dist
         assetFileNames: (assetInfo) => {
           if (assetInfo.name === 'sw.js') {
             return 'sw.js';
           }
-          return assetInfo.name;
+          return 'assets/[name]-[hash][extname]';
         },
       },
     },
