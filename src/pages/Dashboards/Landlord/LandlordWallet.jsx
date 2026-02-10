@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import WalletDisplay from "@/components/common/WalletDisplay";
 import WalletTopUpModal from "@/components/common/WalletTopUpModal";
 import WithdrawalModal from "@/components/common/WithdrawalModal";
-import { useAuth } from "@/context/AuthContext";
+import { useAuthStore } from "@/stores/authStore";
 
 /**
  * LandlordWallet
@@ -14,7 +14,7 @@ import { useAuth } from "@/context/AuthContext";
  * - Supports Top-up, Withdrawal, and Transaction History.
  */
 export default function LandlordWallet() {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [wallet, setWallet] = useState(null);
@@ -168,8 +168,8 @@ export default function LandlordWallet() {
               <li key={t.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${['credit', 'top_up', 'payment_received'].includes(t.type)
-                      ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
-                      : "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+                    ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+                    : "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
                     }`}>
                     {['credit', 'top_up', 'payment_received'].includes(t.type) ? (
                       <ArrowDownCircle className="w-5 h-5" />
@@ -187,8 +187,8 @@ export default function LandlordWallet() {
                   </div>
                 </div>
                 <div className={`text-right font-semibold ${['credit', 'top_up', 'payment_received'].includes(t.type)
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-gray-900 dark:text-white"
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : "text-gray-900 dark:text-white"
                   }`}>
                   {['credit', 'top_up', 'payment_received'].includes(t.type) ? "+" : "-"}
                   ₵{Number(t.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
