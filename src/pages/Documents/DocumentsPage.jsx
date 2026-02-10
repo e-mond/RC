@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { FileText, Upload, Trash2, CheckCircle, XCircle, Clock, Download, Crown } from "lucide-react";
 import { getDocuments, uploadDocument, deleteDocument } from "@/services/documentService";
-import { useAuth } from "@/context/AuthContext";
+import { useAuthStore } from "@/stores/authStore";
 import Button from "@/components/ui/Button";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -18,7 +18,7 @@ const DOCUMENT_TYPES = [
 ];
 
 export default function DocumentsPage() {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);

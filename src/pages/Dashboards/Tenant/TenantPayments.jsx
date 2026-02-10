@@ -6,9 +6,9 @@ import RentPaymentModal from "@/components/tenant/RentPaymentModal";
 import WalletDisplay from "@/components/common/WalletDisplay";
 import WalletTopUpModal from "@/components/common/WalletTopUpModal";
 import { motion } from "framer-motion";
-import { Download, Receipt, CreditCard, Smartphone, CheckCircle, Clock, XCircle, Wallet } from "lucide-react";
+import { Download, Receipt, CreditCard, Smartphone, CheckCircle, Clock, XCircle, Wallet, AlertTriangle, RefreshCw } from "lucide-react";
 import { useFeatureAccess } from "@/context/FeatureAccessContext";
-import { useAuth } from "@/context/AuthContext";
+import { useAuthStore } from "@/stores/authStore";
 
 /**
  * TenantPayments Page
@@ -16,7 +16,7 @@ import { useAuth } from "@/context/AuthContext";
  * - Now includes Wallet Balance and Top-up functionality.
  */
 export default function TenantPayments() {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const { isPremium } = useFeatureAccess();
 
   const [rentals, setRentals] = useState([]);
@@ -50,7 +50,7 @@ export default function TenantPayments() {
 
     } catch (err) {
       console.error("TenantPayments.loadData:", err);
-      setError(err.message || "Failed to load payments");
+      setError("We're having trouble loading your payment information. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -76,7 +76,7 @@ export default function TenantPayments() {
       setActiveRental(null);
       await loadData(); // Refresh data
     } catch (err) {
-      setError(err.message || "Payment failed");
+      setError("Your payment couldn't be processed right now. Please try again shortly.");
     } finally {
       setProcessingPayment(false);
     }
@@ -132,8 +132,8 @@ export default function TenantPayments() {
         <button
           onClick={() => setActiveTab("due")}
           className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "due"
-              ? "text-[#0b6e4f] border-[#0b6e4f]"
-              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border-transparent"
+            ? "text-[#0b6e4f] border-[#0b6e4f]"
+            : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border-transparent"
             }`}
         >
           Payments Due
@@ -142,8 +142,8 @@ export default function TenantPayments() {
           <button
             onClick={() => setActiveTab("history")}
             className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "history"
-                ? "text-[#0b6e4f] border-[#0b6e4f]"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border-transparent"
+              ? "text-[#0b6e4f] border-[#0b6e4f]"
+              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border-transparent"
               }`}
           >
             Payment History
@@ -152,8 +152,8 @@ export default function TenantPayments() {
         <button
           onClick={() => setActiveTab("wallet")}
           className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "wallet"
-              ? "text-[#0b6e4f] border-[#0b6e4f]"
-              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border-transparent"
+            ? "text-[#0b6e4f] border-[#0b6e4f]"
+            : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border-transparent"
             }`}
         >
           Wallet Settings
@@ -161,9 +161,19 @@ export default function TenantPayments() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg text-sm flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4" />
-          {error}
+        <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 rounded-lg text-sm flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-medium">Something went wrong</p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">{error}</p>
+          </div>
+          <button
+            onClick={loadData}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-amber-100 dark:bg-amber-800/30 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-800/50 transition-colors"
+          >
+            <RefreshCw className="w-3 h-3" />
+            Retry
+          </button>
         </div>
       )}
 
@@ -339,6 +349,7 @@ function PaymentHistoryCard({ payment, onDownloadReceipt }) {
     completed: { color: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300", icon: CheckCircle },
     pending: { color: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300", icon: Clock },
     failed: { color: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300", icon: XCircle },
+    processing: { color: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300", icon: Clock },
   };
 
   const status = payment.status || "pending";

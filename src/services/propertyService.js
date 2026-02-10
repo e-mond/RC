@@ -165,7 +165,7 @@ export const fetchProperties = async (opts = {}) => {
     // Use unified API endpoint configuration
     const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
     const { data } = await apiClient.get(API_ENDPOINTS.PROPERTIES.BASE, { params: opts });
-    
+
     // Normalize various possible backend shapes into a flat array
     // Handles: { properties: [] }, { results: [] }, { data: [] }, or direct array
     return (
@@ -205,7 +205,7 @@ export const fetchProperty = async (id) => {
   try {
     // Use unified API endpoint configuration
     const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
-    
+
     // Try authenticated client first (for landlord's own properties)
     // Fallback to public client if 401/403 (for public properties)
     try {
@@ -225,7 +225,7 @@ export const fetchProperty = async (id) => {
     if (err.response?.status === 404) {
       throw new Error(`Property with ID "${id}" not found. It may have been deleted or does not exist.`);
     }
-    
+
     throw extractError(err, "Failed to fetch property");
   }
 };
@@ -264,7 +264,7 @@ export const createProperty = async (payload) => {
   try {
     // Import image validation utility
     const { isValidImageUrl } = await import("@/utils/imageValidation");
-    
+
     // Backend expects multipart/form-data with images as files or URLs
     // Convert payload to FormData (same logic as landlordService)
     const fd = new FormData();
@@ -283,7 +283,7 @@ export const createProperty = async (payload) => {
           }
           return false;
         });
-        
+
         validImages.forEach((item) => {
           if (item instanceof File) {
             fd.append("images", item);
@@ -311,7 +311,7 @@ export const createProperty = async (payload) => {
 
     // Use unified API endpoint configuration
     const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
-    
+
     // Don't set Content-Type header manually - let apiClient interceptor handle it
     const { data } = await apiClient.post(API_ENDPOINTS.PROPERTIES.BASE, fd);
     return data;
@@ -320,7 +320,7 @@ export const createProperty = async (payload) => {
     if (err.response?.data) {
       const errorData = err.response.data;
       let errorMessage = "Failed to create property";
-      
+
       // Handle Django validation errors
       if (typeof errorData === 'object') {
         const fieldErrors = Object.entries(errorData)
@@ -329,7 +329,7 @@ export const createProperty = async (payload) => {
             return `${field}: ${msg}`;
           })
           .join(', ');
-        
+
         if (fieldErrors) {
           errorMessage = `Validation error: ${fieldErrors}`;
         } else if (errorData.detail) {
@@ -342,7 +342,7 @@ export const createProperty = async (payload) => {
       } else if (typeof errorData === 'string') {
         errorMessage = errorData;
       }
-      
+
       throw new Error(errorMessage);
     }
     throw extractError(err, "Failed to create property");
@@ -389,7 +389,7 @@ export const updateProperty = async (id, payload) => {
   try {
     // Import image validation utility
     const { isValidImageUrl } = await import("@/utils/imageValidation");
-    
+
     // Backend expects multipart/form-data for updates (same as creation)
     const fd = new FormData();
     Object.entries(payload || {}).forEach(([k, v]) => {
@@ -398,7 +398,7 @@ export const updateProperty = async (id, payload) => {
       if (k === "images" && v && v.length) {
         // Handle both File objects and URL strings
         // Use shared validation utility for URL strings, keep File objects
-        
+
         const validImages = Array.from(v).filter(item => {
           // Keep File objects (they'll be uploaded)
           if (item instanceof File) return true;
@@ -408,7 +408,7 @@ export const updateProperty = async (id, payload) => {
           }
           return false;
         });
-        
+
         validImages.forEach((item) => {
           if (item instanceof File) {
             fd.append("images", item);
@@ -436,7 +436,7 @@ export const updateProperty = async (id, payload) => {
 
     // Use unified API endpoint configuration
     const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
-    
+
     // Don't set Content-Type header manually - let apiClient interceptor handle it
     const { data } = await apiClient.put(API_ENDPOINTS.PROPERTIES.BY_ID(id), fd);
     return data;
@@ -445,7 +445,7 @@ export const updateProperty = async (id, payload) => {
     if (err.response?.data) {
       const errorData = err.response.data;
       let errorMessage = "Failed to update property";
-      
+
       // Handle Django validation errors
       if (typeof errorData === 'object') {
         const fieldErrors = Object.entries(errorData)
@@ -454,7 +454,7 @@ export const updateProperty = async (id, payload) => {
             return `${field}: ${msg}`;
           })
           .join(', ');
-        
+
         if (fieldErrors) {
           errorMessage = `Validation error: ${fieldErrors}`;
         } else if (errorData.detail) {
@@ -465,7 +465,7 @@ export const updateProperty = async (id, payload) => {
       } else if (typeof errorData === 'string') {
         errorMessage = errorData;
       }
-      
+
       throw new Error(errorMessage);
     }
     throw extractError(err, "Failed to update property");
@@ -512,24 +512,24 @@ export const uploadImage = async (file) => {
   // Validate file type - check both MIME type and file extension
   const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
   const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-  
+
   // Get file extension safely
   const fileName = file.name || '';
   const lastDotIndex = fileName.lastIndexOf('.');
   const fileExtension = lastDotIndex > 0 ? fileName.substring(lastDotIndex).toLowerCase() : '';
-  
+
   // Normalize MIME type for comparison
   const fileMimeType = (file.type || '').toLowerCase().trim();
-  
+
   // Check MIME type (case-insensitive) or file extension
   const mimeTypeValid = fileMimeType && allowedMimeTypes.some(
     allowedType => fileMimeType === allowedType.toLowerCase()
   );
   const extensionValid = fileExtension && allowedExtensions.includes(fileExtension);
-  
+
   // Also check if it starts with "image/" as a fallback (more lenient)
   const isImageType = fileMimeType.startsWith('image/');
-  
+
   // If it's an image type but not in our strict list, allow it anyway (browser compatibility)
   if (!mimeTypeValid && !extensionValid && !isImageType) {
     throw new Error(
@@ -554,19 +554,19 @@ export const uploadImage = async (file) => {
   try {
     const fd = new FormData();
     fd.append("file", file);
-    
+
     // Use unified API endpoint configuration
     const { API_ENDPOINTS } = await import("@/config/apiEndpoints");
-    
+
     // Don't set Content-Type header manually - let apiClient interceptor handle it
     // The interceptor will automatically set the correct multipart/form-data with boundary
     const { data } = await apiClient.post(API_ENDPOINTS.PROPERTIES.UPLOAD_IMAGE, fd);
-    
+
     // Validate response has URL
     if (!data || !data.url) {
       throw new Error("Invalid response from server: missing image URL");
     }
-    
+
     return data;
   } catch (err) {
     // Handle 404 errors (endpoint not found)
@@ -585,7 +585,7 @@ export const uploadImage = async (file) => {
         "POST /api/properties/upload-image/ is implemented."
       );
     }
-    
+
     // Extract more detailed error message
     if (err.response?.data) {
       const errorData = err.response.data;

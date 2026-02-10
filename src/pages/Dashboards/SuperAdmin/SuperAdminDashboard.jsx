@@ -8,8 +8,11 @@ import SA_SystemHealth from "./components/SA_SystemHealth";
 import SA_ActivityFeed from "./components/SA_ActivityFeed";
 import SA_CreateUserModal from "./components/SA_CreateUserModal";
 import SA_DeleteUserModal from "./components/SA_DeleteUserModal";
+import SA_WithdrawalApprovals from "./components/SA_WithdrawalApprovals";
+import SA_SystemWithdrawalModal from "./components/SA_SystemWithdrawalModal";
 import { fetchAllUsers, fetchSystemStats } from "@/services/adminService";
-import { AlertCircle, FileText, Book } from "lucide-react";
+import { getWallet } from "@/services/walletService";
+import { AlertCircle, FileText, Book, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { Link } from "react-router-dom";
@@ -28,6 +31,8 @@ export default function SuperAdminDashboard() {
   const [error, setError] = useState("");
   const [openCreateModal, setOpenCreateModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [systemWithdrawOpen, setSystemWithdrawOpen] = useState(false);
+  const [systemWallet, setSystemWallet] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // Ghana Time (GMT) - Africa/Accra = GMT (no DST)
@@ -67,7 +72,7 @@ export default function SuperAdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 space-y-10">
-        
+
         {/* Enhanced Header with Live Time Badge */}
         <PageHeader
           title="Super Admin Overview"
@@ -213,6 +218,27 @@ export default function SuperAdminDashboard() {
                   </div>
                 </SectionCard>
               )}
+
+              {/* Withdrawal Management */}
+              <SectionCard
+                title="Withdrawal Management"
+                description="Review and process withdrawal requests"
+                className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm dark:shadow-none"
+              >
+                <SA_WithdrawalApprovals />
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => {
+                      getWallet().then(setSystemWallet).catch(() => { });
+                      setSystemWithdrawOpen(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                  >
+                    <Wallet className="w-4 h-4" />
+                    System Withdrawal
+                  </button>
+                </div>
+              </SectionCard>
             </div>
           </>
         )}
@@ -227,6 +253,12 @@ export default function SuperAdminDashboard() {
           user={deleteTarget}
           onClose={() => setDeleteTarget(null)}
           onSuccess={loadDashboardData}
+        />
+        <SA_SystemWithdrawalModal
+          isOpen={systemWithdrawOpen}
+          onClose={() => setSystemWithdrawOpen(false)}
+          onSuccess={loadDashboardData}
+          systemBalance={systemWallet?.balance || 0}
         />
       </div>
     </div>

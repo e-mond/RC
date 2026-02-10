@@ -3,11 +3,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Calendar, Clock, MessageSquare, Phone } from "lucide-react";
 import { createViewingRequest } from "@/services/propertyService";
 import Button from "@/components/ui/Button";
-import { useAuth } from "@/context/AuthContext";
+import { useAuthStore } from "@/stores/authStore";
 import { useNavigate } from "react-router-dom";
 
 export default function ScheduleViewingModal({ property, isOpen, onClose, onSuccess }) {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     preferred_date: "",

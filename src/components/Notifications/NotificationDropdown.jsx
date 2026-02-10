@@ -12,13 +12,13 @@ import {
   archiveNotification,
   deleteNotification,
 } from "@/services/notificationService";
-import { useAuth } from "@/context/AuthContext";
+import { useAuthStore } from "@/stores/authStore";
 import { toast } from "react-hot-toast";
 import { formatNotification } from "@/utils/notificationHelpers";
 import DeleteNotificationModal from "./DeleteNotificationModal";
 
 export default function NotificationDropdown() {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -176,16 +176,14 @@ export default function NotificationDropdown() {
                 return (
                   <div
                     key={notif.id}
-                    className={`w-full p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0 ${
-                      notif.is_pinned
+                    className={`w-full p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0 ${notif.is_pinned
                         ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
                         : ""
-                    }`}
+                      }`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                        formatted.colors.bg || "bg-primary/10"
-                      }`}>
+                      <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${formatted.colors.bg || "bg-primary/10"
+                        }`}>
                         <Icon size={18} className={formatted.colors.icon || "text-primary"} />
                       </div>
                       <div className="flex-1 min-w-0">

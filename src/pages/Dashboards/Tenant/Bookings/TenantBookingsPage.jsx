@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { getTenantBookings, rescheduleBooking, cancelBooking } from "@/services/tenantService";
 import { fetchProperty } from "@/services/propertyService";
+import { getFirstValidImage, getPlaceholderImage } from "@/utils/imageValidation";
 import { Calendar, List, Filter, Clock, MapPin, User, CheckCircle, XCircle, AlertCircle, RefreshCw, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -51,7 +52,7 @@ export default function TenantBookingsPage() {
       setLoading(true);
       setError("");
       const data = await getTenantBookings();
-      
+
       // Enrich bookings with property details
       const enrichedBookings = await Promise.all(
         data.map(async (booking) => {
@@ -60,12 +61,12 @@ export default function TenantBookingsPage() {
               const propertyId = booking.property_id || booking.propertyId;
               const propertyData = await fetchProperty(propertyId);
               const property = propertyData?.data || propertyData?.property || propertyData;
-              
+
               return {
                 ...booking,
                 property: property || booking.property,
                 propertyTitle: property?.title || booking.propertyTitle || "Unknown Property",
-                propertyImage: property?.images?.[0] || property?.image,
+                propertyImage: getFirstValidImage(property?.images || [property?.image], getPlaceholderImage("Property")),
                 propertyAddress: property?.address || property?.location,
               };
             } catch (err) {
@@ -76,7 +77,7 @@ export default function TenantBookingsPage() {
           return booking;
         })
       );
-      
+
       setBookings(enrichedBookings);
     } catch (err) {
       console.error("getTenantBookings error:", err);
@@ -101,7 +102,7 @@ export default function TenantBookingsPage() {
   const handleReschedule = async (bookingId, newDate, newTime, message) => {
     try {
       setError("");
-      
+
       // Find the booking to get landlord and property info
       const booking = bookings.find((b) => b.id === bookingId);
       if (!booking) {
@@ -111,13 +112,13 @@ export default function TenantBookingsPage() {
 
       // Reschedule booking
       const updated = await rescheduleBooking(bookingId, newDate, newTime, message);
-      
+
       // Update local state immediately
       const updatedBooking = { ...booking, ...updated, status: "rescheduled" };
       setBookings((prev) =>
         prev.map((b) => (b.id === bookingId ? updatedBooking : b))
       );
-      
+
       // Trigger notifications (in-system + email) for landlord
       try {
         await notifyBookingRescheduled({
@@ -133,10 +134,10 @@ export default function TenantBookingsPage() {
         // Don't fail the reschedule if notification fails
         console.warn("Notification failed (non-blocking):", notifErr);
       }
-      
+
       setRescheduleTarget(null);
       toast.success("Booking rescheduled successfully! The landlord has been notified.");
-      
+
       // Refresh bookings to get latest data
       setTimeout(() => loadBookings(), 500);
     } catch (err) {
@@ -150,7 +151,7 @@ export default function TenantBookingsPage() {
   const handleCancel = async (bookingId, reason) => {
     try {
       setError("");
-      
+
       // Find the booking to get landlord and property info
       const booking = bookings.find((b) => b.id === bookingId);
       if (!booking) {
@@ -160,13 +161,13 @@ export default function TenantBookingsPage() {
 
       // Cancel booking
       const updated = await cancelBooking(bookingId, reason);
-      
+
       // Update local state immediately
       const updatedBooking = { ...booking, ...updated, status: "cancelled" };
       setBookings((prev) =>
         prev.map((b) => (b.id === bookingId ? updatedBooking : b))
       );
-      
+
       // Trigger notifications (in-system + email) for landlord
       try {
         await notifyBookingCancelled({
@@ -180,10 +181,10 @@ export default function TenantBookingsPage() {
         // Don't fail the cancel if notification fails
         console.warn("Notification failed (non-blocking):", notifErr);
       }
-      
+
       setCancelTarget(null);
       toast.success("Booking cancelled successfully. The landlord has been notified.");
-      
+
       // Refresh bookings to get latest data
       setTimeout(() => loadBookings(), 500);
     } catch (err) {
@@ -242,22 +243,20 @@ export default function TenantBookingsPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setView("list")}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
-              view === "list"
-                ? "bg-[#0b6e4f] text-white"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${view === "list"
+              ? "bg-[#0b6e4f] text-white"
+              : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+              }`}
           >
             <List size={18} />
             List
           </button>
           <button
             onClick={() => setView("calendar")}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
-              view === "calendar"
-                ? "bg-[#0b6e4f] text-white"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${view === "calendar"
+              ? "bg-[#0b6e4f] text-white"
+              : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+              }`}
           >
             <Calendar size={18} />
             Calendar
@@ -285,51 +284,46 @@ export default function TenantBookingsPage() {
         <Filter size={18} className="text-gray-600 dark:text-gray-400" />
         <button
           onClick={() => setFilter("all")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            filter === "all"
-              ? "bg-[#0b6e4f] text-white"
-              : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-          }`}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === "all"
+            ? "bg-[#0b6e4f] text-white"
+            : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+            }`}
         >
           All
         </button>
         <button
           onClick={() => setFilter("pending")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            filter === "pending"
-              ? "bg-yellow-500 text-white"
-              : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-          }`}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === "pending"
+            ? "bg-yellow-500 text-white"
+            : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+            }`}
         >
           Pending
         </button>
         <button
           onClick={() => setFilter("scheduled")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            filter === "scheduled"
-              ? "bg-green-500 text-white"
-              : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-          }`}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === "scheduled"
+            ? "bg-green-500 text-white"
+            : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+            }`}
         >
           Scheduled
         </button>
         <button
           onClick={() => setFilter("cancelled")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            filter === "cancelled"
-              ? "bg-red-500 text-white"
-              : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-          }`}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === "cancelled"
+            ? "bg-red-500 text-white"
+            : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+            }`}
         >
           Cancelled
         </button>
         <button
           onClick={() => setFilter("completed")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            filter === "completed"
-              ? "bg-emerald-500 text-white"
-              : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-          }`}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === "completed"
+            ? "bg-emerald-500 text-white"
+            : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+            }`}
         >
           Completed
         </button>
@@ -463,17 +457,16 @@ function BookingListView({ bookings, normalizeStatus, onReschedule, onCancel }) 
                     )}
                   </div>
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wider ${
-                      status === "scheduled"
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
-                        : status === "pending"
+                    className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wider ${status === "scheduled"
+                      ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                      : status === "pending"
                         ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300"
                         : status === "cancelled"
-                        ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
-                        : status === "completed"
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                        : "bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300"
-                    }`}
+                          ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                          : status === "completed"
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                            : "bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300"
+                      }`}
                   >
                     {booking.status || "pending"}
                   </span>

@@ -182,7 +182,7 @@ export const topUpWallet = async (topUpData) => {
     const amount = parseFloat(topUpData.amount) || 0;
     wallet.balance = (wallet.balance || 0) + amount;
     wallet.updated_at = new Date().toISOString();
-    
+
     const transaction = {
       id: `txn_${Date.now()}`,
       wallet_id: wallet.id,
@@ -194,10 +194,10 @@ export const topUpWallet = async (topUpData) => {
       reference: topUpData.reference || `ref_${Date.now()}`,
       created_at: new Date().toISOString(),
     };
-    
+
     mockWalletStore.transactions.unshift(transaction);
     mockWalletStore.wallet = wallet;
-    
+
     return withDelay({ transaction, wallet }, 600);
   }
 
@@ -218,7 +218,7 @@ export const topUpWallet = async (topUpData) => {
 export const getWalletTransactions = async (filters = {}) => {
   if (USE_MOCK) {
     let transactions = [...mockWalletStore.transactions];
-    
+
     // Apply filters
     if (filters.type) {
       transactions = transactions.filter((t) => t.type === filters.type);
@@ -226,7 +226,7 @@ export const getWalletTransactions = async (filters = {}) => {
     if (filters.status) {
       transactions = transactions.filter((t) => t.status === filters.status);
     }
-    
+
     return withDelay({
       results: transactions,
       count: transactions.length,
@@ -242,7 +242,7 @@ export const getWalletTransactions = async (filters = {}) => {
         params.append(key, filters[key]);
       }
     });
-    
+
     const { data } = await apiClient.get(`/wallet/transactions/?${params.toString()}`);
     return data;
   } catch (err) {
@@ -307,12 +307,12 @@ export const createSubscriptionTransaction = async (subscriptionData) => {
       `Premium ${subscriptionData.period} subscription`,
       { plan: subscriptionData.plan, period: subscriptionData.period }
     );
-    
+
     // Update wallet balance
     if (mockWalletStore.wallet) {
       mockWalletStore.wallet.balance = Math.max(0, (mockWalletStore.wallet.balance || 0) - subscriptionData.amount);
     }
-    
+
     mockWalletStore.transactions.unshift(transaction);
     return withDelay(transaction, 300);
   }
@@ -339,12 +339,12 @@ export const createAdPromotionTransaction = async (adData) => {
       `Ad promotion: ${adData.promotion_type}`,
       { ad_id: adData.ad_id, promotion_type: adData.promotion_type }
     );
-    
+
     // Update wallet balance
     if (mockWalletStore.wallet) {
       mockWalletStore.wallet.balance = Math.max(0, (mockWalletStore.wallet.balance || 0) - adData.amount);
     }
-    
+
     mockWalletStore.transactions.unshift(transaction);
     return withDelay(transaction, 300);
   }
@@ -371,7 +371,7 @@ export const createBookingTransaction = async (bookingData) => {
       `Booking ${bookingData.type === "payment_received" ? "payment received" : bookingData.type}: ${bookingData.booking_id}`,
       { booking_id: bookingData.booking_id, type: bookingData.type }
     );
-    
+
     // Update wallet balance
     if (mockWalletStore.wallet) {
       if (bookingData.type === "payment_received") {
@@ -380,7 +380,7 @@ export const createBookingTransaction = async (bookingData) => {
         mockWalletStore.wallet.balance = Math.max(0, (mockWalletStore.wallet.balance || 0) - bookingData.amount);
       }
     }
-    
+
     mockWalletStore.transactions.unshift(transaction);
     return withDelay(transaction, 300);
   }
@@ -394,6 +394,99 @@ export const createBookingTransaction = async (bookingData) => {
   }
 };
 
+/**
+ * List all withdrawal requests (Admin only)
+ * @param {Object} filters - Filter options (status: 'pending'|'approved'|'rejected', page, page_size)
+ * @returns {Promise<Object>} Withdrawal list with pagination
+ */
+export const listWithdrawals = async (filters = {}) => {
+  if (USE_MOCK) {
+    const withdrawals = mockWalletStore.transactions
+      .filter((t) => t.type === "withdrawal")
+      .map((t) => ({
+        ...t,
+        user_name: "Mock User",
+        user_email: "mock@example.com",
+        requested_at: t.created_at,
+        processed_at: t.status !== "pending" ? t.updated_at : null,
+      }));
+    return withDelay({ results: withdrawals, count: withdrawals.length }, 400);
+  }
+
+  try {
+    const params = new URLSearchParams();
+    Object.keys(filters).forEach((key) => {
+      if (filters[key] !== null && filters[key] !== undefined && filters[key] !== "") {
+        params.append(key, filters[key]);
+      }
+    });
+    const { data } = await apiClient.get(`/wallet/withdrawals/?${params.toString()}`);
+    return data;
+  } catch (err) {
+    console.error("List withdrawals error:", err);
+    throw extractError(err, "Failed to fetch withdrawal requests");
+  }
+};
+
+/**
+ * Approve or reject a withdrawal request (Admin only)
+ * @param {number} withdrawalId - Withdrawal request ID
+ * @param {string} action - 'approve' or 'reject'
+ * @param {string} reason - Optional reason for rejection
+ * @returns {Promise<Object>} Updated withdrawal
+ */
+export const processWithdrawal = async (withdrawalId, action, reason = "") => {
+  if (USE_MOCK) {
+    const txn = mockWalletStore.transactions.find(
+      (t) => t.id === withdrawalId && t.type === "withdrawal"
+    );
+    if (txn) {
+      txn.status = action === "approve" ? "completed" : "rejected";
+      txn.updated_at = new Date().toISOString();
+      txn.admin_note = reason;
+    }
+    return withDelay(txn || { error: "Not found" }, 500);
+  }
+
+  try {
+    const { data } = await apiClient.post(`/wallet/withdrawals/${withdrawalId}/process/`, {
+      action,
+      reason,
+    });
+    return data;
+  } catch (err) {
+    console.error("Process withdrawal error:", err);
+    throw extractError(err, "Failed to process withdrawal");
+  }
+};
+
+/**
+ * Super Admin system wallet withdrawal
+ * Requires verification code for security
+ * @param {Object} withdrawalData - { amount, destination, verification_code, reason }
+ * @returns {Promise<Object>} System withdrawal result
+ */
+export const systemWithdrawal = async (withdrawalData) => {
+  if (USE_MOCK) {
+    const transaction = createMockTransaction(
+      "system_withdrawal",
+      -withdrawalData.amount,
+      `System withdrawal: ${withdrawalData.reason || "Admin withdrawal"}`,
+      { destination: withdrawalData.destination, verification_code: "verified" }
+    );
+    mockWalletStore.transactions.unshift(transaction);
+    return withDelay({ transaction, success: true }, 800);
+  }
+
+  try {
+    const { data } = await apiClient.post("/wallet/system-withdraw/", withdrawalData);
+    return data;
+  } catch (err) {
+    console.error("System withdrawal error:", err);
+    throw extractError(err, "Failed to process system withdrawal");
+  }
+};
+
 export default {
   getWallet,
   setupWallet,
@@ -404,7 +497,7 @@ export default {
   getWalletTransaction,
   withdrawFromWallet,
   isWalletSetup,
-  // Transaction functions are exported as named exports above
-  // They can be imported directly: import { createSubscriptionTransaction } from './walletService'
+  listWithdrawals,
+  processWithdrawal,
+  systemWithdrawal,
 };
-

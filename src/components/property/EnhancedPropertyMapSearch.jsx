@@ -73,7 +73,7 @@ export default function EnhancedPropertyMapSearch({ properties = [], onPropertyS
         const location = { lat, lng };
 
         setUserLocation(location);
-        
+
         // Center map on user location
         if (mapInstance.current) {
           const coords = fromLonLat([lng, lat]);
@@ -107,9 +107,13 @@ export default function EnhancedPropertyMapSearch({ properties = [], onPropertyS
 
     // Create markers for all properties
     markersSource.current.clear();
-    
+
     properties.forEach((property) => {
-      if (property.latitude && property.longitude) {
+      // Check for valid coordinates (allow 0)
+      const lat = property.latitude ?? property.lat ?? property.location?.lat;
+      const lng = property.longitude ?? property.lng ?? property.location?.lng;
+
+      if (lat != null && lng != null) {
         const marker = new Feature({
           geometry: new Point(
             fromLonLat([Number(property.longitude), Number(property.latitude)])
@@ -174,29 +178,31 @@ export default function EnhancedPropertyMapSearch({ properties = [], onPropertyS
     let zoom = 7;
 
     if (properties.length > 0) {
-      const validProperties = properties.filter(
-        (p) => (p.latitude || p.lat || p.location?.lat) && (p.longitude || p.lng || p.location?.lng)
-      );
-      
+      const validProperties = properties.filter((p) => {
+        const lat = p.latitude ?? p.lat ?? p.location?.lat;
+        const lng = p.longitude ?? p.lng ?? p.location?.lng;
+        return lat != null && lng != null;
+      });
+
       if (validProperties.length > 0) {
         const lats = validProperties.map((p) => Number(p.latitude || p.lat || p.location?.lat));
         const lngs = validProperties.map((p) => Number(p.longitude || p.lng || p.location?.lng));
-        
+
         const minLat = Math.min(...lats);
         const maxLat = Math.max(...lats);
         const minLng = Math.min(...lngs);
         const maxLng = Math.max(...lngs);
-        
+
         center = fromLonLat([
           (minLng + maxLng) / 2,
           (minLat + maxLat) / 2,
         ]);
-        
+
         // Adjust zoom based on spread
         const latDiff = maxLat - minLat;
         const lngDiff = maxLng - minLng;
         const maxDiff = Math.max(latDiff, lngDiff);
-        
+
         if (maxDiff < 0.01) zoom = 15;
         else if (maxDiff < 0.05) zoom = 13;
         else if (maxDiff < 0.1) zoom = 11;
@@ -230,7 +236,7 @@ export default function EnhancedPropertyMapSearch({ properties = [], onPropertyS
         evt.pixel,
         (feature) => feature
       );
-      
+
       if (feature && feature.get("property")) {
         const property = feature.get("property");
         setSelectedProperty(property);
@@ -270,7 +276,11 @@ export default function EnhancedPropertyMapSearch({ properties = [], onPropertyS
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600 dark:text-gray-400">
-            {properties.filter((p) => (p.latitude || p.lat || p.location?.lat) && (p.longitude || p.lng || p.location?.lng)).length} properties
+            {properties.filter((p) => {
+              const lat = p.latitude ?? p.lat ?? p.location?.lat;
+              const lng = p.longitude ?? p.lng ?? p.location?.lng;
+              return lat != null && lng != null;
+            }).length} properties
           </span>
           <button
             onClick={handleGetCurrentLocation}
@@ -296,10 +306,10 @@ export default function EnhancedPropertyMapSearch({ properties = [], onPropertyS
           </div>
         </div>
       </div>
-      
+
       <div className="h-96 sm:h-[500px] w-full relative">
         <div ref={mapRef} className="w-full h-full" />
-        
+
         {/* Property Info Popup */}
         {selectedProperty && (
           <div className="absolute bottom-4 left-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 z-10">
