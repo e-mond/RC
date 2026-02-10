@@ -3,8 +3,8 @@
  * Handles offline caching and app installation
  */
 
-const CACHE_NAME = 'rentalconnects-v1';
-const RUNTIME_CACHE = 'rentalconnects-runtime-v1';
+const CACHE_NAME = 'rentalconnects-v2';
+const RUNTIME_CACHE = 'rentalconnects-runtime-v2';
 
 // Assets to cache on install
 const PRECACHE_ASSETS = [
@@ -57,6 +57,25 @@ self.addEventListener('fetch', (event) => {
 
   // Skip cross-origin requests
   if (!event.request.url.startsWith(self.location.origin)) {
+    return;
+  }
+
+  const url = new URL(event.request.url);
+
+  // NEVER cache /assets/ — these are Vite hashed chunks that change every deploy.
+  // Caching them causes MIME-type errors when old hashes are stale.
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        // If asset fetch fails completely (offline), nothing we can do
+        return new Response('', { status: 503, statusText: 'Offline' });
+      })
+    );
+    return;
+  }
+
+  // For API requests, always go to network
+  if (url.pathname.startsWith('/api/')) {
     return;
   }
 
