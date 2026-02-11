@@ -8,11 +8,8 @@ import SA_SystemHealth from "./components/SA_SystemHealth";
 import SA_ActivityFeed from "./components/SA_ActivityFeed";
 import SA_CreateUserModal from "./components/SA_CreateUserModal";
 import SA_DeleteUserModal from "./components/SA_DeleteUserModal";
-import SA_WithdrawalApprovals from "./components/SA_WithdrawalApprovals";
-import SA_SystemWithdrawalModal from "./components/SA_SystemWithdrawalModal";
 import { fetchAllUsers, fetchSystemStats } from "@/services/adminService";
-import { getWallet } from "@/services/walletService";
-import { AlertCircle, FileText, Book, Wallet } from "lucide-react";
+import { AlertCircle, FileText, Book } from "lucide-react";
 import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { Link } from "react-router-dom";
@@ -31,13 +28,10 @@ export default function SuperAdminDashboard() {
   const [error, setError] = useState("");
   const [openCreateModal, setOpenCreateModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [systemWithdrawOpen, setSystemWithdrawOpen] = useState(false);
-  const [systemWallet, setSystemWallet] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // Ghana Time (GMT) - Africa/Accra = GMT (no DST)
   const ghanaTime = toZonedTime(currentTime, "Africa/Accra");
-  const timeStr = format(ghanaTime, "PPP 'at' ppp");
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -89,21 +83,48 @@ export default function SuperAdminDashboard() {
           }
         />
 
-        {/* Live Ghana Time Badge */}
-        <div className="flex justify-center">
-          <div className="inline-flex items-center gap-3 px-6 py-3 bg-linear-to-r from-[#0b6e4f]/10 to-emerald-600/10 dark:from-emerald-900/30 dark:to-[#0b6e4f]/20 border border-emerald-600/30 dark:border-emerald-500/40 rounded-full backdrop-blur-sm">
-            <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse" />
-            <span className="font-mono text-lg font-semibold text-emerald-700 dark:text-emerald-300">
-              {timeStr}
+        {/* Live Ghana Time Badge – updates every second */}
+        <div className="flex justify-center w-full mb-6 sm:mb-8">
+          <div className="flex items-center gap-2 sm:gap-3 
+            px-4 sm:px-6 py-2 sm:py-2.5 
+            bg-linear-to-r from-emerald-950/30 to-emerald-800/20 
+            dark:from-emerald-950/40 dark:to-emerald-900/30 
+            border border-emerald-700/40 dark:border-emerald-600/50 
+            rounded-full backdrop-blur-md shadow-sm">
+
+            {/* Pulse indicator */}
+            <div className="relative flex h-3 w-3">
+              <div className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-40"></div>
+              <div className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500"></div>
+            </div>
+
+            {/* Live updating time with subtle animation */}
+            <span 
+              className={`
+                font-mono font-semibold tracking-tight
+                text-emerald-800 dark:text-emerald-200
+                text-base sm:text-lg
+                transition-all duration-300 ease-out
+                ${currentTime.getSeconds() % 2 === 0 ? 'opacity-100 scale-100' : 'opacity-92 scale-[1.015]'}
+              `}
+              suppressHydrationWarning
+            >
+              {format(ghanaTime, "HH:mm:ss")}
+              <span className="hidden sm:inline text-emerald-600 dark:text-emerald-400 font-normal">
+                {' • ' + format(ghanaTime, "MMM d, yyyy")}
+              </span>
             </span>
-            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Ghana Time (GMT)</span>
+
+            {/* Label */}
+            <span className="text-xs sm:text-sm font-medium 
+              text-emerald-700/90 dark:text-emerald-400/90 tracking-wide">
+              Ghana Time (GMT)
+            </span>
           </div>
         </div>
 
-        {/* Loading State */}
+        {/* Loading / Error states */}
         {loading && <DashboardSkeleton />}
-
-        {/* Error State */}
         {error && !loading && (
           <div className="rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/20 p-8 text-center">
             <AlertCircle size={56} className="mx-auto mb-4 text-red-600 dark:text-red-400" />
@@ -117,7 +138,7 @@ export default function SuperAdminDashboard() {
           </div>
         )}
 
-        {/* Main Content - All Sections with Dark Mode */}
+        {/* Main Content */}
         {!loading && !error && (
           <>
             <SectionCard
@@ -164,7 +185,6 @@ export default function SuperAdminDashboard() {
               <SA_ActivityFeed activity={activity} />
             </SectionCard>
 
-            {/* Mock Data Editor - Only show in mock mode */}
             {isMockMode() && (
               <SectionCard
                 title="Mock Data Editor"
@@ -218,27 +238,6 @@ export default function SuperAdminDashboard() {
                   </div>
                 </SectionCard>
               )}
-
-              {/* Withdrawal Management */}
-              <SectionCard
-                title="Withdrawal Management"
-                description="Review and process withdrawal requests"
-                className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm dark:shadow-none"
-              >
-                <SA_WithdrawalApprovals />
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    onClick={() => {
-                      getWallet().then(setSystemWallet).catch(() => { });
-                      setSystemWithdrawOpen(true);
-                    }}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-                  >
-                    <Wallet className="w-4 h-4" />
-                    System Withdrawal
-                  </button>
-                </div>
-              </SectionCard>
             </div>
           </>
         )}
@@ -253,12 +252,6 @@ export default function SuperAdminDashboard() {
           user={deleteTarget}
           onClose={() => setDeleteTarget(null)}
           onSuccess={loadDashboardData}
-        />
-        <SA_SystemWithdrawalModal
-          isOpen={systemWithdrawOpen}
-          onClose={() => setSystemWithdrawOpen(false)}
-          onSuccess={loadDashboardData}
-          systemBalance={systemWallet?.balance || 0}
         />
       </div>
     </div>

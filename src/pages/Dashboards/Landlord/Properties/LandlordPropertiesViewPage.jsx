@@ -25,16 +25,7 @@ export default function LandlordPropertiesViewPage() {
   const [error, setError] = useState("");
   const [landlordInfo, setLandlordInfo] = useState(null);
 
-  useEffect(() => {
-    if (landlordId) {
-      loadProperties();
-    } else {
-      setError("Landlord ID is required");
-      setLoading(false);
-    }
-  }, [landlordId]);
-
-  const loadProperties = async () => {
+  const loadProperties = React.useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -66,7 +57,16 @@ export default function LandlordPropertiesViewPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [landlordId]);
+
+  useEffect(() => {
+    if (landlordId) {
+      loadProperties();
+    } else {
+      setError("Landlord ID is required");
+      setLoading(false);
+    }
+  }, [landlordId, loadProperties]);
 
   const getThumbnailUrl = (property) => {
     return getFirstValidImage(property.images, getPlaceholderImage("No Image", 400, 300));

@@ -41,6 +41,7 @@ const ArtisanEarnings = lazy(() => import("@/pages/Dashboards/Artisan/ArtisanEar
 const TaskDetailsPage = lazy(() => import("@/pages/Dashboards/Artisan/Tasks/TaskDetailsPage"));
 const ArtisanSchedule = lazy(() => import("@/pages/Dashboards/Artisan/Schedule/ArtisanSchedule"));
 
+
 const MessagesInbox = lazy(() => import("@/pages/Messages/MessagesInbox"));
 const ManageAds = lazy(() => import("@/pages/Ads/ManageAds"));
 const PublicProfilePage = lazy(() => import("@/pages/Users/PublicProfilePage"));
@@ -55,7 +56,6 @@ const AdminReports = lazy(() => import("@/pages/Dashboards/Admin/components/AD_R
 const AdminAssignedRoles = lazy(() => import("@/pages/Dashboards/Admin/AdminAssignedRoles"));
 const AdminLeasesPage = lazy(() => import("@/pages/Dashboards/Admin/Leases/AdminLeasesPage"));
 const AdminPropertyDetailPage = lazy(() => import("@/pages/Dashboards/Admin/properties/AdminPropertyDetailPage"));
-const SA_MarketingCampaigns = lazy(() => import("@/pages/Dashboards/SuperAdmin/marketing/SA_MarketingCampaigns"));
 
 const SuperAdminDashboard = lazy(() => import("@/pages/Dashboards/SuperAdmin/SuperAdminDashboard"));
 const SA_UsersPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/users/SA_UsersPage"));
@@ -68,11 +68,14 @@ const SA_PendingUserApprovals = lazy(() => import("@/pages/Dashboards/SuperAdmin
 const SA_UserApprovalDetailPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/approvals/SA_UserApprovalDetailPage"));
 const SA_PendingPropertyApprovals = lazy(() => import("@/pages/Dashboards/SuperAdmin/approvals/SA_PendingPropertyApprovals"));
 const SA_LeasesPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/leases/SA_LeasesPage"));
-const ProfessionChangeRequestsPage = lazy(() => import("@/pages/Dashboards/Admin/ProfessionChangeRequestsPage"));
+const SA_MarketingCampaigns = lazy(() => import("@/pages/Dashboards/SuperAdmin/marketing/SA_MarketingCampaigns"));
 
-// ---------------------------
+const ProfessionChangeRequestsPage = lazy(() => import("@/pages/Dashboards/SuperAdmin/professionchangerequests/ProfessionChangeRequestsPage"));
+const WithdrawalManagement = lazy(() => import("@/pages/Dashboards/SuperAdmin/withdrawal/WithdrawalManagement"));
+
+// ────────────────────────────────────────────────────────────────
 // Components
-// ---------------------------
+// ────────────────────────────────────────────────────────────────
 const PageLoader = ({ children }) => (
   <Suspense
     fallback={
@@ -85,13 +88,13 @@ const PageLoader = ({ children }) => (
   </Suspense>
 );
 
-// ---------------------------
+// ────────────────────────────────────────────────────────────────
 // Route configuration
-// ---------------------------
+// ────────────────────────────────────────────────────────────────
 const allRoles = ["tenant", "landlord", "artisan", "admin", "super-admin"];
 
 const dashboardRoutes = [
-  // Tenant section ───────────────────────────────────────────────
+  // Tenant section
   {
     path: "tenant",
     role: "tenant",
@@ -104,16 +107,16 @@ const dashboardRoutes = [
       { path: "rentals", element: <TenantRentals /> },
       { path: "payments", element: <TenantPayments /> },
       { path: "maintenance", element: <TenantMaintenance /> },
-          { path: "bookings", element: <TenantBookingsPage /> },
-          { path: "wishlist", element: <TenantWishlist /> },
-          { path: "history", element: <TenantRentalHistory /> },
-          { path: "leases", element: <TenantLeasesPage /> },
-          { path: "artisans", element: <TenantArtisansPage /> },
-          { path: "messages", element: <MessagesInbox /> },
+      { path: "bookings", element: <TenantBookingsPage /> },
+      { path: "wishlist", element: <TenantWishlist /> },
+      { path: "history", element: <TenantRentalHistory /> },
+      { path: "leases", element: <TenantLeasesPage /> },
+      { path: "artisans", element: <TenantArtisansPage /> },
+      { path: "messages", element: <MessagesInbox /> },
     ],
   },
 
-  // Landlord section ─────────────────────────────────────────────
+  // Landlord section
   {
     path: "landlord",
     role: "landlord",
@@ -128,15 +131,19 @@ const dashboardRoutes = [
       { path: "properties/:id/edit", element: <PropertyForm /> },
       { path: "bookings", element: <LandingBookingPage /> },
 
-      // ── Premium / feature-gated routes ──────────────────────────
+      // Premium / feature-gated
       {
-        path: "analytics", element: ( <FeatureProtectedRoute feature="landlord_advanced_analytics">
+        path: "analytics",
+        element: (
+          <FeatureProtectedRoute feature="landlord_advanced_analytics">
             <AnalyticsDashboard />
           </FeatureProtectedRoute>
         ),
       },
       {
-        path: "wallet", element: (  <FeatureProtectedRoute feature="digital_rent_collection">
+        path: "wallet",
+        element: (
+          <FeatureProtectedRoute feature="digital_rent_collection">
             <LandlordWallet />
           </FeatureProtectedRoute>
         ),
@@ -150,12 +157,11 @@ const dashboardRoutes = [
         ),
       },
 
-      // Always available
       { path: "messages", element: <MessagesInbox /> },
     ],
   },
 
-  // Artisan section ──────────────────────────────────────────────
+  // Artisan section
   {
     path: "artisan",
     role: "artisan",
@@ -168,7 +174,6 @@ const dashboardRoutes = [
       { path: "earnings", element: <ArtisanEarnings /> },
       { path: "schedule", element: <ArtisanSchedule /> },
 
-      // Premium / feature-gated
       {
         path: "ads",
         element: (
@@ -178,7 +183,6 @@ const dashboardRoutes = [
         ),
       },
 
-      // Always available
       { path: "messages", element: <MessagesInbox /> },
     ],
   },
@@ -199,16 +203,23 @@ const dashboardRoutes = [
       { path: "properties/pending", element: <PageLoader><SA_PendingPropertyApprovals /></PageLoader> },
       { path: "properties/:id", element: <PageLoader><AdminPropertyDetailPage /></PageLoader> },
       { path: "roles", element: <SA_RolesPage /> },
+      { 
+      path: "profession-change-requests", 
+      element: <PageLoader><ProfessionChangeRequestsPage /></PageLoader> 
+    },
       { path: "audit", element: <SA_AuditPage /> },
       { path: "announcements", element: <SA_AnnouncementsPage /> },
       { path: "pricing", element: <SA_PremiumPricing /> },
       { path: "marketing", element: <SA_MarketingCampaigns /> },
       { path: "leases", element: <PageLoader><SA_LeasesPage /></PageLoader> },
+
+      { path: "withdrawals", element: <PageLoader><WithdrawalManagement /></PageLoader> },
+
       { path: "messages", element: <MessagesInbox /> },
     ],
   },
 
-  // Admin section (admin + super-admin) ─────────────────────────
+  // Admin section (admin + super-admin)
   {
     path: "admin",
     role: ["admin", "super-admin"],
@@ -217,16 +228,16 @@ const dashboardRoutes = [
       { index: true, element: <Navigate to="overview" replace /> },
       { path: "overview", element: <AdminDashboard /> },
       { path: "dashboard", element: <Navigate to="overview" replace /> },
-          { path: "approvals", element: <AdminApprovals /> },
-          { path: "approvals/user/:id", element: <PageLoader><UserApprovalDetailPage /></PageLoader> },
-          { path: "approvals/properties", element: <PageLoader><AdminPropertyApprovalsPage /></PageLoader> },
-          { path: "properties/:id", element: <PageLoader><AdminPropertyDetailPage /></PageLoader> },
-          { path: "assigned-roles", element: <AdminAssignedRoles /> },
-          { path: "marketing", element: <SA_MarketingCampaigns /> },
-          { path: "reports", element: <AdminReports /> },
-          { path: "leases", element: <AdminLeasesPage /> },
-          { path: "profession-change-requests", element: <ProfessionChangeRequestsPage /> },
-          { path: "messages", element: <MessagesInbox /> },
+      { path: "approvals", element: <AdminApprovals /> },
+      { path: "approvals/user/:id", element: <PageLoader><UserApprovalDetailPage /></PageLoader> },
+      { path: "approvals/properties", element: <PageLoader><AdminPropertyApprovalsPage /></PageLoader> },
+      { path: "properties/:id", element: <PageLoader><AdminPropertyDetailPage /></PageLoader> },
+      { path: "assigned-roles", element: <AdminAssignedRoles /> },
+      { path: "marketing", element: <SA_MarketingCampaigns /> },
+      { path: "reports", element: <AdminReports /> },
+      { path: "leases", element: <AdminLeasesPage /> },
+      { path: "profession-change-requests", element: <ProfessionChangeRequestsPage /> },
+      { path: "messages", element: <MessagesInbox /> },
     ],
   },
 ];
@@ -310,7 +321,7 @@ export default function SecureRoutes() {
         <Route index element={<PageLoader><PublicProfilePage /></PageLoader>} />
       </Route>
 
-      {/* Documentation Pages - Public route (accessible to all authenticated users) */}
+      {/* Documentation Pages - Public route */}
       <Route
         path="documentation"
         element={

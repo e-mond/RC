@@ -2,43 +2,63 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-
     <link rel="icon" type="image/png" href="/src/assets/images/Logo.png" />
-    
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Connect landlords, tenants, and artisans for seamless property rental management in Ghana" />
-    <meta name="theme-color" content="#0b6e4f" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="description" content="Ghana's trusted platform connecting landlords, tenants & artisans for secure, seamless property rentals, payments, maintenance & more." />
+
+    <!-- === Theme & PWA Colors (Green + Gold) === -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#0b6e4f" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#084d38" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="RentalConnects" />
-    
-    <!-- Content Security Policy -->
+
+    <!-- === SOCIAL MEDIA / LINK PREVIEW (Open Graph + Twitter/X) === -->
+    <meta property="og:title" content="RentalConnects – Ghana's Smart Property Rental Platform" />
+    <meta property="og:description" content="Find, rent & manage properties easily. Connect landlords, tenants & artisans with verified listings, secure payments, maintenance requests & more – all in one place." />
+    <meta property="og:image" content="https://tryrentalconnects.vercel.app/assets/og-preview-green-gold-1200x630.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="RentalConnects – Modern property rental platform in green and gold theme showing happy tenant and landlord" />
+    <meta property="og:url" content="https://tryrentalconnects.vercel.app" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="RentalConnects" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter / X Cards (large image preview) -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="RentalConnects – Ghana's Smart Property Rental Platform" />
+    <meta name="twitter:description" content="Secure, seamless rentals in Ghana. Connect with landlords, tenants & artisans today." />
+    <meta name="twitter:image" content="https://tryrentalconnects.vercel.app/assets/og-preview-green-gold-1200x630.jpg" />
+    <meta name="twitter:image:alt" content="RentalConnects platform preview – green and gold design" />
+
+    <!-- === Content Security Policy (tight & Vercel-friendly) === -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
       script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.paystack.co https://*.paystack.com https://cdn.tiny.cloud;
       script-src-elem 'self' 'unsafe-inline' https://js.paystack.co https://*.paystack.com https://cdn.tiny.cloud;
       style-src 'self' 'unsafe-inline' https://paystack.com https://*.paystack.com;
       style-src-elem 'self' 'unsafe-inline' https://paystack.com https://*.paystack.com;
-      img-src 'self' data: https: blob: https://rc-backend-658461237694.europe-west1.run.app http://127.0.0.1:8000 http://localhost:8000;
+      img-src 'self' data: https: blob: https://tryrentalconnects.vercel.app https://rc-backend-658461237694.europe-west1.run.app;
       font-src 'self' data:;
-      connect-src 'self' https://api.paystack.com https://*.paystack.com https://rc-backend-658461237694.europe-west1.run.app https://api.rentalconnects.com wss://rc-backend-658461237694.europe-west1.run.app https://nominatim.openstreetmap.org http://127.0.0.1:8000 ws://127.0.0.1:8000 http://localhost:8000 ws://localhost:8000;
-      media-src 'self' https: https://rc-backend-658461237694.europe-west1.run.app http://127.0.0.1:8000 http://localhost:8000;
+      connect-src 'self' https://api.paystack.com https://*.paystack.com https://tryrentalconnects.vercel.app https://rc-backend-658461237694.europe-west1.run.app https://api.rentalconnects.com wss://rc-backend-658461237694.europe-west1.run.app https://nominatim.openstreetmap.org;
+      media-src 'self' https: https://tryrentalconnects.vercel.app https://rc-backend-658461237694.europe-west1.run.app;
       frame-src https://js.paystack.co https://*.paystack.com;
       worker-src 'self' blob:;
     ">
-    
+
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/icon-192x192.png" />
-    
+
     <title>RentalConnects - Property Rental Platform</title>
-    
+
     <link rel="stylesheet" href="/src/index.css" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script src="https://js.paystack.co/v1/inline.js"></script>
-
-    
   </body>
 </html>

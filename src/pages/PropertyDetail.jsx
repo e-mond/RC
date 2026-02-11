@@ -21,8 +21,6 @@ import {
   Loader2,
   Home,
   CheckCircle,
-  Edit,
-  Trash2,
   ChevronLeft,
   ChevronRight,
   MessageSquare,
@@ -37,10 +35,34 @@ import Footer from "@/components/layout/Footer";
 import { ReviewsList, ReviewForm } from "@/components/reviews";
 import { getPropertyReviews, createReview } from "@/services/reviewService";
 import PropertyMapView from "@/components/common/PropertyMapView";
-import { getFirstValidImage, getPlaceholderImage } from "@/utils/imageValidation";
+import { getPlaceholderImage } from "@/utils/imageValidation";
 import RecommendationsSection from "@/components/ai/RecommendationsSection";
 import TrustScore from "@/components/ai/TrustScore";
 import { getAmenityName, getAmenityId } from "@/utils/amenityUtils";
+
+// ────────────────────────────────────────────────
+// Fallback: getFirstValidImage (remove once import works)
+// ────────────────────────────────────────────────
+const getFirstValidImage = (images = []) => {
+  if (!Array.isArray(images) || images.length === 0) return null;
+
+  for (const img of images) {
+    let url = null;
+    if (typeof img === "string") url = img;
+    else if (img?.image) url = img.image;
+    else if (img?.url) url = img.url;
+    else if (img?.image_url) url = img.image_url;
+
+    if (url && typeof url === "string" && url.trim().length > 0) {
+      // Quick sanity check (can be expanded)
+      if (url.startsWith("http") || url.startsWith("data:")) {
+        return url;
+      }
+    }
+  }
+
+  return null;
+};
 
 export default function PropertyDetail() {
   const { id } = useParams();
@@ -62,13 +84,11 @@ export default function PropertyDetail() {
   const [canMessageLandlord, setCanMessageLandlord] = useState(false);
   const [checkingMessagePermission, setCheckingMessagePermission] = useState(false);
 
-  // Booking modal states
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingDate, setBookingDate] = useState("");
   const [bookingMessage, setBookingMessage] = useState("");
   const [bookingLoading, setBookingLoading] = useState(false);
 
-  // Reviews states
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewsData, setReviewsData] = useState({
@@ -77,7 +97,7 @@ export default function PropertyDetail() {
     rating_breakdown: {},
   });
   const [showReviewForm, setShowReviewForm] = useState(false);
-  const [submittingReview, setSubmittingReview] = useState(false); // kept & will be used
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   const isAuthenticated = !!user;
   const isTenant = user?.role === "tenant";
@@ -86,46 +106,49 @@ export default function PropertyDetail() {
   const isOwner = isLandlord && property?.landlord?.id === user?.id;
 
   // ─── Image Gallery Setup ────────────────────────────────────────────────
-  // Normalize images: handle both string URLs and objects with image property
-  // Use image validation utility to ensure only valid URLs are used
-  // Use useMemo to recalculate when property changes
   const images = useMemo(() => {
     if (!property?.images || !Array.isArray(property.images)) return [];
-    
-    const normalizeImage = (img) => {
-      if (typeof img === "string") return img;
-      if (img?.image) return img.image;
-      if (img?.url) return img.url;
-      if (img?.image_url) return img.image_url;
-      return null;
-    };
-    
-    const rawImages = property.images.map(normalizeImage).filter(Boolean);
-    return rawImages.filter(img => img && typeof img === "string" && img.length > 0);
+
+    return property.images
+      .map((img) => {
+        if (typeof img === "string") return img;
+        if (img?.image) return img.image;
+        if (img?.url) return img.url;
+        if (img?.image_url) return img.image_url;
+        return null;
+      })
+      .filter((url) => url && typeof url === "string" && url.trim().length > 0);
   }, [property?.images]);
-  
+
   const hasImages = images.length > 0;
-  const currentImage = images[currentImageIndex] || images[0] || getPlaceholderImage("No Image", 800, 600);
+
+  const currentImage = useMemo(() => {
+    if (!hasImages) return getPlaceholderImage("No Image", 800, 600);
+
+    // Try to get first valid image (fallback implementation + imported one)
+    const firstValid = getFirstValidImage(images) || images[0];
+    return firstValid || getPlaceholderImage("Image not found", 800, 600);
+  }, [images, hasImages]);
 
   const prevImage = () => {
-    if (images.length > 0) {
+    if (hasImages) {
       setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
     }
   };
 
   const nextImage = () => {
-    if (images.length > 0) {
+    if (hasImages) {
       setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
     }
   };
-  
-  // Reset image index when images change
+
   useEffect(() => {
-    if (images.length > 0 && currentImageIndex >= images.length) {
+    if (hasImages && currentImageIndex >= images.length) {
       setCurrentImageIndex(0);
     }
-  }, [images.length, currentImageIndex]);
+  }, [images.length, currentImageIndex, hasImages]);
 
+  // ─── Data Loading ───────────────────────────────────────────────────────
   useEffect(() => {
     let mounted = true;
 
@@ -135,68 +158,38 @@ export default function PropertyDetail() {
         const data = await fetchProperty(id);
         if (mounted) {
           const propertyData = data?.data || data?.property || data;
-          
-          // Normalize images if needed - handle both string URLs and objects
-          if (propertyData?.images && Array.isArray(propertyData.images)) {
-            propertyData.images = propertyData.images.map(img => {
-              if (typeof img === "string") return img;
-              if (img?.image) return img.image;
-              if (img?.url) return img.url;
-              if (img?.image_url) return img.image_url;
-              if (img?.amenity?.image) return img.amenity.image; // Handle nested amenity images
-              return null;
-            }).filter(img => img && typeof img === "string" && img.length > 0);
-          }
 
-          if (propertyData && !propertyData.landlord && import.meta.env.VITE_USE_MOCK === "true") {
-            propertyData.landlord = {
-              id: "landlord_mock_1",
-              full_name: "John Mensah",
-              email: "john.mensah@example.com",
-              phone: "+233241234567",
-              business_type: "Real Estate Developer",
-              ratings: { average: 4.5, total: 12 },
-              verification_status: {
-                identity_verified: true,
-                background_check_status: "verified",
-                payment_verified: true,
-                document_verified: true,
-                overall_status: "verified",
-              },
-            };
+          // Normalize images safely
+          if (propertyData?.images && Array.isArray(propertyData.images)) {
+            propertyData.images = propertyData.images
+              .map((img) => {
+                if (typeof img === "string") return img;
+                if (img?.image) return img.image;
+                if (img?.url) return img.url;
+                if (img?.image_url) return img.image_url;
+                return null;
+              })
+              .filter(Boolean);
           }
 
           setProperty(propertyData);
-          setCurrentImageIndex(0); // Reset image index when property loads
+          setCurrentImageIndex(0);
 
           if (isTenant) {
-            try {
-              const favorited = await isFavorited(id);
-              if (mounted) setIsFavorite(favorited);
-            } catch (err) {
-              console.warn("Could not check favorite status:", err);
-            }
-            
-            // Check if tenant can message landlord (must have viewed or booked)
-            try {
-              setCheckingMessagePermission(true);
-              const canMessage = await hasViewedOrBookedProperty(id);
-              if (mounted) setCanMessageLandlord(canMessage);
-            } catch (err) {
-              console.warn("Could not check message permission:", err);
-              if (mounted) setCanMessageLandlord(false); // Fail closed
-            } finally {
-              if (mounted) setCheckingMessagePermission(false);
-            }
+            const favorited = await isFavorited(id);
+            setIsFavorite(favorited);
+
+            setCheckingMessagePermission(true);
+            const canMessage = await hasViewedOrBookedProperty(id);
+            setCanMessageLandlord(canMessage);
+            setCheckingMessagePermission(false);
           }
         }
       } catch (err) {
         console.error("Error fetching property:", err);
-        if (mounted) {
-          setError(err.message || "Failed to load property");
-        }
+        setError(err.message || "Failed to load property");
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
     };
 
@@ -224,9 +217,9 @@ export default function PropertyDetail() {
         }
       } catch (err) {
         console.error("Failed to load reviews:", err);
-        if (mounted) setReviews([]);
+        setReviews([]);
       } finally {
-        if (mounted) setReviewsLoading(false);
+        setReviewsLoading(false);
       }
     };
 
@@ -237,6 +230,7 @@ export default function PropertyDetail() {
     };
   }, [id]);
 
+  // ─── Handlers ───────────────────────────────────────────────────────────
   const handleToggleFavorite = async () => {
     if (!isAuthenticated) {
       toast.error("Please login to save to favorites");
@@ -260,31 +254,34 @@ export default function PropertyDetail() {
         toast.success("Added to favorites ❤️");
       }
     } catch (err) {
-      console.error("Favorite toggle failed:", err);
-      toast.error(err.response?.data?.message || err.message || "Failed to update favorites");
+      toast.error(err.response?.data?.message || "Failed to update favorites");
     }
   };
 
   const handleSubmitReview = async (reviewData) => {
+    if (!isTenant) {
+      toast.error("Only tenants can leave reviews");
+      return;
+    }
+
     try {
       setSubmittingReview(true);
-      const newReview = await createReview(reviewData); // kept & assigned
+      const newReview = await createReview(reviewData);
 
-      // Refresh reviews after submission
-      const data = await getPropertyReviews(id);
-      setReviews(data.reviews || []);
-      setReviewsData({
-        average_rating: data.average_rating || 0,
-        total_reviews: data.total_reviews || 0,
-        rating_breakdown: data.rating_breakdown || {},
-      });
+      // Optimistic update
+      setReviews((prev) => [newReview, ...prev]);
+      setReviewsData((prev) => ({
+        ...prev,
+        total_reviews: prev.total_reviews + 1,
+        average_rating:
+          (prev.average_rating * prev.total_reviews + reviewData.rating) /
+          (prev.total_reviews + 1),
+      }));
 
       setShowReviewForm(false);
       toast.success("Review submitted! It will be visible after moderation.");
     } catch (err) {
-      console.error("Failed to submit review:", err);
       toast.error(err.message || "Failed to submit review");
-      throw err;
     } finally {
       setSubmittingReview(false);
     }
@@ -292,50 +289,40 @@ export default function PropertyDetail() {
 
   const handleSubmitBooking = async (e) => {
     e.preventDefault();
-
-    // All fields are now optional - allow submission even without date
     setBookingLoading(true);
 
     try {
-      // Build request payload - only include fields that have values
-      const requestPayload = {
+      const payload = {
         propertyId: id,
-        property_id: id, // Also send snake_case for backend compatibility
+        property_id: id,
       };
-      
-      // Only include preferred_date if provided
-      if (bookingDate && bookingDate.trim() !== "") {
-        requestPayload.preferredDate = bookingDate;
-        requestPayload.preferred_date = bookingDate;
+
+      if (bookingDate?.trim()) {
+        payload.preferredDate = bookingDate.trim();
+        payload.preferred_date = bookingDate.trim();
       }
-      
-      // Only include message if provided
-      if (bookingMessage && bookingMessage.trim() !== "") {
-        requestPayload.message = bookingMessage.trim();
+
+      if (bookingMessage?.trim()) {
+        payload.message = bookingMessage.trim();
       }
-      
-      await createViewingRequest(requestPayload);
+
+      await createViewingRequest(payload);
 
       toast.success("Viewing request sent successfully! 🎉");
       setShowBookingModal(false);
       setBookingDate("");
       setBookingMessage("");
-      
-      // Update message permission after successful viewing request
-      try {
-        const canMessage = await hasViewedOrBookedProperty(id);
-        setCanMessageLandlord(canMessage);
-      } catch (err) {
-        console.warn("Could not update message permission:", err);
-      }
+
+      const canMessage = await hasViewedOrBookedProperty(id);
+      setCanMessageLandlord(canMessage);
     } catch (err) {
-      console.error("Viewing request failed:", err);
       toast.error(err.response?.data?.message || "Failed to send viewing request.");
     } finally {
       setBookingLoading(false);
     }
   };
 
+  // ─── Render ─────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className={isInDashboard ? "" : "min-h-screen bg-gray-50 dark:bg-gray-950"}>
@@ -347,7 +334,7 @@ export default function PropertyDetail() {
     );
   }
 
-  if (error || (!property && !loading)) {
+  if (error || !property) {
     return (
       <div className={isInDashboard ? "" : "min-h-screen bg-gray-50 dark:bg-gray-950"}>
         {!isInDashboard && (isAuthenticated ? <Navbar /> : <LandingNavbar />)}
@@ -400,7 +387,7 @@ export default function PropertyDetail() {
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
               <div className="relative h-80 sm:h-96 bg-gray-200 dark:bg-gray-700">
                 <img
-                  src={currentImage || getPlaceholderImage("No Image", 800, 600)}
+                  src={currentImage}
                   alt={property?.title || "Property image"}
                   className="w-full h-full object-cover"
                   onError={(e) => {
@@ -413,12 +400,14 @@ export default function PropertyDetail() {
                     <button
                       onClick={prevImage}
                       className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 p-2.5 sm:p-3 bg-white/90 dark:bg-gray-900/80 rounded-full hover:bg-white dark:hover:bg-gray-800 transition-colors shadow-md"
+                      aria-label="Previous image"
                     >
                       <ChevronLeft size={24} className="text-gray-800 dark:text-gray-200" />
                     </button>
                     <button
                       onClick={nextImage}
                       className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 p-2.5 sm:p-3 bg-white/90 dark:bg-gray-900/80 rounded-full hover:bg-white dark:hover:bg-gray-800 transition-colors shadow-md"
+                      aria-label="Next image"
                     >
                       <ChevronRight size={24} className="text-gray-800 dark:text-gray-200" />
                     </button>
@@ -433,6 +422,7 @@ export default function PropertyDetail() {
                               ? "bg-[#0b6e4f] dark:bg-emerald-400 scale-125"
                               : "bg-gray-400 dark:bg-gray-600 hover:bg-gray-500 dark:hover:bg-gray-400"
                           }`}
+                          aria-label={`Go to image ${index + 1}`}
                         />
                       ))}
                     </div>
@@ -452,6 +442,7 @@ export default function PropertyDetail() {
                           ? "border-[#0b6e4f] dark:border-emerald-400 shadow-md"
                           : "border-transparent hover:border-gray-300 dark:hover:border-gray-500"
                       }`}
+                      aria-label={`Select thumbnail ${index + 1}`}
                     >
                       <img
                         src={img || getPlaceholderImage("?", 96, 96)}
@@ -517,7 +508,7 @@ export default function PropertyDetail() {
                 </h2>
                 <div className="flex items-start gap-3 text-gray-700 dark:text-gray-300">
                   <MapPin size={22} className="text-[#0b6e4f] dark:text-emerald-400 mt-1 shrink-0" />
-                  <p>
+                  <p className="wrap-break-word">
                     {property.address}
                     {property.city && `, ${property.city}`}
                     {property.region && `, ${property.region}`}
@@ -614,9 +605,10 @@ export default function PropertyDetail() {
                 {isTenant && !showReviewForm && (
                   <button
                     onClick={() => setShowReviewForm(true)}
-                    className="px-4 py-2 text-sm font-medium text-[#0b6e4f] dark:text-emerald-400 hover:bg-[#0b6e4f]/10 dark:hover:bg-emerald-400/10 rounded-lg transition-colors"
+                    disabled={submittingReview}
+                    className="px-4 py-2 text-sm font-medium text-[#0b6e4f] dark:text-emerald-400 hover:bg-[#0b6e4f]/10 dark:hover:bg-emerald-400/10 rounded-lg transition-colors disabled:opacity-50"
                   >
-                    Write Review
+                    {submittingReview ? "Submitting..." : "Write Review"}
                   </button>
                 )}
               </div>
@@ -629,6 +621,7 @@ export default function PropertyDetail() {
                     targetName={property.title}
                     onSubmit={handleSubmitReview}
                     onCancel={() => setShowReviewForm(false)}
+                    disabled={submittingReview}
                   />
                 </div>
               )}
@@ -647,7 +640,7 @@ export default function PropertyDetail() {
                 />
               )}
 
-              {/* Similar Properties Recommendations */}
+              {/* Recommendations */}
               {isTenant && (
                 <div className="mt-8">
                   <RecommendationsSection

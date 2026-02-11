@@ -1,13 +1,23 @@
 {
   "name": "RentalConnects - Property Rental Platform",
   "short_name": "RentalConnects",
-  "description": "Connect landlords, tenants, and artisans for seamless property rental management in Ghana",
-  "start_url": "/",
+  "description": "Connect landlords, tenants, and artisans for seamless property rental management in Ghana. Find, rent, manage properties, request maintenance, and access verified services — all in one secure platform.",
+  "start_url": "/?source=pwa",
   "display": "standalone",
-  "background_color": "#f8f9f9",
+  "display_override": ["standalone", "browser"],
+  "background_color": "#f8f9fa",
   "theme_color": "#0b6e4f",
   "orientation": "portrait-primary",
   "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": [
+    "business",
+    "lifestyle",
+    "productivity",
+    "real-estate",
+    "services"
+  ],
   "icons": [
     {
       "src": "/icon-192x192.png",
@@ -16,52 +26,63 @@
       "purpose": "any"
     },
     {
-      "src": "/icon-192x192.png",
+      "src": "/icon-192x192-maskable.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     },
     {
       "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-  "categories": [
-    "business",
-    "lifestyle",
-    "productivity"
-  ],
-  "screenshots": [],
-  "shortcuts": [
-    {
-      "name": "Properties",
-      "short_name": "Properties",
-      "description": "Browse available properties",
-      "url": "/properties",
-      "icons": [
-        {
-          "src": "/icon-192x192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "purpose": "any"
     },
     {
-      "name": "Dashboard",
+      "src": "/icon-512x512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/welcome-540x720.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Welcome to RentalConnects"
+    },
+    {
+      "src": "/screenshots/property-browser-720x540.png",
+      "sizes": "720x540",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Browse Properties"
+    },
+    {
+      "src": "/screenshots/dashboard-view-720x540.png",
+      "sizes": "720x540",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Your Personalized Dashboard"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Browse Properties",
+      "short_name": "Properties",
+      "description": "Discover available rentals and services across Ghana",
+      "url": "/properties"
+    },
+    {
+      "name": "My Dashboard",
       "short_name": "Dashboard",
-      "description": "View your dashboard",
-      "url": "/dashboard",
-      "icons": [
-        {
-          "src": "/icon-192x192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "description": "Access your rentals, tasks, payments, messages and profile",
+      "url": "/dashboard"
     }
   ],
   "share_target": {
-    "action": "/share",
+    "action": "/share-target",
     "method": "GET",
     "enctype": "application/x-www-form-urlencoded",
     "params": {
@@ -69,5 +90,8 @@
       "text": "text",
       "url": "url"
     }
-  }
+  },
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "iarc_rating_id": ""
 }
