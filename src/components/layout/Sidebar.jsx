@@ -14,7 +14,6 @@ import {
   Hammer,
   Receipt,
   AlertCircle,
-  Menu,
   X,
   ChevronLeft,
   ChevronRight,
@@ -30,7 +29,7 @@ import {
   Lock,
   Crown,
   Book,
-  Wallet,          // ← Added for Withdrawals
+  Wallet,
 } from "lucide-react";
 
 // Store & context hooks
@@ -40,13 +39,11 @@ import { useTranslation } from "react-i18next";
 import useLanguage from "@/hooks/useLanguage";
 import { useFeatureAccess } from "@/context/FeatureAccessContext";
 
-// Service for unread message count
+// Services
 import { getUnreadCount } from "@/services/messagesService";
-
-// Service for pending approval counts (admin/super-admin)
 import { fetchAdminDashboardStats } from "@/services/adminService";
 
-// Static configuration for role badges (color + label + icon)
+// Role configuration
 const roleConfig = {
   "super-admin": { color: "bg-purple-600", label: "Super Admin", icon: Shield },
   admin:         { color: "bg-red-600",     label: "Admin",       icon: Settings },
@@ -55,7 +52,7 @@ const roleConfig = {
   tenant:        { color: "bg-emerald-600", label: "Tenant",      icon: Home },
 };
 
-// Menu structure - now includes optional requiredFeature for premium gating
+// Menu structure per role
 const roleMenus = {
   "super-admin": [
     { to: "/super-admin/overview",       labelKey: "Overview",           icon: <Home size={18} /> },
@@ -66,10 +63,8 @@ const roleMenus = {
     { to: "/super-admin/pricing",        labelKey: "Premium Pricing",     icon: <Crown size={18} /> },
     { to: "/super-admin/marketing",      labelKey: "Marketing",           icon: <Megaphone size={18} /> },
     { to: "/super-admin/audit",          labelKey: "Audit Logs",          icon: <FileText size={18} /> },
-    
     { to: "/super-admin/profession-change-requests", labelKey: "Profession Requests", icon: <Wrench size={18} />, hasPendingBadge: "professionRequests" },
     { to: "/super-admin/withdrawals",    labelKey: "Withdrawals",         icon: <Wallet size={18} /> },
-    
     { to: "/super-admin/leases",         labelKey: "Lease Management",    icon: <FileText size={18} /> },
     { to: "/super-admin/announcements",  labelKey: "Announcements",       icon: <Megaphone size={18} /> },
     { to: "/super-admin/messages",       labelKey: "Messages",            icon: <MessageSquare size={18} />, hasMessages: true },
@@ -166,9 +161,25 @@ export default function Sidebar() {
     professionRequests: 0,
   });
 
-  const role = user?.role?.toLowerCase() || "tenant";
-  const config = roleConfig[role] || roleConfig.tenant;
-  const isAdminRole = role === "admin" || role === "super-admin";
+  // Safe role handling
+  const rawRole = user?.role;
+  const role = typeof rawRole === "string" ? rawRole.toLowerCase() : "tenant";
+  const normalizedRole = role in roleMenus ? role : "tenant";
+
+  // Development-only warning
+  if (import.meta.env?.DEV && !(role in roleMenus)) {
+    console.warn(`Sidebar: No menu config for role "${rawRole || 'unknown'}". Using tenant fallback.`);
+  }
+
+  const config = roleConfig[normalizedRole] || roleConfig.tenant;
+  const isAdminRole = normalizedRole === "admin" || normalizedRole === "super-admin";
+
+  // Always array – prevents undefined.filter crash
+  const menuItems = roleMenus[normalizedRole] || roleMenus.tenant || [];
+
+  const visibleMenuItems = menuItems.filter(
+    (item) => !item.requiredFeature || canAccessFeature(item.requiredFeature)
+  );
 
   // Fetch unread messages
   useEffect(() => {
@@ -210,8 +221,9 @@ export default function Sidebar() {
     return () => clearInterval(interval);
   }, [isAdminRole]);
 
+  // Route active check
   const isActive = useCallback(
-    (path, allMenuItems = []) => {
+    (path) => {
       const current = location.pathname;
 
       if (current === path) return true;
@@ -224,15 +236,6 @@ export default function Sidebar() {
       if (current.startsWith(path)) {
         if (path.endsWith("/")) return true;
 
-        const hasMoreSpecificMatch = allMenuItems.some((item) => {
-          const itemPath = item.to;
-          if (itemPath === path) return false;
-          if (itemPath.length > path.length && current.startsWith(itemPath)) return true;
-          return false;
-        });
-
-        if (hasMoreSpecificMatch) return false;
-
         const nextChar = current[path.length];
         return nextChar === undefined || nextChar === "/";
       }
@@ -242,41 +245,52 @@ export default function Sidebar() {
     [location.pathname]
   );
 
-  const menuItems = roleMenus[role] || roleMenus.tenant;
-
-  const visibleMenuItems = menuItems.filter(
-    (item) => !item.requiredFeature || canAccessFeature(item.requiredFeature)
-  );
-
   return (
     <>
-      {/* Mobile toggle */}
+      {/* Mobile Sidebar Toggle – subtle half-visible circle, no arrow */}
       <button
-        className="fixed top-4 left-4 z-50 p-2.5 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-xl shadow-lg md:hidden border border-gray-200/50 dark:border-gray-700/50"
+        className={`
+          fixed left-0 top-1/2 -translate-y-1/2 z-50 
+          pl-6 pr-4 py-6
+          bg-emerald-600/60 hover:bg-emerald-700/75 
+          text-transparent rounded-r-full 
+          md:hidden 
+          border-2 border-l-0 border-emerald-400/20 
+          transition-all duration-300 
+          active:scale-105 focus:outline-none focus:ring-2 focus:ring-emerald-300/40
+          shadow-md
+        `}
         onClick={() => setIsMobileOpen(true)}
-        aria-label={t("openMenu")}
+        aria-label={t("open sidebar menu")}
+        aria-expanded={isMobileOpen}
+        aria-controls="mobile-sidebar"
       >
-        <Menu size={24} />
+        {/* No icon – very subtle grab handle look */}
+        <div className="w-1.5 h-10 bg-white/50 rounded-full opacity-60"></div>
       </button>
 
+      {/* Backdrop */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"
           onClick={() => setIsMobileOpen(false)}
           aria-hidden="true"
         />
       )}
 
+      {/* Sidebar */}
       <aside
+        id="mobile-sidebar"
         className={`
           fixed md:sticky md:top-0 md:h-screen
           inset-y-0 left-0 z-50 flex flex-col
           bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg
           border-r border-gray-200/60 dark:border-gray-700/60
-          transition-all duration-300 ease-in-out
+          transition-transform duration-300 ease-in-out
           ${isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
           ${isCollapsed ? "w-20" : "w-72"}
         `}
+        aria-label={t("sidebarNavigation")}
       >
         {/* Header */}
         <div className="relative p-5 border-b border-gray-200/60 dark:border-gray-700/60 shrink-0">
@@ -289,11 +303,11 @@ export default function Sidebar() {
           </button>
 
           <button
-            className="absolute right-4 top-5 md:hidden p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="absolute right-4 top-5 md:hidden p-2.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
             onClick={() => setIsMobileOpen(false)}
-            aria-label={t("closeMenu")}
+            aria-label={t("closeSidebar")}
           >
-            <X size={20} />
+            <X size={24} />
           </button>
 
           <div className={`flex items-center gap-3 ${isCollapsed ? "justify-center" : ""}`}>
@@ -321,7 +335,7 @@ export default function Sidebar() {
         <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
           <nav className="px-3 py-6 space-y-1">
             {visibleMenuItems.map((item) => {
-              const active = isActive(item.to, visibleMenuItems);
+              const active = isActive(item.to);
               const showMessageBadge = item.hasMessages && unreadMessages > 0;
               const isLocked = item.requiredFeature && !canAccessFeature(item.requiredFeature);
               const pendingBadgeCount = item.hasPendingBadge ? pendingCounts[item.hasPendingBadge] || 0 : 0;
