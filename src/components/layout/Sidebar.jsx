@@ -1,9 +1,4 @@
-// components/layout/Sidebar.jsx
-// This component renders the main navigation sidebar for all user roles
-// It is responsive (mobile slide-in + desktop fixed/collapsible)
-// Shows only features the current user has access to (via FeatureAccessContext)
-// Locked features are marked as "Pro" and redirect to upgrade page
-
+// src/components/layout/Sidebar.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -13,28 +8,28 @@ import {
   Users,
   Wrench,
   FileText,
-      Settings,
-      Shield,
-      Building2,
-      Hammer,
-      Receipt,
-      AlertCircle,
-      Menu,
-      X,
-      ChevronLeft,
-      ChevronRight,
-      Calendar,
-      TrendingUp,
-      MessageSquare,
-      Heart,
-      History,
-      Megaphone,
-      Languages,
-      Sun,
-      Moon,
-      Lock,
-      Crown,          // Added for locked/premium features
-      Book,           // Added for documentation
+  Settings,
+  Shield,
+  Building2,
+  Hammer,
+  Receipt,
+  AlertCircle,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  TrendingUp,
+  MessageSquare,
+  Heart,
+  History,
+  Megaphone,
+  Languages,
+  Sun,
+  Moon,
+  Lock,
+  Crown,
+  Book,
+  Wallet,
 } from "lucide-react";
 
 // Store & context hooks
@@ -44,13 +39,11 @@ import { useTranslation } from "react-i18next";
 import useLanguage from "@/hooks/useLanguage";
 import { useFeatureAccess } from "@/context/FeatureAccessContext";
 
-// Service for unread message count
+// Services
 import { getUnreadCount } from "@/services/messagesService";
-
-// Service for pending approval counts (admin/super-admin)
 import { fetchAdminDashboardStats } from "@/services/adminService";
 
-// Static configuration for role badges (color + label + icon)
+// Role configuration
 const roleConfig = {
   "super-admin": { color: "bg-purple-600", label: "Super Admin", icon: Shield },
   admin:         { color: "bg-red-600",     label: "Admin",       icon: Settings },
@@ -59,7 +52,7 @@ const roleConfig = {
   tenant:        { color: "bg-emerald-600", label: "Tenant",      icon: Home },
 };
 
-// Menu structure - now includes optional requiredFeature for premium gating
+// Menu structure per role
 const roleMenus = {
   "super-admin": [
     { to: "/super-admin/overview",       labelKey: "Overview",           icon: <Home size={18} /> },
@@ -68,87 +61,88 @@ const roleMenus = {
     { to: "/super-admin/properties/pending", labelKey: "Pending Property Approvals", icon: <Building2 size={18} />, hasPendingBadge: "properties" },
     { to: "/super-admin/roles",          labelKey: "Role Delegation",     icon: <Settings size={18} /> },
     { to: "/super-admin/pricing",        labelKey: "Premium Pricing",     icon: <Crown size={18} /> },
-    { to: "/super-admin/marketing",     labelKey: "Marketing",           icon: <Megaphone size={18} /> },
+    { to: "/super-admin/marketing",      labelKey: "Marketing",           icon: <Megaphone size={18} /> },
     { to: "/super-admin/audit",          labelKey: "Audit Logs",          icon: <FileText size={18} /> },
-    { to: "/super-admin/leases",         labelKey: "Lease Management",     icon: <FileText size={18} /> },
-    { to: "/super-admin/announcements",  labelKey: "Announcements",      icon: <Megaphone size={18} /> },
-    { to: "/super-admin/messages",       labelKey: "Messages",           icon: <MessageSquare size={18} />, hasMessages: true },
-    { to: "/profile",                   labelKey: "Profile",           icon: <Users size={18} /> },
+    { to: "/super-admin/profession-change-requests", labelKey: "Profession Requests", icon: <Wrench size={18} />, hasPendingBadge: "professionRequests" },
+    { to: "/super-admin/withdrawals",    labelKey: "Withdrawals",         icon: <Wallet size={18} /> },
+    { to: "/super-admin/leases",         labelKey: "Lease Management",    icon: <FileText size={18} /> },
+    { to: "/super-admin/announcements",  labelKey: "Announcements",       icon: <Megaphone size={18} /> },
+    { to: "/super-admin/messages",       labelKey: "Messages",            icon: <MessageSquare size={18} />, hasMessages: true },
+    { to: "/profile",                    labelKey: "Profile",             icon: <Users size={18} /> },
   ],
-      admin: [
-        { to: "/admin/overview",             labelKey: "Overview",           icon: <Home size={18} /> },
-        { to: "/admin/approvals",            labelKey: "Pending Approvals",   icon: <AlertCircle size={18} />, hasPendingBadge: "all" },
-        { to: "/admin/assigned-roles",      labelKey: "Assigned Roles",      icon: <Shield size={18} /> },
-        { to: "/admin/marketing",           labelKey: "Marketing",           icon: <Megaphone size={18} /> },
-        { to: "/admin/reports",              labelKey: "Reports",            icon: <FileText size={18} /> },
-        { to: "/admin/leases",               labelKey: "Lease Management",    icon: <FileText size={18} /> },
-        { to: "/admin/profession-change-requests", labelKey: "Profession Requests", icon: <Wrench size={18} />, hasPendingBadge: "professionRequests" },
-        { to: "/admin/messages",             labelKey: "Messages",           icon: <MessageSquare size={18} />, hasMessages: true },
-        { to: "/profile",                   labelKey: "Profile",           icon: <Users size={18} /> },
-      ],
-      tenant: [
-        { to: "/tenant/overview",            labelKey: "Overview",           icon: <Home size={18} /> },
-        { to: "/tenant/properties",          labelKey: "Browse Properties",   icon: <Building2 size={18} /> },
-        { to: "/tenant/rentals",             labelKey: "My Rentals",          icon: <FileText size={18} /> },
-        { to: "/tenant/payments",            labelKey: "Payments",           icon: <Receipt size={18} /> },
-        { to: "/tenant/maintenance",         labelKey: "Maintenance",        icon: <Wrench size={18} /> },
-        { to: "/tenant/wishlist",            labelKey: "Wishlist",           icon: <Heart size={18} /> },
-        { to: "/tenant/history",             labelKey: "RentalHistory",      icon: <History size={18} /> },
-        { to: "/tenant/leases",             labelKey: "Lease Agreements",    icon: <FileText size={18} /> },
-        { to: "/tenant/messages",            labelKey: "Messages",           icon: <MessageSquare size={18} />, hasMessages: true },
-        // { to: "/documentation",              labelKey: "Documentation",      icon: <Book size={18} /> },
-        { to: "/profile",                   labelKey: "Profile",           icon: <Users size={18} /> },
-      ],
-      landlord: [
-        { to: "/landlord/overview",          labelKey: "Overview",           icon: <Home size={18} /> },
-        { to: "/landlord/properties",        labelKey: "My Properties",       icon: <Building2 size={18} /> },
-        { to: "/landlord/bookings",          labelKey: "Bookings",           icon: <Calendar size={18} /> },
-        { to: "/landlord/leases",            labelKey: "Lease Agreements",    icon: <FileText size={18} /> },
-        {
-          to: "/landlord/analytics",
-          labelKey: "Analytics",
-          icon: <TrendingUp size={18} />,
-          requiredFeature: "landlord_advanced_analytics",
-          premium: true,
-        },
-        {
-          to: "/landlord/wallet",
-          labelKey: "Wallet",
-          icon: <Receipt size={18} />,
-          requiredFeature: "digital_rent_collection",
-          premium: true,
-        },
-        { to: "/landlord/messages",          labelKey: "Messages",           icon: <MessageSquare size={18} />, hasMessages: true },
-        {
-          to: "/landlord/ads",
-          labelKey: "Promoted Ads",
-          icon: <Megaphone size={18} />,
-          requiredFeature: "advertisement_manager",
-          premium: true,
-        },
-        // { to: "/documentation",              labelKey: "Documentation",      icon: <Book size={18} /> },
-        { to: "/profile",                   labelKey: "Profile",           icon: <Users size={18} /> },
-      ],
-      artisan: [
-        { to: "/artisan/overview",           labelKey: "Overview",           icon: <Home size={18} /> },
-        { to: "/artisan/tasks",              labelKey: "Assigned Tasks",     icon: <Wrench size={18} /> },
-        { to: "/artisan/earnings",           labelKey: "Earnings",           icon: <Receipt size={18} /> },
-        { to: "/artisan/schedule",           labelKey: "Schedule",           icon: <Calendar size={18} /> },
-        { to: "/artisan/messages",           labelKey: "Messages",           icon: <MessageSquare size={18} />, hasMessages: true },
-        {
-          to: "/artisan/ads",
-          labelKey: "Promoted Ads",
-          icon: <Megaphone size={18} />,
-          requiredFeature: "advertisement_manager",
-          premium: true,
-        },
-        // { to: "/documentation",              labelKey: "Documentation",      icon: <Book size={18} /> },
-        { to: "/profile",                   labelKey: "Profile",           icon: <Users size={18} /> },
-      ],
+
+  admin: [
+    { to: "/admin/overview",             labelKey: "Overview",            icon: <Home size={18} /> },
+    { to: "/admin/approvals",            labelKey: "Pending Approvals",   icon: <AlertCircle size={18} />, hasPendingBadge: "all" },
+    { to: "/admin/assigned-roles",       labelKey: "Assigned Roles",      icon: <Shield size={18} /> },
+    { to: "/admin/marketing",            labelKey: "Marketing",           icon: <Megaphone size={18} /> },
+    { to: "/admin/reports",              labelKey: "Reports",             icon: <FileText size={18} /> },
+    { to: "/admin/leases",               labelKey: "Lease Management",    icon: <FileText size={18} /> },
+    { to: "/admin/messages",             labelKey: "Messages",            icon: <MessageSquare size={18} />, hasMessages: true },
+    { to: "/profile",                    labelKey: "Profile",             icon: <Users size={18} /> },
+  ],
+
+  tenant: [
+    { to: "/tenant/overview",            labelKey: "Overview",            icon: <Home size={18} /> },
+    { to: "/tenant/properties",          labelKey: "Browse Properties",   icon: <Building2 size={18} /> },
+    { to: "/tenant/rentals",             labelKey: "My Rentals",          icon: <FileText size={18} /> },
+    { to: "/tenant/payments",            labelKey: "Payments",            icon: <Receipt size={18} /> },
+    { to: "/tenant/maintenance",         labelKey: "Maintenance",         icon: <Wrench size={18} /> },
+    { to: "/tenant/wishlist",            labelKey: "Wishlist",            icon: <Heart size={18} /> },
+    { to: "/tenant/history",             labelKey: "RentalHistory",       icon: <History size={18} /> },
+    { to: "/tenant/leases",              labelKey: "Lease Agreements",    icon: <FileText size={18} /> },
+    { to: "/tenant/messages",            labelKey: "Messages",            icon: <MessageSquare size={18} />, hasMessages: true },
+    { to: "/profile",                    labelKey: "Profile",             icon: <Users size={18} /> },
+  ],
+
+  landlord: [
+    { to: "/landlord/overview",          labelKey: "Overview",            icon: <Home size={18} /> },
+    { to: "/landlord/properties",        labelKey: "My Properties",       icon: <Building2 size={18} /> },
+    { to: "/landlord/bookings",          labelKey: "Bookings",            icon: <Calendar size={18} /> },
+    { to: "/landlord/leases",            labelKey: "Lease Agreements",    icon: <FileText size={18} /> },
+    {
+      to: "/landlord/analytics",
+      labelKey: "Analytics",
+      icon: <TrendingUp size={18} />,
+      requiredFeature: "landlord_advanced_analytics",
+      premium: true,
+    },
+    {
+      to: "/landlord/wallet",
+      labelKey: "Wallet",
+      icon: <Receipt size={18} />,
+      requiredFeature: "digital_rent_collection",
+      premium: true,
+    },
+    { to: "/landlord/messages",          labelKey: "Messages",            icon: <MessageSquare size={18} />, hasMessages: true },
+    {
+      to: "/landlord/ads",
+      labelKey: "Promoted Ads",
+      icon: <Megaphone size={18} />,
+      requiredFeature: "advertisement_manager",
+      premium: true,
+    },
+    { to: "/profile",                    labelKey: "Profile",             icon: <Users size={18} /> },
+  ],
+
+  artisan: [
+    { to: "/artisan/overview",           labelKey: "Overview",            icon: <Home size={18} /> },
+    { to: "/artisan/tasks",              labelKey: "Assigned Tasks",      icon: <Wrench size={18} /> },
+    { to: "/artisan/earnings",           labelKey: "Earnings",            icon: <Receipt size={18} /> },
+    { to: "/artisan/schedule",           labelKey: "Schedule",            icon: <Calendar size={18} /> },
+    { to: "/artisan/messages",           labelKey: "Messages",            icon: <MessageSquare size={18} />, hasMessages: true },
+    {
+      to: "/artisan/ads",
+      labelKey: "Promoted Ads",
+      icon: <Megaphone size={18} />,
+      requiredFeature: "advertisement_manager",
+      premium: true,
+    },
+    { to: "/profile",                    labelKey: "Profile",             icon: <Users size={18} /> },
+  ],
 };
 
 export default function Sidebar() {
-  // Translation, routing, theme, language & feature access hooks
   const { t } = useTranslation();
   const location = useLocation();
   const { user } = useAuthStore();
@@ -156,7 +150,6 @@ export default function Sidebar() {
   const { language, setLanguage, availableLanguages } = useLanguage();
   const { can: canAccessFeature } = useFeatureAccess();
 
-  // State management
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
@@ -168,12 +161,27 @@ export default function Sidebar() {
     professionRequests: 0,
   });
 
-  // Determine current user role (fallback to tenant)
-  const role = user?.role?.toLowerCase() || "tenant";
-  const config = roleConfig[role] || roleConfig.tenant;
-  const isAdminRole = role === "admin" || role === "super-admin";
+  // Safe role handling
+  const rawRole = user?.role;
+  const role = typeof rawRole === "string" ? rawRole.toLowerCase() : "tenant";
+  const normalizedRole = role in roleMenus ? role : "tenant";
 
-  // Fetch unread message count (with polling)
+  // Development-only warning
+  if (import.meta.env?.DEV && !(role in roleMenus)) {
+    console.warn(`Sidebar: No menu config for role "${rawRole || 'unknown'}". Using tenant fallback.`);
+  }
+
+  const config = roleConfig[normalizedRole] || roleConfig.tenant;
+  const isAdminRole = normalizedRole === "admin" || normalizedRole === "super-admin";
+
+  // Always array – prevents undefined.filter crash
+  const menuItems = roleMenus[normalizedRole] || roleMenus.tenant || [];
+
+  const visibleMenuItems = menuItems.filter(
+    (item) => !item.requiredFeature || canAccessFeature(item.requiredFeature)
+  );
+
+  // Fetch unread messages
   useEffect(() => {
     const updateCount = async () => {
       try {
@@ -186,80 +194,50 @@ export default function Sidebar() {
     };
 
     updateCount();
-    const interval = setInterval(updateCount, 60000); // every 1 minute
+    const interval = setInterval(updateCount, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch pending approval counts for admin/super-admin (with polling)
+  // Fetch pending counts for admins
   useEffect(() => {
     if (!isAdminRole) return;
 
     const updatePendingCounts = async () => {
       try {
         const stats = await fetchAdminDashboardStats();
-        const usersPending = stats?.pendingUsers || stats?.pending_users || 0;
-        const propertiesPending = stats?.pendingProperties || stats?.pending_properties || 0;
-        const professionRequestsPending = stats?.pendingProfessionRequests || stats?.pending_profession_requests || 0;
-        
         setPendingCounts({
-          users: usersPending,
-          properties: propertiesPending,
-          all: usersPending + propertiesPending,
-          professionRequests: professionRequestsPending,
+          users: stats?.pendingUsers || stats?.pending_users || 0,
+          properties: stats?.pendingProperties || stats?.pending_properties || 0,
+          all: (stats?.pendingUsers || 0) + (stats?.pendingProperties || 0),
+          professionRequests: stats?.pendingProfessionRequests || stats?.pending_profession_requests || 0,
         });
       } catch (err) {
-        console.warn("Failed to fetch pending approval counts:", err);
-        // Don't reset counts on error to avoid flickering
+        console.warn("Failed to fetch pending counts:", err);
       }
     };
 
     updatePendingCounts();
-    const interval = setInterval(updatePendingCounts, 60000); // every 1 minute
+    const interval = setInterval(updatePendingCounts, 60000);
     return () => clearInterval(interval);
   }, [isAdminRole]);
 
-  // Helper to check if current route matches menu item
+  // Route active check
   const isActive = useCallback(
-    (path, allMenuItems = []) => {
+    (path) => {
       const current = location.pathname;
 
-      // Exact match
       if (current === path) return true;
 
-      // Special case for overview pages
       if (path.endsWith("/overview")) {
         const base = path.replace("/overview", "");
         return current === base || current === `${base}/`;
       }
 
-      // Check if current path starts with this menu path
       if (current.startsWith(path)) {
-        // If path ends with /, it's a directory match
-        if (path.endsWith("/")) {
-          return true;
-        }
-        
-        // Check if there's a more specific menu item that also matches
-        // If there is, this less specific path should not be active
-        const hasMoreSpecificMatch = allMenuItems.some((item) => {
-          const itemPath = item.to;
-          // Skip self
-          if (itemPath === path) return false;
-          // Check if item path is more specific (longer) and also matches current path
-          if (itemPath.length > path.length && current.startsWith(itemPath)) {
-            return true;
-          }
-          return false;
-        });
-        
-        // Only activate if there's no more specific match
-        if (hasMoreSpecificMatch) {
-          return false;
-        }
-        
-        // Check if current path is exactly the menu path (no additional segments)
+        if (path.endsWith("/")) return true;
+
         const nextChar = current[path.length];
-        return nextChar === undefined;
+        return nextChar === undefined || nextChar === "/";
       }
 
       return false;
@@ -267,49 +245,55 @@ export default function Sidebar() {
     [location.pathname]
   );
 
-  // Get menu items for current role
-  const menuItems = roleMenus[role] || roleMenus.tenant;
-
-  // Filter menu items based on feature access
-  const visibleMenuItems = menuItems.filter(
-    (item) => !item.requiredFeature || canAccessFeature(item.requiredFeature)
-  );
-
   return (
     <>
-      {/* Mobile menu toggle button - visible only on small screens */}
+      {/* Mobile Sidebar Toggle – subtle half-visible circle, no arrow */}
       <button
-        className="fixed top-4 left-4 z-50 p-2.5 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-xl shadow-lg md:hidden border border-gray-200/50 dark:border-gray-700/50"
+        className={`
+          fixed left-0 top-1/2 -translate-y-1/2 z-50 
+          pl-6 pr-4 py-6
+          bg-emerald-600/60 hover:bg-emerald-700/75 
+          text-transparent rounded-r-full 
+          md:hidden 
+          border-2 border-l-0 border-emerald-400/20 
+          transition-all duration-300 
+          active:scale-105 focus:outline-none focus:ring-2 focus:ring-emerald-300/40
+          shadow-md
+        `}
         onClick={() => setIsMobileOpen(true)}
-        aria-label={t("openMenu")}
+        aria-label={t("open sidebar menu")}
+        aria-expanded={isMobileOpen}
+        aria-controls="mobile-sidebar"
       >
-        <Menu size={24} />
+        {/* No icon – very subtle grab handle look */}
+        <div className="w-1.5 h-10 bg-white/50 rounded-full opacity-60"></div>
       </button>
 
-      {/* Mobile overlay backdrop */}
+      {/* Backdrop */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"
           onClick={() => setIsMobileOpen(false)}
           aria-hidden="true"
         />
       )}
 
-      {/* Main sidebar container */}
+      {/* Sidebar */}
       <aside
+        id="mobile-sidebar"
         className={`
           fixed md:sticky md:top-0 md:h-screen
           inset-y-0 left-0 z-50 flex flex-col
           bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg
           border-r border-gray-200/60 dark:border-gray-700/60
-          transition-all duration-300 ease-in-out
+          transition-transform duration-300 ease-in-out
           ${isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
           ${isCollapsed ? "w-20" : "w-72"}
         `}
+        aria-label={t("sidebarNavigation")}
       >
-        {/* Sidebar Header - Logo + Role badge + Collapse button */}
+        {/* Header */}
         <div className="relative p-5 border-b border-gray-200/60 dark:border-gray-700/60 shrink-0">
-          {/* Collapse/Expand toggle (desktop only) */}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="absolute -right-3 top-1/2 -translate-y-1/2 hidden md:flex items-center justify-center w-7 h-7 bg-white dark:bg-gray-800 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 hover:scale-105 transition"
@@ -318,22 +302,19 @@ export default function Sidebar() {
             {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
           </button>
 
-          {/* Mobile close button */}
           <button
-            className="absolute right-4 top-5 md:hidden p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="absolute right-4 top-5 md:hidden p-2.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
             onClick={() => setIsMobileOpen(false)}
-            aria-label={t("closeMenu")}
+            aria-label={t("closeSidebar")}
           >
-            <X size={20} />
+            <X size={24} />
           </button>
 
           <div className={`flex items-center gap-3 ${isCollapsed ? "justify-center" : ""}`}>
-            {/* App logo */}
             <div className="w-10 h-10 bg-linear-to-br from-emerald-600 to-emerald-700 rounded-xl flex items-center justify-center shadow-md shrink-0">
               <span className="text-white font-bold text-base">RC</span>
             </div>
 
-            {/* App name + role badge (hidden when collapsed) */}
             {!isCollapsed && (
               <div className="min-w-0">
                 <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
@@ -350,15 +331,13 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* Scrollable navigation section */}
+        {/* Navigation */}
         <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
           <nav className="px-3 py-6 space-y-1">
             {visibleMenuItems.map((item) => {
-              const active = isActive(item.to, visibleMenuItems);
+              const active = isActive(item.to);
               const showMessageBadge = item.hasMessages && unreadMessages > 0;
               const isLocked = item.requiredFeature && !canAccessFeature(item.requiredFeature);
-              
-              // Calculate pending badge count based on badge type
               const pendingBadgeCount = item.hasPendingBadge ? pendingCounts[item.hasPendingBadge] || 0 : 0;
               const showPendingBadge = item.hasPendingBadge && pendingBadgeCount > 0;
 
@@ -367,11 +346,7 @@ export default function Sidebar() {
                   key={item.to}
                   to={isLocked ? "/upgrade" : item.to}
                   onClick={(e) => {
-                    if (isLocked) {
-                      e.preventDefault();
-                      // You can add toast/notification here if desired
-                      // e.g. toast.info("Upgrade to access this feature");
-                    }
+                    if (isLocked) e.preventDefault();
                     setIsMobileOpen(false);
                   }}
                   className={`
@@ -384,18 +359,13 @@ export default function Sidebar() {
                     }
                   `}
                 >
-                  {/* Icon - shows lock when feature is premium-locked */}
                   <span className={`shrink-0 ${active ? "text-white" : "text-gray-500 dark:text-gray-400"}`}>
                     {isLocked ? <Lock size={18} /> : item.icon}
                   </span>
 
-                  {/* Label + Premium badge (hidden when collapsed) */}
                   {!isCollapsed && (
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="truncate">
-                        {t(item.labelKey)}
-                      </span>
-
+                      <span className="truncate">{t(item.labelKey)}</span>
                       {isLocked && (
                         <span className="ml-auto text-xs font-semibold px-2 py-0.5 bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-full">
                           Pro
@@ -404,21 +374,18 @@ export default function Sidebar() {
                     </div>
                   )}
 
-                  {/* Unread messages badge */}
                   {showMessageBadge && !isLocked && (
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-red-500 text-white text-xs font-bold rounded-full min-w-6 h-6 px-1.5 flex items-center justify-center shadow-md animate-pulse">
                       {unreadMessages > 99 ? "99+" : unreadMessages}
                     </span>
                   )}
 
-                  {/* Pending approval badge */}
                   {showPendingBadge && !isLocked && !showMessageBadge && (
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-amber-500 text-white text-xs font-bold rounded-full min-w-6 h-6 px-1.5 flex items-center justify-center shadow-md">
                       {pendingBadgeCount > 99 ? "99+" : pendingBadgeCount}
                     </span>
                   )}
 
-                  {/* Tooltip when sidebar is collapsed */}
                   {isCollapsed && (
                     <div className="absolute left-full ml-3 px-3 py-2 bg-gray-900/95 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none whitespace-nowrap shadow-xl border border-gray-700/50">
                       {t(item.labelKey)}
@@ -433,9 +400,9 @@ export default function Sidebar() {
           </nav>
         </div>
 
-        {/* Bottom section - Language & Theme controls */}
+        {/* Bottom controls */}
         <div className="p-4 border-t border-gray-200/60 dark:border-gray-700/60 shrink-0">
-          {/* Language selector dropdown */}
+          {/* Language selector */}
           <div className="relative mb-2">
             <button
               onClick={() => setShowLangMenu(!showLangMenu)}
@@ -451,13 +418,9 @@ export default function Sidebar() {
               </span>
             </button>
 
-            {/* Language menu popup */}
             {showLangMenu && !isCollapsed && (
               <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setShowLangMenu(false)}
-                />
+                <div className="fixed inset-0 z-40" onClick={() => setShowLangMenu(false)} />
                 <div className="absolute bottom-full left-0 mb-2 w-full bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50">
                   {availableLanguages.map((lang) => (
                     <button
@@ -473,9 +436,7 @@ export default function Sidebar() {
                       }`}
                     >
                       <span>{lang.label}</span>
-                      {language === lang.code && (
-                        <span className="text-emerald-600 dark:text-emerald-400">✓</span>
-                      )}
+                      {language === lang.code && <span className="text-emerald-600 dark:text-emerald-400">✓</span>}
                     </button>
                   ))}
                 </div>
@@ -483,7 +444,7 @@ export default function Sidebar() {
             )}
           </div>
 
-          {/* Theme toggle switch */}
+          {/* Theme toggle */}
           <button
             onClick={toggleTheme}
             className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-100/80 dark:bg-gray-800/60 hover:bg-gray-200/80 dark:hover:bg-gray-700/60 transition"
@@ -493,7 +454,6 @@ export default function Sidebar() {
               {!isCollapsed && <span>{isDark ? t("Light Mode") : t("Dark Mode")}</span>}
             </span>
 
-            {/* Toggle switch visual */}
             <div
               className={`relative w-11 h-6 rounded-full ${
                 isDark ? "bg-emerald-600" : "bg-gray-400"

@@ -8,11 +8,8 @@ import SA_SystemHealth from "./components/SA_SystemHealth";
 import SA_ActivityFeed from "./components/SA_ActivityFeed";
 import SA_CreateUserModal from "./components/SA_CreateUserModal";
 import SA_DeleteUserModal from "./components/SA_DeleteUserModal";
-import SA_WithdrawalApprovals from "./components/SA_WithdrawalApprovals";
-import SA_SystemWithdrawalModal from "./components/SA_SystemWithdrawalModal";
 import { fetchAllUsers, fetchSystemStats } from "@/services/adminService";
-import { getWallet } from "@/services/walletService";
-import { AlertCircle, FileText, Book, Wallet } from "lucide-react";
+import { AlertCircle, FileText, Book, ChevronDown, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { Link } from "react-router-dom";
@@ -24,6 +21,18 @@ import { isMockMode } from "@/mocks/mockManager";
 
 export default function SuperAdminDashboard() {
   const { can } = useFeatureAccess();
+
+  // Load collapse states from localStorage (default: true = collapsed)
+  const [isUserDirectoryCollapsed, setIsUserDirectoryCollapsed] = useState(() => {
+    const saved = localStorage.getItem("superadmin_userdir_collapsed");
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+
+  const [isRecentActivityCollapsed, setIsRecentActivityCollapsed] = useState(() => {
+    const saved = localStorage.getItem("superadmin_activity_collapsed");
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [activity, setActivity] = useState([]);
@@ -31,13 +40,11 @@ export default function SuperAdminDashboard() {
   const [error, setError] = useState("");
   const [openCreateModal, setOpenCreateModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [systemWithdrawOpen, setSystemWithdrawOpen] = useState(false);
-  const [systemWallet, setSystemWallet] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Ghana Time (GMT) - Africa/Accra = GMT (no DST)
-  const ghanaTime = toZonedTime(currentTime, "Africa/Accra");
-  const timeStr = format(ghanaTime, "PPP 'at' ppp");
+  // Auto-detect timezone (fallback to Accra)
+  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Africa/Accra";
+  const zonedTime = toZonedTime(currentTime, userTimezone);
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -61,7 +68,7 @@ export default function SuperAdminDashboard() {
 
   useEffect(() => {
     loadDashboardData();
-    const interval = setInterval(loadDashboardData, 30_000); // Refresh every 30s
+    const interval = setInterval(loadDashboardData, 30000); // 30s refresh
     const timeInterval = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => {
       clearInterval(interval);
@@ -69,41 +76,57 @@ export default function SuperAdminDashboard() {
     };
   }, [loadDashboardData]);
 
+  // Save collapse states to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("superadmin_userdir_collapsed", JSON.stringify(isUserDirectoryCollapsed));
+  }, [isUserDirectoryCollapsed]);
+
+  useEffect(() => {
+    localStorage.setItem("superadmin_activity_collapsed", JSON.stringify(isRecentActivityCollapsed));
+  }, [isRecentActivityCollapsed]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 space-y-10">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 md:py-10 space-y-8 md:space-y-10">
 
-        {/* Enhanced Header with Live Time Badge */}
+        {/* Page Header */}
         <PageHeader
-          title="Super Admin Overview"
-          subtitle="Platform-wide monitoring & control"
-          badge="Platform Control"
+          title="Platform Control Center"
+          subtitle="Full system oversight, user management, and platform health monitoring"
+          badge="Super Admin"
+          badgeColor="bg-purple-600"
           align="between"
           actions={
             <button
               onClick={() => setOpenCreateModal(true)}
-              className="inline-flex items-center gap-2.5 px-6 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-all shadow-lg hover:shadow-xl"
+              className="inline-flex items-center gap-2 px-5 py-2.5 md:px-6 md:py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-all shadow-md hover:shadow-lg active:scale-95"
             >
-              + Create User
+              Create User
             </button>
           }
         />
 
-        {/* Live Ghana Time Badge */}
-        <div className="flex justify-center">
-          <div className="inline-flex items-center gap-3 px-6 py-3 bg-linear-to-r from-[#0b6e4f]/10 to-emerald-600/10 dark:from-emerald-900/30 dark:to-[#0b6e4f]/20 border border-emerald-600/30 dark:border-emerald-500/40 rounded-full backdrop-blur-sm">
-            <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse" />
-            <span className="font-mono text-lg font-semibold text-emerald-700 dark:text-emerald-300">
-              {timeStr}
+        {/* Live Timezone Badge */}
+        <div className="flex justify-center md:justify-end w-full mb-6">
+          <div className="flex items-center gap-2.5 px-4 py-2.5 md:px-5 md:py-3 bg-gradient-to-r from-emerald-950/20 to-emerald-900/10 dark:from-emerald-950/30 dark:to-emerald-900/20 border border-emerald-700/30 dark:border-emerald-600/40 rounded-full backdrop-blur-md shadow-sm">
+            <div className="relative flex h-2.5 w-2.5">
+              <div className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-40"></div>
+              <div className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></div>
+            </div>
+            <span className="font-mono font-semibold text-emerald-800 dark:text-emerald-200 text-sm md:text-base">
+              {format(zonedTime, "HH:mm:ss")}
+              <span className="hidden sm:inline text-emerald-600 dark:text-emerald-400 font-normal ml-1.5">
+                • {format(zonedTime, "MMM d, yyyy")}
+              </span>
             </span>
-            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Ghana Time (GMT)</span>
+            <span className="text-xs md:text-sm font-medium text-emerald-700/90 dark:text-emerald-400/90">
+              {userTimezone}
+            </span>
           </div>
         </div>
 
-        {/* Loading State */}
+        {/* Loading / Error states */}
         {loading && <DashboardSkeleton />}
-
-        {/* Error State */}
         {error && !loading && (
           <div className="rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/20 p-8 text-center">
             <AlertCircle size={56} className="mx-auto mb-4 text-red-600 dark:text-red-400" />
@@ -117,7 +140,7 @@ export default function SuperAdminDashboard() {
           </div>
         )}
 
-        {/* Main Content - All Sections with Dark Mode */}
+        {/* Main Content – original vertical arrangement */}
         {!loading && !error && (
           <>
             <SectionCard
@@ -144,27 +167,60 @@ export default function SuperAdminDashboard() {
               <SA_RoleDistributionChart data={stats?.roles} />
             </SectionCard>
 
+            {/* Collapsible User Directory */}
             <SectionCard
               title="User Directory"
               description="Full control over all platform users"
               className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm dark:shadow-none"
             >
-              <SA_UserTable
-                users={users}
-                onCreate={() => setOpenCreateModal(true)}
-                onDelete={setDeleteTarget}
-              />
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  onClick={() => setIsUserDirectoryCollapsed(!isUserDirectoryCollapsed)}
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  aria-label={isUserDirectoryCollapsed ? "Expand User Directory" : "Collapse User Directory"}
+                >
+                  {isUserDirectoryCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+                </button>
+              </div>
+
+              <div 
+                className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                  isUserDirectoryCollapsed ? "max-h-0" : "max-h-[2000px]"
+                }`}
+              >
+                <SA_UserTable
+                  users={users}
+                  onCreate={() => setOpenCreateModal(true)}
+                  onDelete={setDeleteTarget}
+                />
+              </div>
             </SectionCard>
 
+            {/* Collapsible Recent Activity */}
             <SectionCard
               title="Recent Activity"
               description="Latest actions across the entire platform"
               className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm dark:shadow-none"
             >
-              <SA_ActivityFeed activity={activity} />
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  onClick={() => setIsRecentActivityCollapsed(!isRecentActivityCollapsed)}
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  aria-label={isRecentActivityCollapsed ? "Expand Recent Activity" : "Collapse Recent Activity"}
+                >
+                  {isRecentActivityCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+                </button>
+              </div>
+
+              <div 
+                className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                  isRecentActivityCollapsed ? "max-h-0" : "max-h-[2000px]"
+                }`}
+              >
+                <SA_ActivityFeed activity={activity} />
+              </div>
             </SectionCard>
 
-            {/* Mock Data Editor - Only show in mock mode */}
             {isMockMode() && (
               <SectionCard
                 title="Mock Data Editor"
@@ -218,27 +274,6 @@ export default function SuperAdminDashboard() {
                   </div>
                 </SectionCard>
               )}
-
-              {/* Withdrawal Management */}
-              <SectionCard
-                title="Withdrawal Management"
-                description="Review and process withdrawal requests"
-                className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm dark:shadow-none"
-              >
-                <SA_WithdrawalApprovals />
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    onClick={() => {
-                      getWallet().then(setSystemWallet).catch(() => { });
-                      setSystemWithdrawOpen(true);
-                    }}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-                  >
-                    <Wallet className="w-4 h-4" />
-                    System Withdrawal
-                  </button>
-                </div>
-              </SectionCard>
             </div>
           </>
         )}
@@ -253,12 +288,6 @@ export default function SuperAdminDashboard() {
           user={deleteTarget}
           onClose={() => setDeleteTarget(null)}
           onSuccess={loadDashboardData}
-        />
-        <SA_SystemWithdrawalModal
-          isOpen={systemWithdrawOpen}
-          onClose={() => setSystemWithdrawOpen(false)}
-          onSuccess={loadDashboardData}
-          systemBalance={systemWallet?.balance || 0}
         />
       </div>
     </div>

@@ -1,10 +1,10 @@
-// src/pages/Dashboards/SuperAdmin/components/SA_UserTable.jsx
 /**
  * SA_UserTable
  * - Full user management with search, role filter, bulk delete
  * - Ghana-ready: joined date in Africa/Accra
- * - 100% unique keys via UUID fallback
- * - CSV export, responsive, accessible
+ * - Improved accessibility (ARIA, scope, caption)
+ * - Prevent wrapping of critical columns (Role, Status, etc.)
+ * - Subtle truncation + tooltips for long content
  */
 
 import { useState, useMemo } from "react";
@@ -28,7 +28,6 @@ export default function SA_UserTable({ users = [], loading, onDelete, onRefresh 
 
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
-      // Filter out deleted/inactive users (hard deleted users won't appear in list)
       if (u.status === "deleted" || u.status === "inactive" || u.deleted === true) {
         return false;
       }
@@ -80,27 +79,27 @@ export default function SA_UserTable({ users = [], loading, onDelete, onRefresh 
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
+      className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
     >
       {/* Controls */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-col md:flex-row gap-3">
-        <div className="flex-1 flex gap-2">
-          <div className="relative flex-1">
-            <FiSearch className="absolute left-3 top-3 text-gray-400" size={18} />
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+        <div className="flex-1 flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 min-w-[220px]">
+            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
               placeholder="Search name or email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 pr-3 py-2 border rounded-lg w-full focus:ring-2 focus:ring-[#0b6e4f] focus:border-transparent dark:bg-gray-800 dark:border-gray-600"
-              aria-label="Search users"
+              className="pl-10 pr-4 py-2.5 border rounded-lg w-full focus:ring-2 focus:ring-[#0b6e4f] focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 transition"
+              aria-label="Search users by name or email"
             />
           </div>
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-600"
-            aria-label="Filter by role"
+            className="px-4 py-2.5 border rounded-lg dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 focus:ring-2 focus:ring-[#0b6e4f] min-w-40"
+            aria-label="Filter users by role"
           >
             <option value="">All Roles</option>
             <option value="tenant">Tenant</option>
@@ -111,12 +110,12 @@ export default function SA_UserTable({ users = [], loading, onDelete, onRefresh 
           </select>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 self-end sm:self-auto">
           {selected.length > 0 && (
             <button
               onClick={handleBulkDelete}
-              className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2 transition"
-              aria-label={`Delete ${selected.length} users`}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2 transition focus:ring-2 focus:ring-red-400 focus:outline-none"
+              aria-label={`Delete selected ${selected.length} user${selected.length === 1 ? "" : "s"}`}
             >
               <FiTrash2 size={16} />
               Delete ({selected.length})
@@ -125,8 +124,8 @@ export default function SA_UserTable({ users = [], loading, onDelete, onRefresh 
           <CSVLink
             data={csvData}
             filename={`users_${new Date().toISOString().split("T")[0]}.csv`}
-            className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 transition"
-            aria-label="Export users to CSV"
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 transition focus:ring-2 focus:ring-green-400 focus:outline-none"
+            aria-label="Export filtered users to CSV file"
           >
             <FiDownload size={16} />
             Export CSV
@@ -136,30 +135,45 @@ export default function SA_UserTable({ users = [], loading, onDelete, onRefresh 
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <caption className="sr-only">List of platform users with roles, status, join date and management actions</caption>
+
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th className="p-3 text-left">
+              <th scope="col" className="p-4 text-left">
                 <input
                   type="checkbox"
                   checked={selectAll}
                   onChange={toggleSelectAll}
-                  className="rounded border-gray-300"
-                  aria-label="Select all users"
+                  className="rounded border-gray-300 text-[#0b6e4f] focus:ring-[#0b6e4f]"
+                  aria-label="Select all visible users"
                 />
               </th>
-              <th className="p-3 text-left">Name</th>
-              <th className="p-3 text-left">Email</th>
-              <th className="p-3 text-left">Role</th>
-              <th className="p-3 text-left">Status</th>
-              <th className="p-3 text-left">Joined</th>
-              <th className="p-3 text-right">Actions</th>
+              <th scope="col" className="p-4 text-left font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                Name
+              </th>
+              <th scope="col" className="p-4 text-left font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                Email
+              </th>
+              <th scope="col" className="p-4 text-left font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                Role
+              </th>
+              <th scope="col" className="p-4 text-left font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                Status
+              </th>
+              <th scope="col" className="p-4 text-left font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                Joined
+              </th>
+              <th scope="col" className="p-4 text-right font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                Actions
+              </th>
             </tr>
           </thead>
-          <tbody>
+
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
             <AnimatePresence>
               {filteredUsers.map((u) => {
-                const uniqueKey = u._id || u.id || uuidv4(); // 100% UNIQUE
+                const uniqueKey = u._id || u.id || uuidv4();
                 const isSelected = selected.some((s) => s._id === u._id || s.id === u.id);
 
                 return (
@@ -168,63 +182,71 @@ export default function SA_UserTable({ users = [], loading, onDelete, onRefresh 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0, height: 0 }}
-                    className={`border-b hover:bg-gray-50 dark:hover:bg-gray-800 transition ${
+                    className={`border-b transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/60 ${
                       isSelected ? "bg-blue-50 dark:bg-blue-900/20" : ""
-                    }`}
+                    } focus-within:bg-blue-50 dark:focus-within:bg-blue-900/30 outline-none`}
                   >
-                    <td className="p-3">
+                    <td className="p-4">
                       <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleSelect(u)}
-                        className="rounded border-gray-300"
+                        className="rounded border-gray-300 text-[#0b6e4f] focus:ring-[#0b6e4f]"
                       />
                     </td>
-                    <td className="p-3 font-medium">
+                    <td className="p-4 font-medium max-w-[180px] sm:max-w-[220px]">
                       <Link
                         to={`/super-admin/users/${u.id || u._id}`}
-                        className="text-[#0b6e4f] hover:text-[#095c42] hover:underline transition"
+                        className="text-[#0b6e4f] hover:text-[#095c42] hover:underline transition truncate block"
+                        title={u.fullName}
                       >
                         {u.fullName}
                       </Link>
                     </td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">
+                    <td className="p-4 text-gray-600 dark:text-gray-300 max-w-[220px] sm:max-w-[280px]">
                       <Link
                         to={`/super-admin/users/${u.id || u._id}`}
-                        className="hover:text-[#0b6e4f] hover:underline transition"
+                        className="hover:text-[#0b6e4f] hover:underline transition truncate block"
+                        title={u.email}
                       >
                         {u.email}
                       </Link>
                     </td>
-                    <td className="p-3"><RoleBadge role={u.role} /></td>
-                    <td className="p-3"><StatusBadge status={u.status} /></td>
-                    <td className="p-3 text-sm text-gray-500">
+                    <td className="p-4 whitespace-nowrap">
+                      <RoleBadge role={u.role} />
+                    </td>
+                    <td className="p-4 whitespace-nowrap">
+                      <StatusBadge status={u.status} />
+                    </td>
+                    <td className="p-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                       {formatDateGH(u.joined) || "—"}
                     </td>
-                    <td className="p-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="p-4 text-right">
+                      <div className="flex items-center justify-end gap-3">
                         <Link
                           to={`/super-admin/users/${u.id || u._id}`}
-                          className="text-blue-600 hover:text-blue-800 transition"
-                          aria-label={`View details for ${u.fullName}`}
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
+                          aria-label={`View full details for ${u.fullName}`}
                           title="View user details"
                         >
                           <Eye size={18} />
                         </Link>
+
                         {u.status !== "suspended" && (
                           <button
                             onClick={() => handleSuspend(u)}
-                            className="text-orange-600 hover:text-orange-800 transition"
-                            aria-label={`Suspend ${u.fullName}`}
+                            className="text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-300 transition focus:outline-none focus:ring-2 focus:ring-orange-500 rounded p-1"
+                            aria-label={`Suspend user ${u.fullName}`}
                             title="Suspend user"
                           >
                             <Ban size={18} />
                           </button>
                         )}
+
                         <button
                           onClick={() => onDelete(u)}
-                          className="text-red-600 hover:text-red-800 transition"
-                          aria-label={`Delete ${u.fullName}`}
+                          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition focus:outline-none focus:ring-2 focus:ring-red-500 rounded p-1"
+                          aria-label={`Permanently delete user ${u.fullName}`}
                         >
                           <FiTrash2 size={18} />
                         </button>

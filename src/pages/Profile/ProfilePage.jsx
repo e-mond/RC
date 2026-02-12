@@ -1,5 +1,5 @@
 // src/pages/Profile/ProfilePage.jsx
-import { useState, useEffect, memo } from "react";
+import { useState, useEffect, memo, useCallback, useMemo } from "react";
 import {
   Shield,
   Crown,
@@ -83,7 +83,7 @@ const ProfilePage = () => {
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [show2FAModal, setShow2FAModal] = useState(false);
 
-  // Reviews states
+  // Reviews
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewsData, setReviewsData] = useState({
@@ -92,10 +92,9 @@ const ProfilePage = () => {
     rating_breakdown: {},
   });
   const [showReviewForm, setShowReviewForm] = useState(false);
-  const [submittingReview, setSubmittingReview] = useState(false);
 
-  // Verification status (mock data for now)
-  const [verificationStatus, setVerificationStatus] = useState({
+  // Verification status (mock)
+  const [verificationStatus] = useState({
     identity_verified: user?.role === "landlord" || user?.role === "artisan",
     background_check_status: user?.role === "landlord" ? "verified" : "unverified",
     payment_verified: false,
@@ -103,25 +102,27 @@ const ProfilePage = () => {
     overall_status: user?.role === "landlord" ? "verified" : "unverified",
   });
 
-  // Role & Plan info
+  // Derived values
   const role = user?.role || "tenant";
   const formattedRole = formatRole(role);
   const displayName = getDisplayName(user?.full_name);
   const isPremium = plan === "premium";
   const isAdmin = isAdminRole || role === "admin" || role === "super-admin";
-
-  // Who needs wallet?
   const needsWallet = isLandlord() || isArtisan() || isAdmin;
 
   const { premiumPrice, featuresByRole } = SUBSCRIPTION_CONFIG;
   const premiumFeatures = featuresByRole[role] || featuresByRole.tenant || [];
 
-  const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || "pk_test_your_key_here";
-  const PREMIUM_AMOUNT_KOBO = premiumPrice.monthly * 100000; // assuming price in main unit
+  const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+
+  const PREMIUM_AMOUNT_KOBO = useMemo(
+    () => Math.round(premiumPrice.monthly * 100),
+    [premiumPrice.monthly]
+  );
 
   // ─── Paystack Script Loading ───────────────────────────────
   useEffect(() => {
-    if (paystackLoaded || isPremium || isAdmin) return;
+    if (paystackLoaded || isPremium || isAdmin || !PAYSTACK_PUBLIC_KEY) return;
 
     const script = document.createElement("script");
     script.src = "https://js.paystack.co/v1/inline.js";
@@ -137,12 +138,11 @@ const ProfilePage = () => {
     return () => {
       if (document.body.contains(script)) document.body.removeChild(script);
     };
-  }, [paystackLoaded, isPremium, isAdmin, t]);
+  }, [paystackLoaded, isPremium, isAdmin, PAYSTACK_PUBLIC_KEY, t]);
 
   // ─── Wallet Loading ─────────────────────────────────────────
   useEffect(() => {
     if (!needsWallet || !user) {
-      // Clear wallet state if user doesn't need wallet
       setWallet(null);
       setWalletLoading(false);
       return;
@@ -155,12 +155,10 @@ const ProfilePage = () => {
         setWalletLoading(true);
         const data = await getWallet();
         if (mounted) {
-          // Ensure wallet object has is_setup property
-          setWallet(data || { is_setup: false });
+          setWallet(data || { is_setup: false, balance: 0, currency: "GHS" });
         }
       } catch (err) {
-        console.error("Failed to load wallet:", err);
-        // Set default wallet state if fetch fails
+        console.error("Wallet load error:", err);
         if (mounted) setWallet({ is_setup: false, balance: 0, currency: "GHS" });
       } finally {
         if (mounted) setWalletLoading(false);
@@ -174,27 +172,68 @@ const ProfilePage = () => {
     };
   }, [needsWallet, user]);
 
-  // ─── Preferences ────────────────────────────────────────────
+  // ─── Preferences Loading ────────────────────────────────────
   useEffect(() => {
     const loadPrefs = async () => {
       try {
         const prefs = await getPreferences();
         setPreferences(prefs);
       } catch (err) {
-        console.error("Failed to load preferences:", err);
+        console.error("Preferences load error:", err);
       }
     };
     loadPrefs();
   }, []);
 
-  // Auto-verify after payment callback
+  // ─── Payment Verification ───────────────────────────────────
+  const verifyPayment = useCallback(
+    async (reference) => {
+      if (!reference) return;
+
+      setLoading(true);
+
+      if (isMockMode()) {
+        setPlan("premium");
+        toast.success(t("demoUpgradeSuccess", "Upgrade successful (demo mode)"));
+        setLoading(false);
+        setPendingReference(null);
+        return;
+      }
+
+      try {
+        const { verifyPaystackPayment } = await import("@/services/paystackService");
+        const verification = await verifyPaystackPayment(reference);
+
+        if (verification.success) {
+          setPlan("premium");
+          toast.success(t("paymentSuccess", "Upgrade successful! Welcome to Premium 🎉"));
+        } else {
+          setMessage({
+            text: verification.message || t("paymentVerificationFailed", "Payment verification failed"),
+            type: "error",
+          });
+        }
+      } catch (err) {
+        console.error("Payment verification error:", err);
+        setMessage({
+          text: err.message || t("networkError", "Network error. Please try again."),
+          type: "error",
+        });
+      } finally {
+        setLoading(false);
+        setPendingReference(null);
+      }
+    },
+    [setPlan, t]
+  );
+
   useEffect(() => {
     if (pendingReference) {
       verifyPayment(pendingReference);
     }
-  }, [pendingReference]);
+  }, [pendingReference, verifyPayment]);
 
-  // ─── Load Reviews ─────────────────────────────────────────
+  // ─── Load Reviews ───────────────────────────────────────────
   useEffect(() => {
     if (!user?.id) return;
 
@@ -229,46 +268,7 @@ const ProfilePage = () => {
     };
   }, [user?.id]);
 
-  // ─── Payment Handlers ───────────────────────────────────────
-  const verifyPayment = async (reference) => {
-    if (!reference) return;
-
-    setLoading(true);
-
-    if (isMockMode()) {
-      setPlan("premium");
-      toast.success(t("demoUpgradeSuccess", "Upgrade successful (demo mode)"));
-      setLoading(false);
-      setPendingReference(null);
-      return;
-    }
-
-    try {
-      // Use paystackService for proper error handling and API client integration
-      const { verifyPaystackPayment } = await import("@/services/paystackService");
-      const verification = await verifyPaystackPayment(reference);
-
-      if (verification.success) {
-        setPlan("premium");
-        toast.success(t("paymentSuccess", "Upgrade successful! Welcome to Premium 🎉"));
-      } else {
-        setMessage({
-          text: verification.message || t("paymentVerificationFailed", "Payment verification failed"),
-          type: "error",
-        });
-      }
-    } catch (err) {
-      console.error("Payment verification error:", err);
-      setMessage({
-        text: err.message || t("networkError", "Network error. Please try again."),
-        type: "error",
-      });
-    } finally {
-      setLoading(false);
-      setPendingReference(null);
-    }
-  };
-
+  // ─── Payment & Other Handlers ───────────────────────────────
   const handleUpgrade = () => {
     if (!paystackLoaded) {
       setMessage({
@@ -299,7 +299,7 @@ const ProfilePage = () => {
         user_id: user.id,
         full_name: user.full_name,
         plan: "premium",
-        role: role,
+        role,
       },
       callback: (response) => {
         setPendingReference(response.reference);
@@ -326,7 +326,6 @@ const ProfilePage = () => {
     }
 
     setLoading(true);
-    // In real app → call backend to cancel subscription
     setTimeout(() => {
       setPlan("free");
       toast.success(t("downgradedToFree", "Successfully downgraded to Free plan"));
@@ -349,7 +348,6 @@ const ProfilePage = () => {
     }
   };
 
-  // ─── Wallet Setup Success Handler ───────────────────────────
   const handleWalletSetupSuccess = async () => {
     try {
       const data = await getWallet();
@@ -360,7 +358,6 @@ const ProfilePage = () => {
     }
   };
 
-  // ─── Wallet Top-Up Success Handler ───────────────────────────
   const handleWalletTopUpSuccess = async () => {
     try {
       const data = await getWallet();
@@ -373,10 +370,8 @@ const ProfilePage = () => {
 
   const handleSubmitReview = async (reviewData) => {
     try {
-      setSubmittingReview(true);
       await createReview(reviewData);
-      
-      // Reload reviews
+
       const data = await getUserReviews(user.id);
       setReviews(data.reviews || []);
       setReviewsData({
@@ -384,15 +379,12 @@ const ProfilePage = () => {
         total_reviews: data.total_reviews || 0,
         rating_breakdown: data.rating_breakdown || {},
       });
-      
+
       setShowReviewForm(false);
       toast.success("Review submitted! It will be visible after moderation.");
     } catch (err) {
       console.error("Failed to submit review:", err);
       toast.error(err.message || "Failed to submit review");
-      throw err;
-    } finally {
-      setSubmittingReview(false);
     }
   };
 
@@ -436,7 +428,7 @@ const ProfilePage = () => {
         </div>
       </header>
 
-      {/* Global Messages */}
+      {/* Messages */}
       {message.text && (
         <div
           className={`p-4 rounded-xl border flex items-center gap-3 text-sm font-medium ${
@@ -453,7 +445,7 @@ const ProfilePage = () => {
       )}
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* 1. Contact Information */}
+        {/* Contact Information */}
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-sm">
           <h2 className="text-lg font-semibold flex items-center gap-2 mb-5">
             <Shield className="w-5 h-5 text-emerald-600" />
@@ -471,7 +463,7 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        {/* 2. Account Settings / Preferences */}
+        {/* Account Settings */}
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-sm">
           <h2 className="text-lg font-semibold flex items-center gap-2 mb-5">
             <Settings className="w-5 h-5 text-sky-500" />
@@ -524,30 +516,48 @@ const ProfilePage = () => {
                 </button>
               </div>
 
-              {/* Two-Factor Authentication */}
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-2">
-                  <Lock size={16} className="text-sky-500" />
-                  <div>
-                    <span className="font-medium">{t("twoFactorAuth", "Two-Factor Authentication")}</span>
-                    {preferences.twoFactorAuth && (
-                      <span className="ml-2 px-1.5 py-0.5 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded">
-                        Enabled
-                      </span>
-                    )}
+              {/* Two-Factor Authentication – IMPROVED LAYOUT */}
+              <div className="py-2">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <Lock size={16} className="text-sky-500 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-medium block">{t("twoFactorAuth", "Two-Factor Authentication")}</span>
+                      {preferences.twoFactorAuth && (
+                        <span className="mt-1 inline-block px-2.5 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 rounded-full">
+                          {t("enabled", "Enabled")}
+                        </span>
+                      )}
+                    </div>
                   </div>
+
+                  {!preferences.twoFactorAuth && (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={() => setShow2FAModal(true)}
+                      disabled={savingPrefs}
+                      className="shrink-0 self-start sm:self-center"
+                    >
+                      {t("enable")}
+                    </Button>
+                  )}
                 </div>
-                <button
-                  onClick={() => setShow2FAModal(true)}
-                  disabled={savingPrefs}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                    preferences.twoFactorAuth 
-                      ? "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                      : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/50"
-                  }`}
-                >
-                  {preferences.twoFactorAuth ? "Manage" : "Enable"}
-                </button>
+
+                {/* When enabled → Manage button on its own line */}
+                {preferences.twoFactorAuth && (
+                  <div className="mt-4 flex justify-end">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShow2FAModal(true)}
+                      disabled={savingPrefs}
+                      className="text-sky-600 dark:text-sky-400 border-sky-200 dark:border-sky-800/40 hover:bg-sky-50 dark:hover:bg-sky-900/20"
+                    >
+                      {t("manage")}
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Profile Visibility */}
@@ -601,7 +611,6 @@ const ProfilePage = () => {
                   onChange={(e) => {
                     const newLang = e.target.value;
                     setLanguage(newLang);
-                    // Update preferences
                     if (preferences) {
                       handlePreferenceToggle("language", newLang);
                     }
@@ -625,7 +634,7 @@ const ProfilePage = () => {
           )}
         </div>
 
-        {/* 3. Wallet Section - Prominently displayed for roles that need it */}
+        {/* 3. Wallet Section */}
         {needsWallet && (
           <div className="bg-linear-to-br from-blue-50 to-white dark:from-gray-800 dark:to-gray-900 border border-blue-200 dark:border-blue-800/50 rounded-2xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-5">
@@ -651,121 +660,120 @@ const ProfilePage = () => {
           </div>
         )}
 
-        {/* 4. Subscription Plan - Enhanced UI (Hidden for Admin/Super Admin) */}
+        {/* 4. Subscription Plan */}
         {!isAdmin && (
-        <div className="bg-gradient-to-br from-emerald-50 via-white to-emerald-50/30 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 border-2 border-emerald-200 dark:border-emerald-800/50 rounded-2xl p-6 shadow-lg lg:col-span-1">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Crown className="w-5 h-5 text-amber-500" />
-              {t("subscriptionPlan")}
-            </h2>
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-              isPremium 
-                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
-                : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-            }`}>
-              {isPremium ? "Premium" : "Free"}
-            </span>
-          </div>
+          <div className="bg-linear-to-br from-emerald-50 via-white to-emerald-50/30 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 border-2 border-emerald-200 dark:border-emerald-800/50 rounded-2xl p-6 shadow-lg lg:col-span-1">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Crown className="w-5 h-5 text-amber-500" />
+                {t("subscriptionPlan")}
+              </h2>
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  isPremium
+                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                    : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                }`}
+              >
+                {isPremium ? "Premium" : "Free"}
+              </span>
+            </div>
 
-          <>
             {isPremium ? (
-                <div className="space-y-6">
-                  <div className="text-center py-4">
-                    <div className="flex items-center justify-center gap-3 mb-3">
-                      <Star className="w-10 h-10 text-amber-500 fill-amber-500" />
-                      <span className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">
-                        {t("premiumActive")}
-                      </span>
-                    </div>
-                    <p className="text-lg font-medium text-gray-700 dark:text-gray-300">{premiumPrice.display}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Per month, billed monthly</p>
+              <div className="space-y-6">
+                <div className="text-center py-4">
+                  <div className="flex items-center justify-center gap-3 mb-3">
+                    <Star className="w-10 h-10 text-amber-500 fill-amber-500" />
+                    <span className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">
+                      {t("premiumActive")}
+                    </span>
                   </div>
-
-                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-emerald-200 dark:border-emerald-800">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Premium Features:</p>
-                    <div className="space-y-2">
-                      {premiumFeatures.map((feature, i) => (
-                        <p key={i} className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
-                          <CheckCircle size={16} className="shrink-0" />
-                          <span>{feature}</span>
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={handleDowngrade}
-                    disabled={loading}
-                    variant="outline"
-                    className="w-full border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        {t("processing")}
-                      </>
-                    ) : (
-                      t("downgradeToFree")
-                    )}
-                  </Button>
+                  <p className="text-lg font-medium text-gray-700 dark:text-gray-300">{premiumPrice.display}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Per month, billed monthly</p>
                 </div>
-              ) : (
-                <div className="space-y-6">
-                  <div className="text-center py-4">
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{t("freePlan")}</p>
-                    <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-2">₵0</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t("upgradeToUnlock", "Upgrade to unlock premium features")}
-                    </p>
-                  </div>
 
-                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Premium Features:</p>
-                    <ul className="space-y-2 text-sm">
-                      {premiumFeatures.map((feature, i) => (
-                        <li key={i} className="flex items-start gap-2 text-gray-600 dark:text-gray-400">
-                          <Star size={16} className="text-amber-500 mt-0.5 shrink-0" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-emerald-200 dark:border-emerald-800">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Premium Features:</p>
+                  <div className="space-y-2">
+                    {premiumFeatures.map((feature, i) => (
+                      <p key={i} className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
+                        <CheckCircle size={16} className="shrink-0" />
+                        <span>{feature}</span>
+                      </p>
+                    ))}
                   </div>
+                </div>
 
-                  <Button
-                    onClick={handleUpgrade}
-                    disabled={loading || !paystackLoaded}
-                    variant="primary"
-                    size="lg"
-                    className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold shadow-lg"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                        {t("processing")}
-                      </>
-                    ) : (
-                      <>
-                        <Star size={18} className="mr-2" />
-                        {t("upgradeToPremium")} – {premiumPrice.display}
-                      </>
-                    )}
-                  </Button>
-                  
-                  <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-                    Cancel anytime • Secure payment via Paystack
+                <Button
+                  onClick={handleDowngrade}
+                  disabled={loading}
+                  variant="outline"
+                  className="w-full border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      {t("processing")}
+                    </>
+                  ) : (
+                    t("downgradeToFree")
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="text-center py-4">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{t("freePlan")}</p>
+                  <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-2">₵0</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {t("upgradeToUnlock", "Upgrade to unlock premium features")}
                   </p>
                 </div>
-              )}
-          </>
-        </div>
-        )}
 
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Premium Features:</p>
+                  <ul className="space-y-2 text-sm">
+                    {premiumFeatures.map((feature, i) => (
+                      <li key={i} className="flex items-start gap-2 text-gray-600 dark:text-gray-400">
+                        <Star size={16} className="text-amber-500 mt-0.5 shrink-0" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <Button
+                  onClick={handleUpgrade}
+                  disabled={loading || !paystackLoaded}
+                  variant="primary"
+                  size="lg"
+                  className="w-full bg-linear-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold shadow-lg"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      {t("processing")}
+                    </>
+                  ) : (
+                    <>
+                      <Star size={18} className="mr-2" />
+                      {t("upgradeToPremium")} – {premiumPrice.display}
+                    </>
+                  )}
+                </Button>
+
+                <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+                  Cancel anytime • Secure payment via Paystack
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Verification Status Panel */}
+      {/* Verification Panel */}
       {(isLandlord() || isArtisan() || role === "tenant") && (
-        <div className="mt-6">
+        <div className="mt-8">
           <BackgroundStatusPanel
             userId={user?.id}
             userRole={role}
@@ -776,38 +784,38 @@ const ProfilePage = () => {
 
       {/* Reviews Section */}
       {(isLandlord() || isArtisan() || role === "tenant") && (
-        <div className="mt-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-6">
+        <div className="mt-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
               Reviews & Ratings
             </h2>
             {((isLandlord() && role === "tenant") || (role === "landlord" && isLandlord())) && !showReviewForm && (
-              <button
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={() => setShowReviewForm(true)}
-                className="px-4 py-2 text-sm font-medium text-[#0b6e4f] dark:text-emerald-400 hover:bg-[#0b6e4f]/10 dark:hover:bg-emerald-400/10 rounded-lg transition-colors"
               >
                 Write Review
-              </button>
+              </Button>
             )}
           </div>
 
-          {/* Review Form */}
           {showReviewForm && (
-            <div className="mb-6">
+            <div className="mb-8">
               <ReviewForm
                 reviewType={isLandlord() ? "tenant" : "landlord"}
                 targetId={user?.id}
                 targetName={user?.full_name}
                 onSubmit={handleSubmitReview}
                 onCancel={() => setShowReviewForm(false)}
+                disabled={loading}
               />
             </div>
           )}
 
-          {/* Reviews List */}
           {reviewsLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-[#0b6e4f] dark:text-emerald-400" />
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-10 h-10 animate-spin text-emerald-600" />
             </div>
           ) : (
             <ReviewsList
@@ -821,7 +829,7 @@ const ProfilePage = () => {
         </div>
       )}
 
-      {/* Wallet Setup Modal */}
+      {/* Modals */}
       {needsWallet && (
         <>
           <WalletSetupModal
@@ -829,7 +837,6 @@ const ProfilePage = () => {
             onClose={() => setShowWalletSetup(false)}
             onSuccess={handleWalletSetupSuccess}
           />
-
           <WalletTopUpModal
             isOpen={showWalletTopUp}
             onClose={() => setShowWalletTopUp(false)}
@@ -840,7 +847,6 @@ const ProfilePage = () => {
         </>
       )}
 
-      {/* Two-Factor Authentication Modal */}
       <TwoFactorSetupModal
         isOpen={show2FAModal}
         onClose={() => setShow2FAModal(false)}
@@ -848,7 +854,6 @@ const ProfilePage = () => {
         isEnabled={preferences?.twoFactorAuth || false}
         onSuccess={({ enabled }) => {
           setPreferences((prev) => ({ ...prev, twoFactorAuth: enabled }));
-          // Also update backend
           updatePreferences({ twoFactorAuth: enabled }).catch(console.warn);
         }}
       />
